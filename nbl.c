@@ -12,7 +12,7 @@
 int main(int argc, char *argv[]) {
     printf("NBL (New Bastiaan Lanuage) Interpreter v0.1\nMade by Bastiaan van der Plaat\n\n");
     if (argc >= 2) {
-        FILE *file = fopen(argv[1], "rb");
+        FILE *file = fopen(argv[1], "r");
         fseek(file, 0, SEEK_END);
         long file_size = ftell(file);
         fseek(file, 0, SEEK_SET);
