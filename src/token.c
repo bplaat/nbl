@@ -10,12 +10,13 @@ Token *token_new(TokenType type) {
 
 void token_dump(Token *token) {
     if (token->type == TOKEN_TYPE_NUMBER) printf("%.15g\n", token->value.number);
-    if (token->type == TOKEN_TYPE_VARIABLE) puts(token->value.string);
+    if (token->type == TOKEN_TYPE_VARIABLE) printf("%s\n", token->value.string);
+
+    if (token->type == TOKEN_TYPE_ASSIGN) puts("=");
+    if (token->type == TOKEN_TYPE_STOP) puts(";");
 
     if (token->type == TOKEN_TYPE_PAREN_LEFT) puts("(");
     if (token->type == TOKEN_TYPE_PAREN_RIGHT) puts(")");
-    if (token->type == TOKEN_TYPE_STOP) puts("STOP");
-    if (token->type == TOKEN_TYPE_SET) puts("=");
     if (token->type == TOKEN_TYPE_ADD) puts("+");
     if (token->type == TOKEN_TYPE_SUB) puts("-");
     if (token->type == TOKEN_TYPE_MUL) puts("*");

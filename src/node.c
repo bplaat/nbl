@@ -25,21 +25,25 @@ void node_dump(Node *node) {
             list_item = list_item->next;
         }
     }
+
+    if (node->type == NODE_TYPE_ASSIGN) {
+        node_dump(node->value.children->first->value);
+        printf(" = ");
+        node_dump(node->value.children->first->next->value);
+    }
+
     if (node->type == NODE_TYPE_UNARY_ADD) {
         printf("(+ ");
         node_dump(node->value.children->first->value);
         putchar(')');
     }
+
     if (node->type == NODE_TYPE_UNARY_SUB) {
         printf("(- ");
         node_dump(node->value.children->first->value);
         putchar(')');
     }
-     if (node->type == NODE_TYPE_SET) {
-        node_dump(node->value.children->first->value);
-        printf(" = ");
-        node_dump(node->value.children->first->next->value);
-    }
+
     if (node->type == NODE_TYPE_ADD) {
         putchar('(');
         node_dump(node->value.children->first->value);
@@ -47,6 +51,7 @@ void node_dump(Node *node) {
         node_dump(node->value.children->first->next->value);
         putchar(')');
     }
+
     if (node->type == NODE_TYPE_SUB) {
         putchar('(');
         node_dump(node->value.children->first->value);
@@ -54,6 +59,7 @@ void node_dump(Node *node) {
         node_dump(node->value.children->first->next->value);
         putchar(')');
     }
+
     if (node->type == NODE_TYPE_MUL) {
         putchar('(');
         node_dump(node->value.children->first->value);
@@ -61,6 +67,7 @@ void node_dump(Node *node) {
         node_dump(node->value.children->first->next->value);
         putchar(')');
     }
+
     if (node->type == NODE_TYPE_DIV) {
         putchar('(');
         node_dump(node->value.children->first->value);
@@ -68,6 +75,7 @@ void node_dump(Node *node) {
         node_dump(node->value.children->first->next->value);
         putchar(')');
     }
+
     if (node->type == NODE_TYPE_MOD) {
         putchar('(');
         node_dump(node->value.children->first->value);
@@ -81,6 +89,7 @@ void node_free(Node *node) {
     if (node->type == NODE_TYPE_VARIABLE) {
         free(node->value.string);
     }
+
     if (node->type >= NODE_TYPE_BLOCK && node->type <= NODE_TYPE_MOD) {
         ListItem *list_item = node->value.children->first;
         while (list_item != NULL) {
@@ -89,5 +98,6 @@ void node_free(Node *node) {
         }
         list_free(node->value.children);
     }
+
     free(node);
 }

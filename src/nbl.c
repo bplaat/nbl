@@ -10,7 +10,7 @@
 #include "interpreter.h"
 
 int main(int argc, char *argv[]) {
-    printf("NBL (New Bastiaan Lanuage) Interpreter v0.1\nMade by Bastiaan van der Plaat\n\n");
+    puts("NBL (New Bastiaan Lanuage) Interpreter v0.1\nMade by Bastiaan van der Plaat\n");
     if (argc >= 2) {
         FILE *file = fopen(argv[1], "r");
         fseek(file, 0, SEEK_END);
@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
         char *file_buffer = malloc(file_size);
         fread(file_buffer, 1, file_size, file);
         fclose(file);
+
         puts("# Tokens:");
         List *tokens = lexer(file_buffer);
         free(file_buffer);
@@ -46,8 +47,8 @@ int main(int argc, char *argv[]) {
 
                 Map *vars = map_new();
                 Node *pi = node_new(NODE_TYPE_NUMBER);
-                pi->value.number = 3.14159;
-                map_set(vars, "pi", pi);
+                pi->value.number = 3.14159265358979323846;
+                map_set(vars, "PI", pi);
                 start_interpreter(node, vars);
 
                 puts("\n# Vars:");
@@ -65,5 +66,6 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+
     return EXIT_SUCCESS;
 }

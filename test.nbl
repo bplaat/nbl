@@ -1,4 +1,3 @@
-x = pi;
+x = PI;
 y = x * 5;
-
-z = pi / 2
+z = PI / 2

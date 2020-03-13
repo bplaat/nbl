@@ -8,7 +8,8 @@
 
 List *lexer(char *text) {
     List *tokens = list_new();
-    char *buffer = malloc(1024);
+    char *buffer = malloc(512);
+
     while (*text != 0) {
         if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
             char *buffer_current = buffer;
@@ -24,6 +25,7 @@ List *lexer(char *text) {
             token->value.number = atof(buffer);
             list_add(tokens, token);
         }
+
         else if (isalpha(*text) || *text == '_') {
             char *buffer_current = buffer;
             while (isalnum(*text) || *text == '_') {
@@ -38,43 +40,52 @@ List *lexer(char *text) {
             list_add(tokens, token);
         }
 
+        else if (*text == '=' || *text == ':') {
+            list_add(tokens, token_new(TOKEN_TYPE_ASSIGN));
+            text++;
+        }
+
+        else if (*text == ';' || *text == ',') {
+            list_add(tokens, token_new(TOKEN_TYPE_STOP));
+            text++;
+        }
+
         else if (*text == '(') {
             list_add(tokens, token_new(TOKEN_TYPE_PAREN_LEFT));
             text++;
         }
+
         else if (*text == ')') {
             list_add(tokens, token_new(TOKEN_TYPE_PAREN_RIGHT));
             text++;
         }
-        else if (*text == ';' || *text == '\n') {
-            list_add(tokens, token_new(TOKEN_TYPE_STOP));
-            text++;
-        }
-        else if (*text == '=') {
-            list_add(tokens, token_new(TOKEN_TYPE_SET));
-            text++;
-        }
+
         else if (*text == '+') {
             list_add(tokens, token_new(TOKEN_TYPE_ADD));
             text++;
         }
+
         else if (*text == '-') {
             list_add(tokens, token_new(TOKEN_TYPE_SUB));
             text++;
         }
+
         else if (*text == '*') {
             list_add(tokens, token_new(TOKEN_TYPE_MUL));
             text++;
         }
+
         else if (*text == '/') {
             list_add(tokens, token_new(TOKEN_TYPE_DIV));
             text++;
         }
+
         else if (*text == '%') {
             list_add(tokens, token_new(TOKEN_TYPE_MOD));
             text++;
         }
-        else if (*text == ' ') {
+
+        else if (isspace(*text)) {
             text++;
         }
 
@@ -90,6 +101,7 @@ List *lexer(char *text) {
             return NULL;
         }
     }
+
     free(buffer);
     return tokens;
 }

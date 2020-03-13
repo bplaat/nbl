@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MAP_H
+#define MAP_H
 
 typedef struct MapItem {
     char *key;
@@ -18,3 +19,5 @@ void *map_get(Map *map, char *key);
 void map_set(Map *map, char *key, void *value);
 
 void map_free(Map *map);
+
+#endif

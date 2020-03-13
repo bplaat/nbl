@@ -8,16 +8,17 @@
 
 /*
 block = stat (STOP stat)*
-stat = expr (SET expr)*
+stat = VARIABLE ASSIGN expr
 expr = term ((ADD | SUB) term)*
 term = factor ((MUL | DIV | MOD) factor)*
-factor = ADD factor | SUB factor | NUMBER | VARIABLE | ( expr )
+factor = ADD factor | SUB factor | NUMBER | VARIABLE | LPAREN expr RPAREN
 */
 
 ListItem *list_item;
 
 Node *parse_factor(void) {
     Token *token = list_item->value;
+
     if (token->type == TOKEN_TYPE_ADD) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_UNARY_ADD);
@@ -25,6 +26,7 @@ Node *parse_factor(void) {
         list_add(node->value.children, parse_factor());
         return node;
     }
+
     else if (token->type == TOKEN_TYPE_SUB) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_UNARY_SUB);
@@ -32,12 +34,14 @@ Node *parse_factor(void) {
         list_add(node->value.children, parse_factor());
         return node;
     }
+
     else if (token->type == TOKEN_TYPE_NUMBER) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_NUMBER);
         node->value.number = token->value.number;
         return node;
     }
+
     else if (token->type == TOKEN_TYPE_VARIABLE) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_VARIABLE);
@@ -46,12 +50,14 @@ Node *parse_factor(void) {
         node->value.string = string_copy;
         return node;
     }
+
     else if (token->type == TOKEN_TYPE_PAREN_LEFT) {
         list_item = list_item->next;
         Node *node = parse_expr();
         list_item = list_item->next;
         return node;
     }
+
     else {
         printf("Unexpected token: ");
         token_dump(token);
@@ -77,6 +83,7 @@ Node *parse_term(void) {
             list_add(new_node->value.children, parse_factor());
             node = new_node;
         }
+
         else if (((Token *)list_item->value)->type == TOKEN_TYPE_DIV) {
             list_item = list_item->next;
             Node *new_node = node_new(NODE_TYPE_DIV);
@@ -85,6 +92,7 @@ Node *parse_term(void) {
             list_add(new_node->value.children, parse_factor());
             node = new_node;
         }
+
         else if (((Token *)list_item->value)->type == TOKEN_TYPE_MOD) {
             list_item = list_item->next;
             Node *new_node = node_new(NODE_TYPE_MOD);
@@ -113,6 +121,7 @@ Node *parse_expr(void) {
             list_add(new_node->value.children, parse_term());
             node = new_node;
         }
+
         else if (((Token *)list_item->value)->type == TOKEN_TYPE_SUB) {
             list_item = list_item->next;
             Node *new_node = node_new(NODE_TYPE_SUB);
@@ -127,9 +136,9 @@ Node *parse_expr(void) {
 
 Node *parse_stat(void) {
     Node *node = parse_expr();
-    while (list_item != NULL && ((Token *)list_item->value)->type == TOKEN_TYPE_SET) {
+    while (list_item != NULL && ((Token *)list_item->value)->type == TOKEN_TYPE_ASSIGN) {
         list_item = list_item->next;
-        Node *new_node = node_new(NODE_TYPE_SET);
+        Node *new_node = node_new(NODE_TYPE_ASSIGN);
         new_node->value.children = list_new();
         list_add(new_node->value.children, node);
         list_add(new_node->value.children, parse_expr());

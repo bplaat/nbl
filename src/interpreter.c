@@ -11,40 +11,49 @@ double interpreter(Node *node) {
     if (node->type == NODE_TYPE_NUMBER) {
         return node->value.number;
     }
+
     if (node->type == NODE_TYPE_VARIABLE) {
         Node *var = map_get(vars_map, node->value.string);
         return var == NULL ? 0 : var->value.number;
     }
 
-    if (node->type == NODE_TYPE_UNARY_ADD) {
-        return interpreter(node->value.children->first->value);
-    }
-    if (node->type == NODE_TYPE_UNARY_SUB) {
-        return -interpreter(node->value.children->first->value);
-    }
-    if (node->type == NODE_TYPE_SET) {
+    if (node->type == NODE_TYPE_ASSIGN) {
         Node *var = node_new(NODE_TYPE_NUMBER);
         var->value.number = interpreter(node->value.children->first->next->value);
         map_set(vars_map, ((Node *)node->value.children->first->value)->value.string, var);
         return var->value.number;
     }
+
+    if (node->type == NODE_TYPE_UNARY_ADD) {
+        return interpreter(node->value.children->first->value);
+    }
+
+    if (node->type == NODE_TYPE_UNARY_SUB) {
+        return -interpreter(node->value.children->first->value);
+    }
+
     if (node->type == NODE_TYPE_ADD) {
         return interpreter(node->value.children->first->value) + interpreter(node->value.children->first->next->value);
     }
+
     if (node->type == NODE_TYPE_SUB) {
         return interpreter(node->value.children->first->value) - interpreter(node->value.children->first->next->value);
     }
+
     if (node->type == NODE_TYPE_MUL) {
         return interpreter(node->value.children->first->value) * interpreter(node->value.children->first->next->value);
     }
+
     if (node->type == NODE_TYPE_DIV) {
         return interpreter(node->value.children->first->value) / interpreter(node->value.children->first->next->value);
     }
+
     if (node->type == NODE_TYPE_MOD) {
         return fmod(interpreter(node->value.children->first->value), interpreter(node->value.children->first->next->value));
     }
 
-    return 0;
+    puts("Unsuported node!");
+    exit(EXIT_FAILURE);
 }
 
 
