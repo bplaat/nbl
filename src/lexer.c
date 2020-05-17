@@ -14,7 +14,7 @@ List *lexer(char *text) {
 
     char string_buffer[BUFFER_SIZE];
 
-    while (*text != 0) {
+    while (*text != '\0') {
         if (*text == 'n' && *(text + 1) == 'u' && *(text + 2) == 'l' && *(text + 3) == 'l') {
             list_add(tokens_list, token_new(TOKEN_TYPE_NULL));
             text += 4;
@@ -153,6 +153,7 @@ List *lexer(char *text) {
                     text += 2;
                 }
             }
+
             else if (*(text + 1) == '=') {
                 list_add(tokens_list, token_new(TOKEN_TYPE_MUL_ASSIGN));
                 text += 2;
@@ -164,7 +165,23 @@ List *lexer(char *text) {
         }
 
         else if (*text == '/') {
-            if (*(text + 1) == '=') {
+            if (*(text + 1) == '*') {
+                text += 2;
+                while (*text != '*' || *(text + 1) != '/') {
+                    text++;
+                }
+                text += 2;
+            }
+
+            else if (*(text + 1) == '/') {
+                text += 2;
+
+                while (*text != '\r' && *text != '\n' && *text != '\0') {
+                    text++;
+                }
+            }
+
+            else if (*(text + 1) == '=') {
                 list_add(tokens_list, token_new(TOKEN_TYPE_DIV_ASSIGN));
                 text += 2;
             } else {
@@ -226,6 +243,14 @@ List *lexer(char *text) {
         else if (*text == ';') {
             list_add(tokens_list, token_new(TOKEN_TYPE_STOP));
             text++;
+        }
+
+        else if (*text == '#') {
+            text++;
+
+            while (*text != '\r' && *text != '\n' && *text != '\0') {
+                text++;
+            }
         }
 
         else if (isspace(*text)) {

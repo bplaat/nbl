@@ -64,6 +64,17 @@ boolean && boolean    ->    boolean
 boolean || boolean    ->    boolean
 ```
 
+## Coments
+```php
+# Single line comment
+
+// Single line comment
+
+/*
+Multi line comment
+*/
+```
+
 ## Arrays
 ```js
 names = [ 'Bastiaan', 'Jan', 'Dirk' ]

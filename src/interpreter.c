@@ -56,28 +56,26 @@ Value *interpreter(Node *node) {
             return new_value;
         }
 
-        else if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
+        if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
             Value *new_value = value_new_string(string_concat(old_value->value.string, value->value.string));
             map_set(vars_map, variable, new_value);
             return new_value;
         }
 
-        else if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type != VALUE_TYPE_STRING) {
+        if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type != VALUE_TYPE_STRING) {
             Value *new_value = value_new_string(string_concat(old_value->value.string, value_to_string(value)));
             map_set(vars_map, variable, new_value);
             return new_value;
         }
 
-        else if (old_value != NULL && old_value->type != VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
+        if (old_value != NULL && old_value->type != VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
             Value *new_value = value_new_string(string_concat(value_to_string(old_value), value->value.string));
             map_set(vars_map, variable, new_value);
             return new_value;
         }
 
-        else {
-            printf("[ERROR] Type error by add assign\n");
-            exit(EXIT_FAILURE);
-        }
+        printf("[ERROR] Type error by add assign\n");
+        exit(EXIT_FAILURE);
     }
 
     if (node->type == NODE_TYPE_SUB_ASSIGN) {
@@ -214,22 +212,20 @@ Value *interpreter(Node *node) {
             return value_new_number(left->value.number + right->value.number);
         }
 
-        else if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
+        if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
             return value_new_string(string_concat(left->value.string, right->value.string));
         }
 
-        else if (left->type == VALUE_TYPE_STRING && right->type != VALUE_TYPE_STRING) {
+        if (left->type == VALUE_TYPE_STRING && right->type != VALUE_TYPE_STRING) {
             return value_new_string(string_concat(left->value.string, value_to_string(right)));
         }
 
-        else if (left->type != VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
+        if (left->type != VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
             return value_new_string(string_concat(value_to_string(left), right->value.string));
         }
 
-        else {
-            printf("[ERROR] Type error by add\n");
-            exit(EXIT_FAILURE);
-        }
+        printf("[ERROR] Type error by add\n");
+        exit(EXIT_FAILURE);
     }
 
     if (node->type == NODE_TYPE_SUB) {
