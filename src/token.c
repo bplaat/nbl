@@ -44,12 +44,40 @@ char *token_to_string(Token *token) {
         return string_copy("=");
     }
 
+    if (token->type == TOKEN_TYPE_ADD_ASSIGN) {
+        return string_copy("+=");
+    }
+
+    if (token->type == TOKEN_TYPE_SUB_ASSIGN) {
+        return string_copy("-=");
+    }
+
+    if (token->type == TOKEN_TYPE_MUL_ASSIGN) {
+        return string_copy("*=");
+    }
+
+    if (token->type == TOKEN_TYPE_EXP_ASSIGN) {
+        return string_copy("**=");
+    }
+
+    if (token->type == TOKEN_TYPE_DIV_ASSIGN) {
+        return string_copy("/=");
+    }
+
+    if (token->type == TOKEN_TYPE_MOD_ASSIGN) {
+        return string_copy("%=");
+    }
+
     if (token->type == TOKEN_TYPE_LPAREN) {
         return string_copy("(");
     }
 
     if (token->type == TOKEN_TYPE_RPAREN) {
         return string_copy(")");
+    }
+
+    if (token->type == TOKEN_TYPE_STOP) {
+        return string_copy(";");
     }
 
     if (token->type == TOKEN_TYPE_ADD) {
@@ -110,10 +138,6 @@ char *token_to_string(Token *token) {
 
     if (token->type == TOKEN_TYPE_OR) {
         return string_copy("||");
-    }
-
-    if (token->type == TOKEN_TYPE_STOP) {
-        return string_copy(";");
     }
 
     printf("[ERROR] Unkown token type: %d\n", token->type);

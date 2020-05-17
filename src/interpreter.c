@@ -12,6 +12,7 @@
 Map *vars_map;
 
 Value *interpreter(Node *node) {
+    // Value nodes
     if (node->type == NODE_TYPE_NULL) {
         return value_new_null();
     }
@@ -37,12 +38,134 @@ Value *interpreter(Node *node) {
         }
     }
 
+    // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
         Value *value = interpreter(node->value.operation.right);
         map_set(vars_map, node->value.operation.left->value.string, value);
         return value;
     }
 
+    if (node->type == NODE_TYPE_ADD_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(old_value->value.number + value->value.number);
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
+            Value *new_value = value_new_string(string_concat(old_value->value.string, value->value.string));
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type != VALUE_TYPE_STRING) {
+            Value *new_value = value_new_string(string_concat(old_value->value.string, value_to_string(value)));
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else if (old_value != NULL && old_value->type != VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
+            Value *new_value = value_new_string(string_concat(value_to_string(old_value), value->value.string));
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by add assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_SUB_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(old_value->value.number - value->value.number);
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by sub assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_MUL_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(old_value->value.number * value->value.number);
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by mul assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_EXP_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(pow(old_value->value.number, value->value.number));
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by exp assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_DIV_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(old_value->value.number / value->value.number);
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by div assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_MOD_ASSIGN) {
+        char *variable = node->value.operation.left->value.string;
+        Value *value = interpreter(node->value.operation.right);
+        Value *old_value = map_get(vars_map, variable);
+
+        if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
+            Value *new_value = value_new_number(fmod(old_value->value.number, value->value.number));
+            map_set(vars_map, variable, new_value);
+            return new_value;
+        }
+
+        else {
+            printf("[ERROR] Type error by mod assign\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Unaries
     if (node->type == NODE_TYPE_UNARY_ADD) {
         Value *value = interpreter(node->value.child);
 
@@ -82,6 +205,7 @@ Value *interpreter(Node *node) {
         }
     }
 
+    // Number operations
     if (node->type == NODE_TYPE_ADD) {
         Value *left = interpreter(node->value.operation.left);
         Value *right = interpreter(node->value.operation.right);
@@ -178,6 +302,7 @@ Value *interpreter(Node *node) {
         }
     }
 
+    // Boolean operations
     if (node->type == NODE_TYPE_EQUALS) {
         Value *left = interpreter(node->value.operation.left);
         Value *right = interpreter(node->value.operation.right);

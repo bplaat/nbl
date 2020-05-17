@@ -39,7 +39,21 @@ List *lexer(char *text) {
             text++;
             char *string_buffer_current = string_buffer;
             while (*text != '\'') {
-                *string_buffer_current++ = *text++;
+                if (*text == '\\') {
+                    text++;
+                    if (*text == '\\') {
+                        *string_buffer_current++ = '\\';
+                    }
+                    if (*text == '\'') {
+                        *string_buffer_current++ = '\'';
+                    }
+                    if (*text == '"') {
+                        *string_buffer_current++ = '"';
+                    }
+                    text++;
+                } else {
+                    *string_buffer_current++ = *text++;
+                }
             }
             *string_buffer_current = 0;
             text++;
@@ -110,18 +124,37 @@ List *lexer(char *text) {
         }
 
         else if (*text == '+') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_ADD));
-            text++;
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ADD_ASSIGN));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ADD));
+                text++;
+            }
         }
 
         else if (*text == '-') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_SUB));
-            text++;
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_SUB_ASSIGN));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_SUB));
+                text++;
+            }
         }
 
         else if (*text == '*') {
             if (*(text + 1) == '*') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_EXP));
+                if (*(text + 2) == '=') {
+                    list_add(tokens_list, token_new(TOKEN_TYPE_EXP_ASSIGN));
+                    text += 3;
+                } else {
+                    list_add(tokens_list, token_new(TOKEN_TYPE_EXP));
+                    text += 2;
+                }
+            }
+            else if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_MUL_ASSIGN));
                 text += 2;
             }
             else {
@@ -131,13 +164,23 @@ List *lexer(char *text) {
         }
 
         else if (*text == '/') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_DIV));
-            text++;
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_DIV_ASSIGN));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_DIV));
+                text++;
+            }
         }
 
         else if (*text == '%') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_MOD));
-            text++;
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_MOD_ASSIGN));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_MOD));
+                text++;
+            }
         }
 
         else if (*text == '>') {

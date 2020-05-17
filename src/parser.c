@@ -8,12 +8,12 @@
 #include "utils.h"
 
 /*
-stat = bool | VARIABLE ASSIGN bool
+stat = bool | VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool
 bool = equals ((AND | OR) equals)*
 equals = expr ((EQUALS | NOT_EQUALS | GREATER | GREATER_EQUALS | LOWER | LOWER_EQUALS) expr)*
 expr = term ((ADD | SUB) term)* |
 term = factor ((MUL | EXP | DIV | MOD) factor)*
-factor = ADD factor | SUB factor | NOT factor | NULL | NUMBER | STRING | BOOLEAN | VARIABLE | LPAREN bool RPAREN
+factor = ADD factor | SUB factor | NOT factor | LPAREN bool RPAREN | NULL | NUMBER | STRING | BOOLEAN | VARIABLE
 */
 
 ListItem *list_item;
@@ -268,6 +268,109 @@ Node *parse_stat(void) {
         new_node->value.operation.right = parse_bool();
         return new_node;
     }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_ADD_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_ADD_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_SUB_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_SUB_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_MUL_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_MUL_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_EXP_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_EXP_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_DIV_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_DIV_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
+    else if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type == TOKEN_TYPE_MOD_ASSIGN
+    ) {
+        Node *variable_node = node_new(NODE_TYPE_VARIABLE);
+        variable_node->value.string = string_copy(((Token *)list_item->value)->value.string);
+
+        list_item = list_item->next;
+        list_item = list_item->next;
+
+        Node *new_node = node_new(NODE_TYPE_MOD_ASSIGN);
+        new_node->value.operation.left = variable_node;
+        new_node->value.operation.right = parse_bool();
+        return new_node;
+    }
+
     else {
         return parse_bool();
     }

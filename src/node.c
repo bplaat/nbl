@@ -52,6 +52,66 @@ char *node_to_string(Node *node) {
         return string_buffer;
     }
 
+    if (node->type == NODE_TYPE_ADD_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s += %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_SUB_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s -= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_MUL_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s *= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_EXP_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s **= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_DIV_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s /= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_MOD_ASSIGN) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s %%= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
     if (node->type == NODE_TYPE_UNARY_ADD) {
         char *node_string = node_to_string(node->value.child);
         char *string_buffer = malloc(BUFFER_SIZE);
