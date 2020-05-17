@@ -8,3 +8,10 @@ char *string_copy(char *string) {
     strcpy(new_string, string);
     return new_string;
 }
+
+char *string_concat(char *a, char *b) {
+    char *new_string = malloc(strlen(a) + strlen(b) + 1);
+    strcpy(new_string, a);
+    strcat(new_string, b);
+    return new_string;
+}

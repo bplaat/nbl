@@ -3,6 +3,7 @@
 #include <ctype.h>
 
 #include "lexer.h"
+#include "constants.h"
 #include "list.h"
 #include "token.h"
 #include "utils.h"
@@ -10,7 +11,7 @@
 List *lexer(char *text) {
     List *tokens_list = list_new();
 
-    char string_buffer[64];
+    char string_buffer[BUFFER_SIZE];
 
     while (*text != 0) {
         if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
@@ -36,6 +37,34 @@ List *lexer(char *text) {
             *string_buffer_current = 0;
 
             Token *token = token_new(TOKEN_TYPE_VARIABLE);
+            token->value.string = string_copy(string_buffer);
+            list_add(tokens_list, token);
+        }
+
+        else if (*text == '\'') {
+            text++;
+            char *string_buffer_current = string_buffer;
+            while (*text != '\'') {
+                *string_buffer_current++ = *text++;
+            }
+            *string_buffer_current = 0;
+            text++;
+
+            Token *token = token_new(TOKEN_TYPE_STRING);
+            token->value.string = string_copy(string_buffer);
+            list_add(tokens_list, token);
+        }
+
+        else if (*text == '"') {
+            text++;
+            char *string_buffer_current = string_buffer;
+            while (*text != '"') {
+                *string_buffer_current++ = *text++;
+            }
+            *string_buffer_current = 0;
+            text++;
+
+            Token *token = token_new(TOKEN_TYPE_STRING);
             token->value.string = string_copy(string_buffer);
             list_add(tokens_list, token);
         }
@@ -96,7 +125,7 @@ List *lexer(char *text) {
         }
 
         else {
-            printf("[ERROR] Unexpected character: '%c'\n", *text);
+            printf("[ERROR] Unexpected character: %c\n", *text);
             exit(EXIT_FAILURE);
         }
     }

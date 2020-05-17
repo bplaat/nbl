@@ -4,6 +4,7 @@
 typedef enum NodeType {
     NODE_TYPE_NUMBER,
     NODE_TYPE_VARIABLE,
+    NODE_TYPE_STRING,
 
     NODE_TYPE_ASSIGN,
 

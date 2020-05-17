@@ -11,7 +11,7 @@
 stat = VARIABLE ASSIGN expr | expr
 expr = term ((ADD | SUB) term)*
 term = factor ((MUL | EXP | DIV | MOD) factor)*
-factor = ADD factor | SUB factor | NUMBER | VARIABLE | LPAREN expr RPAREN
+factor = ADD factor | SUB factor | NUMBER | STRING | VARIABLE | LPAREN expr RPAREN
 */
 
 ListItem *list_item;
@@ -43,6 +43,13 @@ Node *parse_factor(void) {
     else if (token->type == TOKEN_TYPE_VARIABLE) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_VARIABLE);
+        node->value.string = string_copy(token->value.string);
+        return node;
+    }
+
+    else if (token->type == TOKEN_TYPE_STRING) {
+        list_item = list_item->next;
+        Node *node = node_new(NODE_TYPE_STRING);
         node->value.string = string_copy(token->value.string);
         return node;
     }

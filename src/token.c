@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "token.h"
+#include "constants.h"
 #include "utils.h"
 
 Token *token_new(TokenType type) {
@@ -12,13 +13,19 @@ Token *token_new(TokenType type) {
 
 char *token_to_string(Token *token) {
     if (token->type == TOKEN_TYPE_NUMBER) {
-        char *string_buffer = malloc(64);
-        sprintf(string_buffer, "%.15g", token->value.number);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "%g", token->value.number);
         return string_buffer;
     }
 
     if (token->type == TOKEN_TYPE_VARIABLE) {
         return string_copy(token->value.string);
+    }
+
+    if (token->type == TOKEN_TYPE_STRING) {
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "'%s'", token->value.string);
+        return string_buffer;
     }
 
     if (token->type == TOKEN_TYPE_ASSIGN) {
@@ -61,7 +68,7 @@ char *token_to_string(Token *token) {
         return string_copy(";");
     }
 
-    printf("[ERROR] Unkown token type");
+    printf("[ERROR] Unkown token type\n");
     exit(EXIT_FAILURE);
 }
 

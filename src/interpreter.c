@@ -6,62 +6,152 @@
 #include "node.h"
 #include "map.h"
 #include "value.h"
+#include "utils.h"
 
 Map *vars_map;
 
-double interpreter(Node *node) {
+Value *interpreter(Node *node) {
     if (node->type == NODE_TYPE_NUMBER) {
-        return node->value.number;
+        return value_new_number(node->value.number);
     }
 
     if (node->type == NODE_TYPE_VARIABLE) {
-        Value *value = map_get(vars_map, node->value.string);
-        return value->value.number;
+        return value_copy(map_get(vars_map, node->value.string));
+    }
+
+    if (node->type == NODE_TYPE_STRING) {
+        return value_new_string(node->value.string);
     }
 
     if (node->type == NODE_TYPE_ASSIGN) {
-        double number = interpreter(node->value.operation.right);
-        map_set(vars_map, node->value.operation.left->value.string, value_new_number(number));
-        return number;
+        Value *value = interpreter(node->value.operation.right);
+        map_set(vars_map, node->value.operation.left->value.string, value);
+        return value;
     }
 
     if (node->type == NODE_TYPE_UNARY_ADD) {
-        return interpreter(node->value.child);
+        Value *value = interpreter(node->value.child);
+        if (value->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(+value->value.number);
+        }
+        else {
+            printf("[ERROR] Type error by unary add\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_UNARY_SUB) {
-        return -interpreter(node->value.child);
+        Value *value = interpreter(node->value.child);
+        if (value->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(-value->value.number);
+        }
+        else {
+            printf("[ERROR] Type error by unary sub\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_ADD) {
-        return interpreter(node->value.operation.left) + interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(left->value.number + right->value.number);
+        }
+
+        else if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
+            return value_new_string(string_concat(left->value.string, right->value.string));
+        }
+
+        else if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_STRING) {
+            return value_new_string(string_concat(value_to_string(left), right->value.string));
+        }
+
+        else if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_string(string_concat(left->value.string, value_to_string(right)));
+        }
+
+        else {
+            printf("[ERROR] Type error by add\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_SUB) {
-        return interpreter(node->value.operation.left) - interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(left->value.number - right->value.number);
+        }
+
+        else {
+            printf("[ERROR] Type error by sub\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_MUL) {
-        return interpreter(node->value.operation.left) * interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(left->value.number * right->value.number);
+        }
+
+        else {
+            printf("[ERROR] Type error by mul\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_EXP) {
-        return pow(interpreter(node->value.operation.left), interpreter(node->value.operation.right));
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(pow(left->value.number, right->value.number));
+        }
+
+        else {
+            printf("[ERROR] Type error by exp\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_DIV) {
-        return interpreter(node->value.operation.left) / interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(left->value.number / right->value.number);
+        }
+
+        else {
+            printf("[ERROR] Type error by div\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (node->type == NODE_TYPE_MOD) {
-        return fmod(interpreter(node->value.operation.left), interpreter(node->value.operation.right));
+        Value *left = interpreter(node->value.operation.left);
+        Value *right = interpreter(node->value.operation.right);
+
+        if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
+            return value_new_number(fmod(left->value.number, right->value.number));
+        }
+
+        else {
+            printf("[ERROR] Type error by mod\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    printf("[ERROR] Unkown node type");
+    printf("[ERROR] Unkown node type\n");
     exit(EXIT_FAILURE);
 }
 
-double start_interpreter(Node *node, Map *global_vars_map) {
+Value *start_interpreter(Node *node, Map *global_vars_map) {
     vars_map = global_vars_map;
     return interpreter(node);
 }

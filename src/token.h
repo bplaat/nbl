@@ -4,6 +4,7 @@
 typedef enum TokenType {
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_VARIABLE,
+    TOKEN_TYPE_STRING,
 
     TOKEN_TYPE_ASSIGN,
 

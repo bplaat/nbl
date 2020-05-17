@@ -24,6 +24,10 @@ Value *value_new_number(double number);
 
 Value *value_new_string(char *string);
 
+char *value_to_string(Value *value);
+
+Value *value_copy(Value *value);
+
 void value_free(Value *value);
 
 #endif

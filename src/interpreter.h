@@ -2,10 +2,11 @@
 #define INTERPRETER_H
 
 #include "node.h"
+#include "value.h"
 #include "map.h"
 
-double interpreter(Node *node);
+Value *interpreter(Node *node);
 
-double start_interpreter(Node *node, Map *global_vars_map);
+Value *start_interpreter(Node *node, Map *global_vars_map);
 
 #endif

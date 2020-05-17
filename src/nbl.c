@@ -5,6 +5,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "constants.h"
 #include "list.h"
 #include "token.h"
 #include "lexer.h"
@@ -60,7 +61,11 @@ void run(char *text) {
             // Interpreter the nodes
             list_item = nodes_list->first;
             while (list_item != NULL) {
-                printf("%.15g\n", start_interpreter(list_item->value, global_vars_map));
+                Value *value = start_interpreter(list_item->value, global_vars_map);
+                char *value_string = value_to_string(value);
+                printf("%s\n", value_string);
+                free(value_string);
+                value_free(value);
                 list_item = list_item->next;
             }
 
@@ -106,12 +111,11 @@ int main(int argc, char **argv) {
     else {
         printf("NBL - New Bastiaan Lanuage Interpreter\n");
 
-        #define LINE_BUFFER_SIZE 256
-        char line_buffer[LINE_BUFFER_SIZE];
+        char line_buffer[BUFFER_SIZE];
 
         for (;;) {
             printf("> ");
-            fgets(line_buffer, LINE_BUFFER_SIZE, stdin);
+            fgets(line_buffer, BUFFER_SIZE, stdin);
             line_buffer[strlen(line_buffer) - 1] = '\0';
 
             if (line_buffer[0] != '\0') {
