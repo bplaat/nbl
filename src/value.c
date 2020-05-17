@@ -31,6 +31,13 @@ Value *value_new_string(char *string) {
     return value;
 }
 
+Value *value_new_boolean(bool boolean) {
+    Value *value = malloc(sizeof(Value));
+    value->type = VALUE_TYPE_BOOLEAN;
+    value->value.boolean = boolean;
+    return value;
+}
+
 char *value_to_string(Value *value) {
     if (value->type == VALUE_TYPE_NULL) {
         return string_copy("null");
@@ -46,14 +53,26 @@ char *value_to_string(Value *value) {
         return string_copy(value->value.string);
     }
 
-    printf("[ERROR] Unkown value type\n");
+    if (value->type == VALUE_TYPE_BOOLEAN) {
+        if (value->value.boolean) {
+            return string_copy("true");
+        } else {
+            return string_copy("false");
+        }
+    }
+
+    printf("[ERROR] Unkown value type: %d\n", value->type);
     exit(EXIT_FAILURE);
 }
 
 Value *value_copy(Value *value) {
     Value *new_value = malloc(sizeof(Value));
     new_value->type = value->type;
-    new_value->value = value->value;
+    if (value->type == VALUE_TYPE_STRING) {
+        new_value->value.string = string_copy(value->value.string);
+    } else {
+        new_value->value = value->value;
+    }
     return new_value;
 }
 

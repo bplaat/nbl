@@ -12,20 +12,32 @@ Token *token_new(TokenType type) {
 }
 
 char *token_to_string(Token *token) {
+    if (token->type == TOKEN_TYPE_NULL) {
+        return string_copy("null");
+    }
+
     if (token->type == TOKEN_TYPE_NUMBER) {
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "%g", token->value.number);
         return string_buffer;
     }
 
-    if (token->type == TOKEN_TYPE_VARIABLE) {
-        return string_copy(token->value.string);
-    }
-
     if (token->type == TOKEN_TYPE_STRING) {
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "'%s'", token->value.string);
         return string_buffer;
+    }
+
+    if (token->type == TOKEN_TYPE_BOOLEAN) {
+        if (token->value.boolean) {
+            return string_copy("true");
+        } else {
+            return string_copy("false");
+        }
+    }
+
+    if (token->type == TOKEN_TYPE_VARIABLE) {
+        return string_copy(token->value.string);
     }
 
     if (token->type == TOKEN_TYPE_ASSIGN) {
@@ -68,7 +80,7 @@ char *token_to_string(Token *token) {
         return string_copy(";");
     }
 
-    printf("[ERROR] Unkown token type\n");
+    printf("[ERROR] Unkown token type: %d\n", token->type);
     exit(EXIT_FAILURE);
 }
 

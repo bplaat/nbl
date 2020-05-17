@@ -11,16 +11,29 @@
 Map *vars_map;
 
 Value *interpreter(Node *node) {
+    if (node->type == NODE_TYPE_NULL) {
+        return value_new_null();
+    }
+
     if (node->type == NODE_TYPE_NUMBER) {
         return value_new_number(node->value.number);
     }
 
-    if (node->type == NODE_TYPE_VARIABLE) {
-        return value_copy(map_get(vars_map, node->value.string));
-    }
-
     if (node->type == NODE_TYPE_STRING) {
         return value_new_string(node->value.string);
+    }
+
+    if (node->type == NODE_TYPE_BOOLEAN) {
+        return value_new_boolean(node->value.boolean);
+    }
+
+    if (node->type == NODE_TYPE_VARIABLE) {
+        Value *value = map_get(vars_map, node->value.string);
+        if (value != NULL) {
+            return value_copy(value);
+        } else {
+            return value_new_null();
+        }
     }
 
     if (node->type == NODE_TYPE_ASSIGN) {
@@ -31,9 +44,11 @@ Value *interpreter(Node *node) {
 
     if (node->type == NODE_TYPE_UNARY_ADD) {
         Value *value = interpreter(node->value.child);
+
         if (value->type == VALUE_TYPE_NUMBER) {
             return value_new_number(+value->value.number);
         }
+
         else {
             printf("[ERROR] Type error by unary add\n");
             exit(EXIT_FAILURE);
@@ -42,9 +57,11 @@ Value *interpreter(Node *node) {
 
     if (node->type == NODE_TYPE_UNARY_SUB) {
         Value *value = interpreter(node->value.child);
+
         if (value->type == VALUE_TYPE_NUMBER) {
             return value_new_number(-value->value.number);
         }
+
         else {
             printf("[ERROR] Type error by unary sub\n");
             exit(EXIT_FAILURE);
@@ -63,12 +80,12 @@ Value *interpreter(Node *node) {
             return value_new_string(string_concat(left->value.string, right->value.string));
         }
 
-        else if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_STRING) {
-            return value_new_string(string_concat(value_to_string(left), right->value.string));
+        else if (left->type == VALUE_TYPE_STRING && right->type != VALUE_TYPE_STRING) {
+            return value_new_string(string_concat(left->value.string, value_to_string(right)));
         }
 
-        else if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_string(string_concat(left->value.string, value_to_string(right)));
+        else if (left->type != VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
+            return value_new_string(string_concat(value_to_string(left), right->value.string));
         }
 
         else {

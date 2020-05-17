@@ -12,21 +12,33 @@ Node *node_new(NodeType type) {
 }
 
 char *node_to_string(Node *node) {
+    if (node->type == NODE_TYPE_NULL) {
+        return string_copy("null");
+    }
+
     if (node->type == NODE_TYPE_NUMBER) {
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %g )", node->value.number);
         return string_buffer;
     }
 
-    if (node->type == NODE_TYPE_VARIABLE) {
-        char *string_buffer = malloc(BUFFER_SIZE);
-        sprintf(string_buffer, "( %s )", node->value.string);
-        return string_buffer;
-    }
-
     if (node->type == NODE_TYPE_STRING) {
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( '%s' )", node->value.string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_BOOLEAN) {
+        if (node->value.boolean) {
+            return string_copy("true");
+        } else {
+            return string_copy("false");
+        }
+    }
+
+    if (node->type == NODE_TYPE_VARIABLE) {
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s )", node->value.string);
         return string_buffer;
     }
 
@@ -116,7 +128,7 @@ char *node_to_string(Node *node) {
         return string_buffer;
     }
 
-    printf("[ERROR] Unkown node type\n");
+    printf("[ERROR] Unkown node type: %d\n", node->type);
     exit(EXIT_FAILURE);
 }
 

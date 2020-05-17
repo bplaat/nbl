@@ -6,8 +6,8 @@ The language has the syntax of **JavaScript**, the strong but dynamic type syste
 ## Types:
 - `null`
 - `number`
-- `boolean`
 - `string`
+- `boolean`
 - `array`
 - `object`
 - `function`

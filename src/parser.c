@@ -11,7 +11,7 @@
 stat = VARIABLE ASSIGN expr | expr
 expr = term ((ADD | SUB) term)*
 term = factor ((MUL | EXP | DIV | MOD) factor)*
-factor = ADD factor | SUB factor | NUMBER | STRING | VARIABLE | LPAREN expr RPAREN
+factor = ADD factor | SUB factor | NULL | NUMBER | STRING | BOOLEAN | VARIABLE | LPAREN expr RPAREN
 */
 
 ListItem *list_item;
@@ -33,6 +33,11 @@ Node *parse_factor(void) {
         return node;
     }
 
+    else if (token->type == TOKEN_TYPE_NULL) {
+        list_item = list_item->next;
+        return node_new(NODE_TYPE_NULL);
+    }
+
     else if (token->type == TOKEN_TYPE_NUMBER) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_NUMBER);
@@ -40,16 +45,23 @@ Node *parse_factor(void) {
         return node;
     }
 
-    else if (token->type == TOKEN_TYPE_VARIABLE) {
+    else if (token->type == TOKEN_TYPE_STRING) {
         list_item = list_item->next;
-        Node *node = node_new(NODE_TYPE_VARIABLE);
+        Node *node = node_new(NODE_TYPE_STRING);
         node->value.string = string_copy(token->value.string);
         return node;
     }
 
-    else if (token->type == TOKEN_TYPE_STRING) {
+    else if (token->type == TOKEN_TYPE_BOOLEAN) {
         list_item = list_item->next;
-        Node *node = node_new(NODE_TYPE_STRING);
+        Node *node = node_new(NODE_TYPE_BOOLEAN);
+        node->value.boolean = token->value.boolean;
+        return node;
+    }
+
+    else if (token->type == TOKEN_TYPE_VARIABLE) {
+        list_item = list_item->next;
+        Node *node = node_new(NODE_TYPE_VARIABLE);
         node->value.string = string_copy(token->value.string);
         return node;
     }

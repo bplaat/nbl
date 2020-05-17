@@ -1,10 +1,14 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include <stdbool.h>
+
 typedef enum NodeType {
+    NODE_TYPE_NULL,
     NODE_TYPE_NUMBER,
-    NODE_TYPE_VARIABLE,
     NODE_TYPE_STRING,
+    NODE_TYPE_BOOLEAN,
+    NODE_TYPE_VARIABLE,
 
     NODE_TYPE_ASSIGN,
 
@@ -25,6 +29,8 @@ typedef struct Node {
         double number;
 
         char *string;
+
+        bool boolean;
 
         struct Node *child;
 

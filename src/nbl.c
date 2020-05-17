@@ -119,6 +119,16 @@ int main(int argc, char **argv) {
             line_buffer[strlen(line_buffer) - 1] = '\0';
 
             if (line_buffer[0] != '\0') {
+                if (!strcmp(line_buffer, ".dump")) {
+                    MapItem *global_vars_map_item = global_vars_map->first;
+                    while (global_vars_map_item != NULL) {
+                        printf("%s = %s\n", global_vars_map_item->key, value_to_string(global_vars_map_item->value));
+
+                        global_vars_map_item = global_vars_map_item->next;
+                    }
+                    continue;
+                }
+
                 if (!strcmp(line_buffer, ".exit")) {
                     break;
                 }

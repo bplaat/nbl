@@ -13,7 +13,7 @@ Map *map_new(void) {
 void *map_get(Map *map, char *key) {
     MapItem *map_item = map->first;
     while (map_item != NULL) {
-        if (strcmp(map_item->key, key) == 0) {
+        if (!strcmp(map_item->key, key)) {
             return map_item->value;
         }
         map_item = map_item->next;
@@ -24,7 +24,7 @@ void *map_get(Map *map, char *key) {
 void map_set(Map *map, char *key, void *value) {
     MapItem *map_item = map->first;
     while (map_item != NULL) {
-        if (strcmp(map_item->key, key) == 0) {
+        if (!strcmp(map_item->key, key)) {
             map_item->value = value;
             return;
         }
