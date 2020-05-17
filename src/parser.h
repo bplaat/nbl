@@ -10,6 +10,10 @@ Node *parse_term(void);
 
 Node *parse_expr(void);
 
+Node *parse_equals(void);
+
+Node *parse_bool(void);
+
 Node *parse_stat(void);
 
 List *parser(List *tokens);

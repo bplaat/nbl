@@ -8,10 +8,12 @@
 #include "utils.h"
 
 /*
-stat = VARIABLE ASSIGN expr | expr
-expr = term ((ADD | SUB) term)*
+stat = bool | VARIABLE ASSIGN bool
+bool = equals ((AND | OR) equals)*
+equals = expr ((EQUALS | NOT_EQUALS | GREATER | GREATER_EQUALS | LOWER | LOWER_EQUALS) expr)*
+expr = term ((ADD | SUB) term)* |
 term = factor ((MUL | EXP | DIV | MOD) factor)*
-factor = ADD factor | SUB factor | NULL | NUMBER | STRING | BOOLEAN | VARIABLE | LPAREN expr RPAREN
+factor = ADD factor | SUB factor | NOT factor | NULL | NUMBER | STRING | BOOLEAN | VARIABLE | LPAREN bool RPAREN
 */
 
 ListItem *list_item;
@@ -29,6 +31,13 @@ Node *parse_factor(void) {
     else if (token->type == TOKEN_TYPE_SUB) {
         list_item = list_item->next;
         Node *node = node_new(NODE_TYPE_UNARY_SUB);
+        node->value.child = parse_factor();
+        return node;
+    }
+
+    else if (token->type == TOKEN_TYPE_NOT) {
+        list_item = list_item->next;
+        Node *node = node_new(NODE_TYPE_NOT);
         node->value.child = parse_factor();
         return node;
     }
@@ -68,7 +77,7 @@ Node *parse_factor(void) {
 
     else if (token->type == TOKEN_TYPE_LPAREN) {
         list_item = list_item->next;
-        Node *node = parse_expr();
+        Node *node = parse_bool();
         list_item = list_item->next;
         return node;
     }
@@ -152,6 +161,96 @@ Node *parse_expr(void) {
     return node;
 }
 
+Node *parse_equals(void) {
+    Node *node = parse_expr();
+    while (
+        list_item != NULL && (
+            ((Token *)list_item->value)->type == TOKEN_TYPE_EQUALS ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_NOT_EQUALS ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_GREATER ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_GREATER_EQUALS ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_LOWER ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_LOWER_EQUALS
+        )
+    ) {
+        if (((Token *)list_item->value)->type == TOKEN_TYPE_EQUALS) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_EQUALS);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_NOT_EQUALS) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_NOT_EQUALS);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_GREATER) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_GREATER);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_GREATER_EQUALS) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_GREATER_EQUALS);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_LOWER) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_LOWER);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_LOWER_EQUALS) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_LOWER_EQUALS);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_expr();
+            node = new_node;
+        }
+    }
+    return node;
+}
+
+Node *parse_bool(void) {
+    Node *node = parse_equals();
+    while (
+        list_item != NULL && (
+            ((Token *)list_item->value)->type == TOKEN_TYPE_AND ||
+            ((Token *)list_item->value)->type == TOKEN_TYPE_OR
+        )
+    ) {
+        if (((Token *)list_item->value)->type == TOKEN_TYPE_AND) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_AND);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_equals();
+            node = new_node;
+        }
+
+        else if (((Token *)list_item->value)->type == TOKEN_TYPE_OR) {
+            list_item = list_item->next;
+            Node *new_node = node_new(NODE_TYPE_OR);
+            new_node->value.operation.left = node;
+            new_node->value.operation.right = parse_equals();
+            node = new_node;
+        }
+    }
+    return node;
+}
+
 Node *parse_stat(void) {
     if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
@@ -166,11 +265,11 @@ Node *parse_stat(void) {
 
         Node *new_node = node_new(NODE_TYPE_ASSIGN);
         new_node->value.operation.left = variable_node;
-        new_node->value.operation.right = parse_expr();
+        new_node->value.operation.right = parse_bool();
         return new_node;
     }
     else {
-        return parse_expr();
+        return parse_bool();
     }
 }
 

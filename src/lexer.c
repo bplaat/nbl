@@ -90,8 +90,13 @@ List *lexer(char *text) {
         }
 
         else if (*text == '=') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_ASSIGN));
-            text++;
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_EQUALS));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ASSIGN));
+                text++;
+            }
         }
 
         else if (*text == '(') {
@@ -133,6 +138,46 @@ List *lexer(char *text) {
         else if (*text == '%') {
             list_add(tokens_list, token_new(TOKEN_TYPE_MOD));
             text++;
+        }
+
+        else if (*text == '>') {
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_GREATER_EQUALS));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_GREATER));
+                text++;
+            }
+        }
+
+        else if (*text == '<') {
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_LOWER_EQUALS));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_LOWER));
+                text++;
+            }
+        }
+
+        else if (*text == '!') {
+            if (*(text + 1) == '=') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_NOT_EQUALS));
+                text += 2;
+            } else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_NOT));
+                text++;
+            }
+        }
+
+        else if (*text == '&' && *(text + 1) == '&') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_AND));
+            text += 2;
+        }
+
+        else if (*text == '|' && *(text + 1) == '|') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_OR));
+            text += 2;
         }
 
         else if (*text == ';') {

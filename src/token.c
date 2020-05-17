@@ -76,6 +76,42 @@ char *token_to_string(Token *token) {
         return string_copy("%");
     }
 
+    if (token->type == TOKEN_TYPE_EQUALS) {
+        return string_copy("==");
+    }
+
+    if (token->type == TOKEN_TYPE_NOT_EQUALS) {
+        return string_copy("!=");
+    }
+
+    if (token->type == TOKEN_TYPE_GREATER) {
+        return string_copy(">");
+    }
+
+    if (token->type == TOKEN_TYPE_GREATER_EQUALS) {
+        return string_copy(">=");
+    }
+
+    if (token->type == TOKEN_TYPE_LOWER) {
+        return string_copy("<");
+    }
+
+    if (token->type == TOKEN_TYPE_LOWER_EQUALS) {
+        return string_copy("<=");
+    }
+
+    if (token->type == TOKEN_TYPE_NOT) {
+        return string_copy("!");
+    }
+
+    if (token->type == TOKEN_TYPE_AND) {
+        return string_copy("&&");
+    }
+
+    if (token->type == TOKEN_TYPE_OR) {
+        return string_copy("||");
+    }
+
     if (token->type == TOKEN_TYPE_STOP) {
         return string_copy(";");
     }

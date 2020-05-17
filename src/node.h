@@ -20,7 +20,18 @@ typedef enum NodeType {
     NODE_TYPE_MUL,
     NODE_TYPE_EXP,
     NODE_TYPE_DIV,
-    NODE_TYPE_MOD
+    NODE_TYPE_MOD,
+
+    NODE_TYPE_EQUALS,
+    NODE_TYPE_NOT_EQUALS,
+    NODE_TYPE_GREATER,
+    NODE_TYPE_GREATER_EQUALS,
+    NODE_TYPE_LOWER,
+    NODE_TYPE_LOWER_EQUALS,
+
+    NODE_TYPE_NOT,
+    NODE_TYPE_AND,
+    NODE_TYPE_OR
 } NodeType;
 
 typedef struct Node {

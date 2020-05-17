@@ -128,6 +128,94 @@ char *node_to_string(Node *node) {
         return string_buffer;
     }
 
+    if (node->type == NODE_TYPE_EQUALS) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s == %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_NOT_EQUALS) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s != %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_GREATER) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s > %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_GREATER_EQUALS) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s >= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_LOWER) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s < %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_LOWER_EQUALS) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s <= %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_NOT) {
+        char *node_string = node_to_string(node->value.child);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( ! %s )", node_string);
+        free(node_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_AND) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s && %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_OR) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( %s || %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
     printf("[ERROR] Unkown node type: %d\n", node->type);
     exit(EXIT_FAILURE);
 }
