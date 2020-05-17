@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
+#include <stdbool.h>
 
 #include "constants.h"
 #include "library.h"
@@ -16,7 +16,7 @@
 
 Map *global_vars_map;
 
-void run(char *text) {
+void run(char *text, bool print_result) {
     #ifdef DEBUG
         printf("[DEBUG] Text: %s\n", text);
     #endif
@@ -60,9 +60,11 @@ void run(char *text) {
     list_item = nodes_list->first;
     while (list_item != NULL) {
         Value *value = start_interpreter(list_item->value, global_vars_map);
-        char *value_string = value_to_string(value);
-        printf("%s\n", value_string);
-        free(value_string);
+        if (print_result) {
+            char *value_string = value_to_string(value);
+            printf("%s\n", value_string);
+            free(value_string);
+        }
         value_free(value);
         list_item = list_item->next;
     }
@@ -92,14 +94,14 @@ int main(int argc, char **argv) {
     if (argc >= 2) {
         FILE *file = fopen(argv[1], "r");
         fseek(file, 0, SEEK_END);
-        uint64_t file_size = ftell(file);
+        long file_size = ftell(file);
         fseek(file, 0, SEEK_SET);
         char *file_buffer = malloc(file_size + 1);
         fread(file_buffer, 1, file_size, file);
         file_buffer[file_size] = '\0';
         fclose(file);
 
-        run(file_buffer);
+        run(file_buffer, false);
     }
 
     // Else run REPL loop
@@ -128,7 +130,7 @@ int main(int argc, char **argv) {
                     break;
                 }
 
-                run(line_buffer);
+                run(line_buffer, true);
             }
         }
     }

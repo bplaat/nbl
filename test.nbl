@@ -4,9 +4,12 @@ x = pi;;;
 y = x * 5;;;
 z = e / 2;;;;
 
+println('x = ' + x + ', y = ' + y + ', z = ' + z);
+
 // fsdjjlsdakjfsdajl
 
-name = 'Bastiaan';;;;;
+name = input('Name > ');
+println('Hello ', name, '!');
 
 /*
 
