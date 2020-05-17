@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 #include "constants.h"
+#include "library.h"
 #include "list.h"
 #include "token.h"
 #include "lexer.h"
@@ -22,7 +21,7 @@ void run(char *text) {
         printf("[DEBUG] Text: %s\n", text);
     #endif
 
-    // Lexer
+    // Lexer the text
     List *tokens_list = lexer(text);
 
     // Print tokens list
@@ -43,10 +42,10 @@ void run(char *text) {
         printf("\n");
     #endif
 
-    // Parser
+    // Parse the tokens list
     List *nodes_list = parser(tokens_list);
 
-    // Print nodes
+    // Print nodes list
     #ifdef DEBUG
         list_item = nodes_list->first;
         while (list_item != NULL) {
@@ -57,7 +56,7 @@ void run(char *text) {
         }
     #endif
 
-    // Interpreter the nodes
+    // Interpreter the nodes list
     list_item = nodes_list->first;
     while (list_item != NULL) {
         Value *value = start_interpreter(list_item->value, global_vars_map);
@@ -68,14 +67,6 @@ void run(char *text) {
         list_item = list_item->next;
     }
 
-    // Free nodes
-    list_item = nodes_list->first;
-    while (list_item != NULL) {
-        node_free(list_item->value);
-        list_item = list_item->next;
-    }
-    list_free(nodes_list);
-
     // Free tokens list
     list_item = tokens_list->first;
     while (list_item != NULL) {
@@ -83,13 +74,19 @@ void run(char *text) {
         list_item = list_item->next;
     }
     list_free(tokens_list);
+
+    // Free nodes list
+    list_item = nodes_list->first;
+    while (list_item != NULL) {
+        node_free(list_item->value);
+        list_item = list_item->next;
+    }
+    list_free(nodes_list);
 }
 
 int main(int argc, char **argv) {
-    // Create global vars map
-    global_vars_map = map_new();
-    map_set(global_vars_map, "PI", value_new_number(M_PI));
-    map_set(global_vars_map, "E", value_new_number(M_E));
+    // Get the NBL standard library
+    global_vars_map = get_library();
 
     // When file is given run file
     if (argc >= 2) {

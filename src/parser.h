@@ -4,6 +4,8 @@
 #include "node.h"
 #include "list.h"
 
+List *parse_args(void);
+
 Node *parse_factor(void);
 
 Node *parse_term(void);

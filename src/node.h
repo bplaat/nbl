@@ -3,12 +3,15 @@
 
 #include <stdbool.h>
 
+#include "list.h"
+
 typedef enum NodeType {
     NODE_TYPE_NULL,
     NODE_TYPE_NUMBER,
     NODE_TYPE_STRING,
     NODE_TYPE_BOOLEAN,
     NODE_TYPE_VARIABLE,
+    NODE_TYPE_CALL,
 
     NODE_TYPE_ASSIGN,
     NODE_TYPE_ADD_ASSIGN,
@@ -20,6 +23,7 @@ typedef enum NodeType {
 
     NODE_TYPE_UNARY_ADD,
     NODE_TYPE_UNARY_SUB,
+    NODE_TYPE_NOT,
 
     NODE_TYPE_ADD,
     NODE_TYPE_SUB,
@@ -34,7 +38,6 @@ typedef enum NodeType {
     NODE_TYPE_GREATER_EQUALS,
     NODE_TYPE_LOWER,
     NODE_TYPE_LOWER_EQUALS,
-    NODE_TYPE_NOT,
     NODE_TYPE_AND,
     NODE_TYPE_OR
 } NodeType;
@@ -48,7 +51,17 @@ typedef struct Node {
 
         bool boolean;
 
-        struct Node *child;
+        struct {
+            char *variable;
+            List *arguments;
+        } call;
+
+        struct {
+            char *variable;
+            struct Node *node;
+        } assign;
+
+        struct Node *node;
 
         struct {
             struct Node *left;

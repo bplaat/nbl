@@ -64,8 +64,8 @@ boolean && boolean    ->    boolean
 boolean || boolean    ->    boolean
 ```
 
-## Coments
-```php
+## Comments
+```js
 # Single line comment
 
 // Single line comment

@@ -1,7 +1,9 @@
+// #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "map.h"
+// #include "value.h"
 
 Map *map_new(void) {
     Map *map = malloc(sizeof(Map));
@@ -11,6 +13,13 @@ Map *map_new(void) {
 }
 
 void *map_get(Map *map, char *key) {
+    // printf("Global Vars Dump:\n");
+    // MapItem *q = map->first;
+    // while (q != NULL) {
+    //     printf("%s = %s\n", q->key, value_to_string(q->value));
+    //     q = q->next;
+    // }
+
     MapItem *map_item = map->first;
     while (map_item != NULL) {
         if (!strcmp(map_item->key, key)) {
@@ -26,6 +35,14 @@ void map_set(Map *map, char *key, void *value) {
     while (map_item != NULL) {
         if (!strcmp(map_item->key, key)) {
             map_item->value = value;
+
+            // printf("Global Vars Dump:\n");
+            // MapItem *q = map->first;
+            // while (q != NULL) {
+            //     printf("%s = %s\n", q->key, value_to_string(q->value));
+            //     q = q->next;
+            // }
+
             return;
         }
         map_item = map_item->next;
@@ -41,6 +58,13 @@ void map_set(Map *map, char *key, void *value) {
         map->last->next = map_item;
     }
     map->last = map_item;
+
+    // printf("Global Vars Dump:\n");
+    // MapItem *q = map->first;
+    // while (q != NULL) {
+    //     printf("%s = %s\n", q->key, value_to_string(q->value));
+    //     q = q->next;
+    // }
 }
 
 void map_free(Map *map) {

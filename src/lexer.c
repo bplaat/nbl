@@ -240,6 +240,11 @@ List *lexer(char *text) {
             text += 2;
         }
 
+        else if (*text == ',') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_COMMA));
+            text++;
+        }
+
         else if (*text == ';') {
             list_add(tokens_list, token_new(TOKEN_TYPE_STOP));
             text++;

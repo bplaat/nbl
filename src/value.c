@@ -38,6 +38,13 @@ Value *value_new_boolean(bool boolean) {
     return value;
 }
 
+Value *value_new_native_function(Value *(*native_function)(List *list)) {
+    Value *value = malloc(sizeof(Value));
+    value->type = VALUE_TYPE_NATIVE_FUNCTION;
+    value->value.native_function = native_function;
+    return value;
+}
+
 char *value_to_string(Value *value) {
     if (value->type == VALUE_TYPE_NULL) {
         return string_copy("null");
@@ -59,6 +66,10 @@ char *value_to_string(Value *value) {
         } else {
             return string_copy("false");
         }
+    }
+
+    if (value->type == VALUE_TYPE_NATIVE_FUNCTION) {
+        return string_copy("function");
     }
 
     printf("[ERROR] Unkown value type: %d\n", value->type);

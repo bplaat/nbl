@@ -38,16 +38,33 @@ Value *interpreter(Node *node) {
         }
     }
 
+    if (node->type == NODE_TYPE_CALL) {
+        Value *value = map_get(vars_map, node->value.call.variable);
+        if (value != NULL) {
+            List *arguments = node->value.call.arguments;
+            ListItem *list_item = arguments->first;
+            while (list_item != NULL) {
+                list_item->value = interpreter(list_item->value);
+                list_item = list_item->next;
+            }
+
+            return value->value.native_function(arguments);
+        } else {
+            printf("[ERROR] Function call error\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
-        Value *value = interpreter(node->value.operation.right);
-        map_set(vars_map, node->value.operation.left->value.string, value);
+        Value *value = interpreter(node->value.assign.node);
+        map_set(vars_map, node->value.assign.variable, value);
         return value;
     }
 
     if (node->type == NODE_TYPE_ADD_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -79,8 +96,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_SUB_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -96,8 +113,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MUL_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -113,8 +130,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_EXP_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -130,8 +147,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_DIV_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -147,8 +164,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MOD_ASSIGN) {
-        char *variable = node->value.operation.left->value.string;
-        Value *value = interpreter(node->value.operation.right);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
@@ -165,7 +182,7 @@ Value *interpreter(Node *node) {
 
     // Unaries
     if (node->type == NODE_TYPE_UNARY_ADD) {
-        Value *value = interpreter(node->value.child);
+        Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_NUMBER) {
             return value_new_number(+value->value.number);
@@ -178,7 +195,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_UNARY_SUB) {
-        Value *value = interpreter(node->value.child);
+        Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_NUMBER) {
             return value_new_number(-value->value.number);
@@ -191,7 +208,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_NOT) {
-        Value *value = interpreter(node->value.child);
+        Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_BOOLEAN) {
             return value_new_boolean(!value->value.boolean);

@@ -20,6 +20,7 @@ typedef enum TokenType {
 
     TOKEN_TYPE_LPAREN,
     TOKEN_TYPE_RPAREN,
+    TOKEN_TYPE_COMMA,
     TOKEN_TYPE_STOP,
 
     TOKEN_TYPE_ADD,

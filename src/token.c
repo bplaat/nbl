@@ -76,6 +76,10 @@ char *token_to_string(Token *token) {
         return string_copy(")");
     }
 
+    if (token->type == TOKEN_TYPE_COMMA) {
+        return string_copy(",");
+    }
+
     if (token->type == TOKEN_TYPE_STOP) {
         return string_copy(";");
     }

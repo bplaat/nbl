@@ -3,19 +3,26 @@
 
 #include <stdbool.h>
 
+#include "list.h"
+
 typedef enum ValueType {
     VALUE_TYPE_NULL,
     VALUE_TYPE_NUMBER,
     VALUE_TYPE_STRING,
-    VALUE_TYPE_BOOLEAN
+    VALUE_TYPE_BOOLEAN,
+    VALUE_TYPE_NATIVE_FUNCTION
 } ValueType;
 
 typedef struct Value {
     ValueType type;
     union {
         double number;
+
         char *string;
+
         bool boolean;
+
+        struct Value *(*native_function)(List *list);
     } value;
 } Value;
 
@@ -29,6 +36,8 @@ Value *value_new_number(double number);
 Value *value_new_string(char *string);
 
 Value *value_new_boolean(bool boolean);
+
+Value *value_new_native_function(Value *(*native_function)(List *list));
 
 char *value_to_string(Value *value);
 
