@@ -6,15 +6,19 @@ typedef enum TokenType {
     TOKEN_TYPE_VARIABLE,
 
     TOKEN_TYPE_ASSIGN,
-    TOKEN_TYPE_STOP,
 
-    TOKEN_TYPE_PAREN_LEFT,
-    TOKEN_TYPE_PAREN_RIGHT,
+    TOKEN_TYPE_LPAREN,
+    TOKEN_TYPE_RPAREN,
+
     TOKEN_TYPE_ADD,
     TOKEN_TYPE_SUB,
+
     TOKEN_TYPE_MUL,
+    TOKEN_TYPE_EXP,
     TOKEN_TYPE_DIV,
-    TOKEN_TYPE_MOD
+    TOKEN_TYPE_MOD,
+
+    TOKEN_TYPE_STOP
 } TokenType;
 
 typedef struct Token {
@@ -27,7 +31,7 @@ typedef struct Token {
 
 Token *token_new(TokenType type);
 
-void token_dump(Token *token);
+char *token_to_string(Token *token);
 
 void token_free(Token *token);
 

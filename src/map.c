@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+
 #include "map.h"
 
 Map *map_new(void) {
@@ -29,6 +30,7 @@ void map_set(Map *map, char *key, void *value) {
         }
         map_item = map_item->next;
     }
+
     map_item = malloc(sizeof(MapItem));
     map_item->key = key;
     map_item->value = value;

@@ -1,87 +1,93 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <string.h>
+
+#include "lexer.h"
 #include "list.h"
 #include "token.h"
-#include "lexer.h"
+#include "utils.h"
 
 List *lexer(char *text) {
-    List *tokens = list_new();
-    char *buffer = malloc(512);
+    List *tokens_list = list_new();
+
+    char string_buffer[64];
 
     while (*text != 0) {
         if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
-            char *buffer_current = buffer;
+            char *string_buffer_current = string_buffer;
             while (
                 isdigit(*text) || *text == '.' || *text == 'e' || *text == 'E' ||
-                (*text == '-' && (*(buffer_current - 1) == 'e' || *(buffer_current - 1) == 'E'))
+                (*text == '-' && (*(string_buffer_current - 1) == 'e' || *(string_buffer_current - 1) == 'E'))
             ) {
-                *buffer_current++ = *text++;
+                *string_buffer_current++ = *text++;
             }
-            *buffer_current = 0;
+            *string_buffer_current = 0;
 
             Token *token = token_new(TOKEN_TYPE_NUMBER);
-            token->value.number = atof(buffer);
-            list_add(tokens, token);
+            token->value.number = atof(string_buffer);
+            list_add(tokens_list, token);
         }
 
         else if (isalpha(*text) || *text == '_') {
-            char *buffer_current = buffer;
+            char *string_buffer_current = string_buffer;
             while (isalnum(*text) || *text == '_') {
-                *buffer_current++ = *text++;
+                *string_buffer_current++ = *text++;
             }
-            *buffer_current = 0;
+            *string_buffer_current = 0;
 
             Token *token = token_new(TOKEN_TYPE_VARIABLE);
-            char *buffer_copy = malloc(strlen(buffer) + 1);
-            strcpy(buffer_copy, buffer);
-            token->value.string = buffer_copy;
-            list_add(tokens, token);
+            token->value.string = string_copy(string_buffer);
+            list_add(tokens_list, token);
         }
 
-        else if (*text == '=' || *text == ':') {
-            list_add(tokens, token_new(TOKEN_TYPE_ASSIGN));
-            text++;
-        }
-
-        else if (*text == ';' || *text == ',') {
-            list_add(tokens, token_new(TOKEN_TYPE_STOP));
+        else if (*text == '=') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_ASSIGN));
             text++;
         }
 
         else if (*text == '(') {
-            list_add(tokens, token_new(TOKEN_TYPE_PAREN_LEFT));
+            list_add(tokens_list, token_new(TOKEN_TYPE_LPAREN));
             text++;
         }
 
         else if (*text == ')') {
-            list_add(tokens, token_new(TOKEN_TYPE_PAREN_RIGHT));
+            list_add(tokens_list, token_new(TOKEN_TYPE_RPAREN));
             text++;
         }
 
         else if (*text == '+') {
-            list_add(tokens, token_new(TOKEN_TYPE_ADD));
+            list_add(tokens_list, token_new(TOKEN_TYPE_ADD));
             text++;
         }
 
         else if (*text == '-') {
-            list_add(tokens, token_new(TOKEN_TYPE_SUB));
+            list_add(tokens_list, token_new(TOKEN_TYPE_SUB));
             text++;
         }
 
         else if (*text == '*') {
-            list_add(tokens, token_new(TOKEN_TYPE_MUL));
-            text++;
+            if (*(text + 1) == '*') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_EXP));
+                text += 2;
+            }
+            else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_MUL));
+                text++;
+            }
         }
 
         else if (*text == '/') {
-            list_add(tokens, token_new(TOKEN_TYPE_DIV));
+            list_add(tokens_list, token_new(TOKEN_TYPE_DIV));
             text++;
         }
 
         else if (*text == '%') {
-            list_add(tokens, token_new(TOKEN_TYPE_MOD));
+            list_add(tokens_list, token_new(TOKEN_TYPE_MOD));
+            text++;
+        }
+
+        else if (*text == ';') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_STOP));
             text++;
         }
 
@@ -90,18 +96,10 @@ List *lexer(char *text) {
         }
 
         else {
-            printf("Unexpected character: '%c'\n", *text);
-            ListItem *list_item = tokens->first;
-            while (list_item != NULL) {
-                token_free(list_item->value);
-                list_item = list_item->next;
-            }
-            free(buffer);
-            list_free(tokens);
-            return NULL;
+            printf("[ERROR] Unexpected character: '%c'\n", *text);
+            exit(EXIT_FAILURE);
         }
     }
 
-    free(buffer);
-    return tokens;
+    return tokens_list;
 }

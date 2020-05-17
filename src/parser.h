@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "node.h"
 #include "list.h"
 
 Node *parse_factor(void);
@@ -11,8 +12,6 @@ Node *parse_expr(void);
 
 Node *parse_stat(void);
 
-Node *parse_block(void);
-
-Node *parser(List *tokens);
+List *parser(List *tokens);
 
 #endif

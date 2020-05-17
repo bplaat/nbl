@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "node.h"
+#include "utils.h"
 
 Node *node_new(NodeType type) {
     Node *node = malloc(sizeof(Node));
@@ -8,81 +10,107 @@ Node *node_new(NodeType type) {
     return node;
 }
 
-void node_dump(Node *node) {
+char *node_to_string(Node *node) {
     if (node->type == NODE_TYPE_NUMBER) {
-        printf("%.15g", node->value.number);
-    }
-    if (node->type == NODE_TYPE_VARIABLE) {
-        printf("%s", node->value.string);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %.15g )", node->value.number);
+        return string_buffer;
     }
 
-    if (node->type == NODE_TYPE_BLOCK) {
-        ListItem *list_item = node->value.children->first;
-        while (list_item != NULL) {
-            printf("- ");
-            node_dump(list_item->value);
-            putchar('\n');
-            list_item = list_item->next;
-        }
+    if (node->type == NODE_TYPE_VARIABLE) {
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s )", node->value.string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_ASSIGN) {
-        node_dump(node->value.children->first->value);
-        printf(" = ");
-        node_dump(node->value.children->first->next->value);
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s = %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_UNARY_ADD) {
-        printf("(+ ");
-        node_dump(node->value.children->first->value);
-        putchar(')');
+        char *node_string = node_to_string(node->value.child);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( + %s )", node_string);
+        free(node_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_UNARY_SUB) {
-        printf("(- ");
-        node_dump(node->value.children->first->value);
-        putchar(')');
+        char *node_string = node_to_string(node->value.child);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( - %s )", node_string);
+        free(node_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_ADD) {
-        putchar('(');
-        node_dump(node->value.children->first->value);
-        printf(" + ");
-        node_dump(node->value.children->first->next->value);
-        putchar(')');
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s + %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_SUB) {
-        putchar('(');
-        node_dump(node->value.children->first->value);
-        printf(" - ");
-        node_dump(node->value.children->first->next->value);
-        putchar(')');
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s - %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_MUL) {
-        putchar('(');
-        node_dump(node->value.children->first->value);
-        printf(" * ");
-        node_dump(node->value.children->first->next->value);
-        putchar(')');
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s * %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_EXP) {
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s ** %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_DIV) {
-        putchar('(');
-        node_dump(node->value.children->first->value);
-        printf(" / ");
-        node_dump(node->value.children->first->next->value);
-        putchar(')');
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s / %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
 
     if (node->type == NODE_TYPE_MOD) {
-        putchar('(');
-        node_dump(node->value.children->first->value);
-        printf(" %% ");
-        node_dump(node->value.children->first->next->value);
-        putchar(')');
+        char *left_string = node_to_string(node->value.operation.left);
+        char *right_string = node_to_string(node->value.operation.right);
+        char *string_buffer = malloc(64);
+        sprintf(string_buffer, "( %s %% %s )", left_string, right_string);
+        free(left_string);
+        free(right_string);
+        return string_buffer;
     }
+
+    printf("[ERROR] Unkown node type");
+    exit(EXIT_FAILURE);
 }
 
 void node_free(Node *node) {
@@ -90,13 +118,13 @@ void node_free(Node *node) {
         free(node->value.string);
     }
 
-    if (node->type >= NODE_TYPE_BLOCK && node->type <= NODE_TYPE_MOD) {
-        ListItem *list_item = node->value.children->first;
-        while (list_item != NULL) {
-            node_free(list_item->value);
-            list_item = list_item->next;
-        }
-        list_free(node->value.children);
+    if (node->type >= NODE_TYPE_UNARY_ADD && node->type <= NODE_TYPE_UNARY_SUB) {
+        free(node->value.child);
+    }
+
+    if (node->type >= NODE_TYPE_ADD && node->type <= NODE_TYPE_MOD) {
+        node_free(node->value.operation.left);
+        node_free(node->value.operation.right);
     }
 
     free(node);
