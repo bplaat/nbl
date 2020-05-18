@@ -98,13 +98,38 @@ List *lexer(char *text) {
 
         else if (*text == 'e' && *(text + 1) == 'l' && *(text + 2) == 's' && *(text + 3) == 'e') {
             if (*(text + 4) == ' ' && *(text + 5) == 'i' && *(text + 6) == 'f') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ELSEIF));
+                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE_IF));
                 text += 7;
             }
             else {
                 list_add(tokens_list, token_new(TOKEN_TYPE_ELSE));
                 text += 4;
             }
+        }
+
+        else if (*text == 'w' && *(text + 1) == 'h' && *(text + 2) == 'i' && *(text + 3) == 'l' && *(text + 4) == 'e') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_WHILE));
+            text += 5;
+        }
+
+        else if (*text == 'd' && *(text + 1) == 'o') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_DO));
+            text += 2;
+        }
+
+        else if (*text == 'f' && *(text + 1) == 'o' && *(text + 2) == 'r') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_FOR));
+            text += 3;
+        }
+
+        else if (*text == 'b' && *(text + 1) == 'r' && *(text + 2) == 'e' && *(text + 3) == 'a' && *(text + 4) == 'k') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_BREAK));
+            text += 5;
+        }
+
+        else if (*text == 'c' && *(text + 1) == 'o' && *(text + 2) == 'n' && *(text + 3) == 't' && *(text + 4) == 'i' && *(text + 5) == 'n' && *(text + 6) == 'u' && *(text + 7) == 'e') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_CONTINUE));
+            text += 8;
         }
 
         else if (isalpha(*text) || *text == '_') {

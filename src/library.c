@@ -9,7 +9,7 @@
 #include "map.h"
 #include "value.h"
 
-// Types
+// Core
 Value *do_type(List *arguments) {
     Value *value = arguments->first->value;
 
@@ -66,6 +66,14 @@ Value *do_number(List *arguments) {
 Value *do_string(List *arguments) {
     Value *value = arguments->first->value;
     return value_new_string(value_to_string(value));
+}
+
+Value *do_exit(List *arguments) {
+    if (arguments->first != NULL && ((Value *)arguments->first->value)->type == VALUE_TYPE_NUMBER) {
+        Value *value = arguments->first->value;
+        exit(floor(value->value.number));
+    }
+    exit(0);
 }
 
 // I/O
@@ -146,11 +154,12 @@ Value *do_atan(List *arguments) {
 Map *get_library(void) {
     Map *library = map_new();
 
-    // Types
+    // Core
     map_set(library, "type", value_new_native_function(do_type));
     map_set(library, "len", value_new_native_function(do_len));
     map_set(library, "number", value_new_native_function(do_number));
     map_set(library, "string", value_new_native_function(do_string));
+    map_set(library, "exit", value_new_native_function(do_exit));
 
     // I/O
     map_set(library, "print", value_new_native_function(do_print));

@@ -72,12 +72,32 @@ char *token_to_string(Token *token) {
         return string_copy("if");
     }
 
-    if (token->type == TOKEN_TYPE_ELSEIF) {
+    if (token->type == TOKEN_TYPE_ELSE_IF) {
         return string_copy("else if");
     }
 
     if (token->type == TOKEN_TYPE_ELSE) {
         return string_copy("else");
+    }
+
+    if (token->type == TOKEN_TYPE_WHILE) {
+        return string_copy("while");
+    }
+
+    if (token->type == TOKEN_TYPE_DO) {
+        return string_copy("do");
+    }
+
+    if (token->type == TOKEN_TYPE_FOR) {
+        return string_copy("for");
+    }
+
+    if (token->type == TOKEN_TYPE_BREAK) {
+        return string_copy("break");
+    }
+
+    if (token->type == TOKEN_TYPE_CONTINUE) {
+        return string_copy("continue");
     }
 
     if (token->type == TOKEN_TYPE_LBLOCK) {

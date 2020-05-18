@@ -18,10 +18,6 @@
 Map *global_vars_map;
 
 void run(char *text, bool print_result) {
-    #ifdef DEBUG
-        printf("[DEBUG] Text: %s\n", text);
-    #endif
-
     // Lexer the text
     List *tokens_list = lexer(text);
 

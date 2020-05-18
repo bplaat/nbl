@@ -42,8 +42,13 @@ typedef enum NodeType {
     NODE_TYPE_OR,
 
     NODE_TYPE_IF,
-    NODE_TYPE_ELSEIF,
-    NODE_TYPE_ELSE
+    NODE_TYPE_ELSE_IF,
+    NODE_TYPE_ELSE,
+    NODE_TYPE_WHILE,
+    NODE_TYPE_DO_WHILE,
+    NODE_TYPE_FOR,
+    NODE_TYPE_BREAK,
+    NODE_TYPE_CONTINUE,
 } NodeType;
 
 typedef struct Node {
@@ -73,12 +78,24 @@ typedef struct Node {
         } operation;
 
         struct {
-            struct Node *node;
+            struct Node *cond;
             List *nodes;
             struct Node *next;
         } condition;
 
         List *nodes;
+
+        struct {
+            struct Node *cond;
+            List *nodes;
+        } while_loop;
+
+        struct {
+            struct Node *init;
+            struct Node *cond;
+            struct Node *inc;
+            List *nodes;
+        } for_loop;
     } value;
 } Node;
 

@@ -18,6 +18,8 @@ Node *parse_equals(void);
 
 Node *parse_bool(void);
 
+Node *parse_assign(void);
+
 Node *parse_stat(void);
 
 List *parser(List *tokens);

@@ -9,16 +9,28 @@
 
 /*
 root = (stat | stat STOP)*
-stat = bool |
-    VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool |
-    IF LPAREN bool RPAREN block (ELSEIF LPAREN bool RPAREN block)* (ELSE block)?
+
+stat = bool | assign |
+    IF LPAREN bool RPAREN block (ELSE_IF LPAREN bool RPAREN block)* (ELSE block)? |
+    WHILE LPAREN bool RPAREN block |
+    DO block WHILE LPAREN bool RPAREN |
+    FOR LPAREN assign STOP bool STOP assign RPAREN block
+
+assign = VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool
+
 bool = equals ((AND | OR) equals)*
+
 equals = expr ((EQUALS | NOT_EQUALS | GREATER | GREATER_EQUALS | LOWER | LOWER_EQUALS) expr)*
+
 expr = term ((ADD | SUB) term)* |
+
 term = factor ((MUL | EXP | DIV | MOD) factor)*
+
 factor = ADD factor | SUB factor | NOT factor | LPAREN bool RPAREN |
     NULL | NUMBER | STRING | BOOLEAN | VARIABLE | VARIABLE LPAREN args RPAREN
+
 block = stat | LBLOCK (stat STOP?)* RBLOCK
+
 args = (bool COMMA?)*
 */
 
@@ -310,7 +322,7 @@ Node *parse_bool(void) {
     return node;
 }
 
-Node *parse_stat(void) {
+Node *parse_assign(void) {
     if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
@@ -327,7 +339,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_ADD_ASSIGN
@@ -343,7 +355,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_SUB_ASSIGN
@@ -359,7 +371,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_MUL_ASSIGN
@@ -375,7 +387,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_EXP_ASSIGN
@@ -391,7 +403,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_DIV_ASSIGN
@@ -407,7 +419,7 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (
+    if (
         ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
         list_item->next != NULL &&
         ((Token *)list_item->next->value)->type == TOKEN_TYPE_MOD_ASSIGN
@@ -423,14 +435,27 @@ Node *parse_stat(void) {
         return new_node;
     }
 
-    else if (((Token *)list_item->value)->type == TOKEN_TYPE_IF) {
-        list_item = list_item->next;
-        list_item = list_item->next;
-        Node *condition = parse_bool();
-        list_item = list_item->next;
+    char *token_string = token_to_string((Token *)list_item->value);
+    printf("[ERROR] Unexpected token: %s\n", token_string);
+    exit(EXIT_FAILURE);
+}
 
+Node *parse_stat(void) {
+    if (
+        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+        list_item->next != NULL &&
+        ((Token *)list_item->next->value)->type >= TOKEN_TYPE_ASSIGN &&
+        ((Token *)list_item->next->value)->type <= TOKEN_TYPE_MOD_ASSIGN
+    ) {
+        return parse_assign();
+    }
+
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_IF) {
         Node *node = node_new(NODE_TYPE_IF);
-        node->value.condition.node = condition;
+        list_item = list_item->next;
+        list_item = list_item->next;
+        node->value.condition.cond = parse_bool();
+        list_item = list_item->next;
         node->value.condition.nodes = parse_block();
         node->value.condition.next = NULL;
 
@@ -438,18 +463,18 @@ Node *parse_stat(void) {
 
         while (
             list_item != NULL && (
-                ((Token *)list_item->value)->type == TOKEN_TYPE_ELSEIF ||
+                ((Token *)list_item->value)->type == TOKEN_TYPE_ELSE_IF ||
                 ((Token *)list_item->value)->type == TOKEN_TYPE_ELSE
             )
         ) {
-            if (((Token *)list_item->value)->type == TOKEN_TYPE_ELSEIF) {
+            if (((Token *)list_item->value)->type == TOKEN_TYPE_ELSE_IF) {
                 list_item = list_item->next;
                 list_item = list_item->next;
                 Node *new_condition = parse_bool();
                 list_item = list_item->next;
 
                 Node *new_node = node_new(NODE_TYPE_IF);
-                new_node->value.condition.node = new_condition;
+                new_node->value.condition.cond = new_condition;
                 new_node->value.condition.nodes = parse_block();
                 new_node->value.condition.next = NULL;
                 current_node->value.condition.next = new_node;
@@ -465,12 +490,56 @@ Node *parse_stat(void) {
                 current_node = new_node;
             }
         }
+
         return node;
     }
 
-    else {
-        return parse_bool();
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_WHILE) {
+        Node *node = node_new(NODE_TYPE_WHILE);
+        list_item = list_item->next;
+        list_item = list_item->next;
+        node->value.while_loop.cond = parse_bool();
+        list_item = list_item->next;
+        node->value.while_loop.nodes = parse_block();
+        return node;
     }
+
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_DO) {
+        Node *node = node_new(NODE_TYPE_DO_WHILE);
+        list_item = list_item->next;
+        node->value.while_loop.nodes = parse_block();
+        list_item = list_item->next;
+        list_item = list_item->next;
+        node->value.while_loop.cond = parse_bool();
+        list_item = list_item->next;
+        return node;
+    }
+
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_FOR) {
+        Node *node = node_new(NODE_TYPE_FOR);
+        list_item = list_item->next;
+        list_item = list_item->next;
+        node->value.for_loop.init = parse_assign();
+        list_item = list_item->next;
+        node->value.for_loop.cond = parse_bool();
+        list_item = list_item->next;
+        node->value.for_loop.inc = parse_assign();
+        list_item = list_item->next;
+        node->value.for_loop.nodes = parse_block();
+        return node;
+    }
+
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_BREAK) {
+        list_item = list_item->next;
+        return node_new(NODE_TYPE_BREAK);
+    }
+
+    if (((Token *)list_item->value)->type == TOKEN_TYPE_CONTINUE) {
+        list_item = list_item->next;
+        return node_new(NODE_TYPE_CONTINUE);
+    }
+
+    return parse_bool();
 }
 
 List *parser(List *tokens) {

@@ -74,12 +74,12 @@ Value *interpreter(Node *node) {
     // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
         Value *value = interpreter(node->value.assign.node);
-        map_set(vars_map, node->value.assign.variable, value_copy(value));
+        map_set(vars_map, string_copy(node->value.assign.variable), value_copy(value));
         return value;
     }
 
     if (node->type == NODE_TYPE_ADD_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -130,7 +130,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_SUB_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -149,7 +149,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MUL_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -168,7 +168,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_EXP_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -187,7 +187,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_DIV_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -206,7 +206,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MOD_ASSIGN) {
-        char *variable = node->value.assign.variable;
+        char *variable = string_copy(node->value.assign.variable);
         Value *value = interpreter(node->value.assign.node);
         Value *old_value = map_get(vars_map, variable);
 
@@ -577,8 +577,8 @@ Value *interpreter(Node *node) {
         }
     }
 
-    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSEIF) {
-        Value *value = interpreter(node->value.condition.node);
+    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSE_IF) {
+        Value *value = interpreter(node->value.condition.cond);
 
         if (value->type == VALUE_TYPE_BOOLEAN) {
             if (value->value.boolean) {
@@ -595,6 +595,7 @@ Value *interpreter(Node *node) {
                 if (node->value.condition.next != NULL) {
                     return interpreter(node->value.condition.next);
                 }
+                return value_new_null();
             }
         }
 
@@ -614,7 +615,78 @@ Value *interpreter(Node *node) {
         return value_new_null();
     }
 
-    printf("[ERROR] Unkown node type\n");
+    if (node->type == NODE_TYPE_WHILE) {
+        Value *value = interpreter(node->value.while_loop.cond);
+        if (value->type == VALUE_TYPE_BOOLEAN) {
+            while (value->value.boolean) {
+                value_free(value);
+
+                ListItem *list_item = node->value.while_loop.nodes->first;
+                while (list_item != NULL) {
+                    Value *new_value = interpreter(list_item->value);
+                    value_free(new_value);
+                    list_item = list_item->next;
+                }
+
+                value = interpreter(node->value.while_loop.cond);
+                if (value->type != VALUE_TYPE_BOOLEAN) {
+                    printf("[ERROR] Type error by while\n");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            value_free(value);
+            return value_new_null();
+        }
+
+        else {
+            printf("[ERROR] Type error by while\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_DO_WHILE) {
+        Value *value = NULL;
+        do {
+            if (value != NULL) {
+                value_free(value);
+            }
+
+            ListItem *list_item = node->value.while_loop.nodes->first;
+            while (list_item != NULL) {
+                Value *new_value = interpreter(list_item->value);
+                value_free(new_value);
+                list_item = list_item->next;
+            }
+
+            value = interpreter(node->value.while_loop.cond);
+            if (value->type != VALUE_TYPE_BOOLEAN) {
+                printf("[ERROR] Type error by while\n");
+                exit(EXIT_FAILURE);
+            }
+        } while (value->value.boolean);
+        value_free(value);
+        return value_new_null();
+    }
+
+    if (node->type == NODE_TYPE_FOR) {
+        // TODO
+
+        return value_new_null();
+    }
+
+    if (node->type == NODE_TYPE_BREAK) {
+        // TODO
+
+        return value_new_null();
+    }
+
+    if (node->type == NODE_TYPE_CONTINUE) {
+        // TODO
+
+        return value_new_null();
+    }
+
+    printf("[ERROR] Interpreter unkown node type: %d\n", node->type);
     exit(EXIT_FAILURE);
 }
 

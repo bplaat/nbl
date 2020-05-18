@@ -309,7 +309,7 @@ char *node_to_string(Node *node) {
         }
 
         char *string_buffer = malloc(BUFFER_SIZE);
-        char *node_string = node_to_string(node->value.condition.node);
+        char *node_string = node_to_string(node->value.condition.cond);
         if (node->value.condition.next != NULL) {
             char *next_string = node_to_string(node->value.condition.next);
             sprintf(string_buffer, "( if (%s) { %s } %s)", node_string, statements_string_buffer, next_string);
@@ -322,7 +322,7 @@ char *node_to_string(Node *node) {
         return string_buffer;
     }
 
-    if (node->type == NODE_TYPE_ELSEIF) {
+    if (node->type == NODE_TYPE_ELSE_IF) {
         char *statements_string_buffer = malloc(BUFFER_SIZE);
         statements_string_buffer[0] = '\0';
 
@@ -339,7 +339,7 @@ char *node_to_string(Node *node) {
         }
 
         char *string_buffer = malloc(BUFFER_SIZE);
-        char *node_string = node_to_string(node->value.condition.node);
+        char *node_string = node_to_string(node->value.condition.cond);
         if (node->value.condition.next != NULL) {
             char *next_string = node_to_string(node->value.condition.next);
             sprintf(string_buffer, "( else if (%s) { %s } %s)", node_string, statements_string_buffer, next_string);
@@ -372,6 +372,90 @@ char *node_to_string(Node *node) {
         sprintf(string_buffer, "( else { %s } )", statements_string_buffer);
         free(statements_string_buffer);
         return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_WHILE) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.while_loop.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        char *node_string = node_to_string(node->value.while_loop.cond);
+        sprintf(string_buffer, "( while (%s) { %s } )", node_string, statements_string_buffer);
+        free(node_string);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_DO_WHILE) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.while_loop.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        char *node_string = node_to_string(node->value.while_loop.cond);
+        sprintf(string_buffer, "( do { %s } while (%s) )", statements_string_buffer, node_string);
+        free(node_string);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_FOR) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.for_loop.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        char *init_string = node_to_string(node->value.for_loop.init);
+        char *cond_string = node_to_string(node->value.for_loop.cond);
+        char *inc_string = node_to_string(node->value.for_loop.inc);
+        sprintf(string_buffer, "( for (%s; %s; %s) { %s } )", init_string, cond_string, inc_string, statements_string_buffer);
+        free(init_string);
+        free(cond_string);
+        free(inc_string);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_BREAK) {
+        return string_copy("( break )");
+    }
+
+    if (node->type == NODE_TYPE_CONTINUE) {
+        return string_copy("( continue )");
     }
 
     printf("[ERROR] Unkown node type: %d\n", node->type);
@@ -407,8 +491,9 @@ void node_free(Node *node) {
         node_free(node->value.operation.right);
     }
 
-    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSEIF) {
-        node_free(node->value.condition.node);
+    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSE_IF) {
+        node_free(node->value.condition.cond);
+
         ListItem *list_item = node->value.condition.nodes->first;
         while (list_item != NULL) {
             node_free(list_item->value);
@@ -425,6 +510,30 @@ void node_free(Node *node) {
             list_item = list_item->next;
         }
         list_free(node->value.nodes);
+    }
+
+    if (node->type == NODE_TYPE_WHILE || node->type == NODE_TYPE_DO_WHILE) {
+        node_free(node->value.while_loop.cond);
+
+        ListItem *list_item = node->value.while_loop.nodes->first;
+        while (list_item != NULL) {
+            node_free(list_item->value);
+            list_item = list_item->next;
+        }
+        list_free(node->value.while_loop.nodes);
+    }
+
+    if (node->type == NODE_TYPE_FOR) {
+        node_free(node->value.for_loop.init);
+        node_free(node->value.for_loop.cond);
+        node_free(node->value.for_loop.inc);
+
+        ListItem *list_item = node->value.for_loop.nodes->first;
+        while (list_item != NULL) {
+            node_free(list_item->value);
+            list_item = list_item->next;
+        }
+        list_free(node->value.for_loop.nodes);
     }
 
     free(node);

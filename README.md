@@ -101,7 +101,7 @@ number = 4.56
 if (number > 3) {
     println('Number is greater then 3!')
 }
-else if (number > 4) {
+ (number > 4) {
 
 }
 else {
@@ -128,6 +128,12 @@ do {
 // For loops
 for (i = 0; i < 100; i += 1) {
     println('- ' + i);
+}
+
+// For in loop
+names = [ 'Bastiaan', 'Dirk', 'Willem' ]
+for (name in names) {
+    println(name)
 }
 ```
 

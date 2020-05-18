@@ -1,3 +1,29 @@
+// While loops
+x = 0;
+while (x < 10) {
+    if (x == 2) {
+        break
+    }
+
+    println(x);
+    x += 1;
+}
+
+// Do while loops
+x = 0;
+do {
+    x = x + 1;
+    println(x);
+} while(x > 2);
+
+exit();
+
+
+// For loops
+for (i = 0; i < 100; i += 1) {
+    println('- ' + i);
+}
+
 # hoi
 
 n = 4
