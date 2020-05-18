@@ -7,7 +7,10 @@
 #include "library.h"
 #include "constants.h"
 #include "map.h"
+#include "utils.h"
 #include "value.h"
+
+Map *library;
 
 // Core
 Value *do_type(List *arguments) {
@@ -69,6 +72,7 @@ Value *do_string(List *arguments) {
 }
 
 Value *do_exit(List *arguments) {
+    free_library();
     if (arguments->first != NULL && ((Value *)arguments->first->value)->type == VALUE_TYPE_NUMBER) {
         Value *value = arguments->first->value;
         exit(floor(value->value.number));
@@ -152,34 +156,44 @@ Value *do_atan(List *arguments) {
 }
 
 Map *get_library(void) {
-    Map *library = map_new();
+    library = map_new();
 
     // Core
-    map_set(library, "type", value_new_native_function(do_type));
-    map_set(library, "len", value_new_native_function(do_len));
-    map_set(library, "number", value_new_native_function(do_number));
-    map_set(library, "string", value_new_native_function(do_string));
-    map_set(library, "exit", value_new_native_function(do_exit));
+    map_set(library, string_copy("type"), value_new_native_function(do_type));
+    map_set(library, string_copy("len"),value_new_native_function(do_len));
+    map_set(library, string_copy("number"),value_new_native_function(do_number));
+    map_set(library, string_copy("string"),value_new_native_function(do_string));
+    map_set(library, string_copy("exit"),value_new_native_function(do_exit));
 
     // I/O
-    map_set(library, "print", value_new_native_function(do_print));
-    map_set(library, "println", value_new_native_function(do_println));
-    map_set(library, "input", value_new_native_function(do_input));
+    map_set(library, string_copy("print"),value_new_native_function(do_print));
+    map_set(library, string_copy("println"),value_new_native_function(do_println));
+    map_set(library, string_copy("input"),value_new_native_function(do_input));
 
     // Math
-    map_set(library, "pi", value_new_number(M_PI));
-    map_set(library, "e", value_new_number(M_E));
+    map_set(library, string_copy("pi"),value_new_number(M_PI));
+    map_set(library, string_copy("e"),value_new_number(M_E));
 
-    map_set(library, "floor", value_new_native_function(do_floor));
-    map_set(library, "round", value_new_native_function(do_round));
-    map_set(library, "ceil", value_new_native_function(do_ceil));
+    map_set(library, string_copy("floor"),value_new_native_function(do_floor));
+    map_set(library, string_copy("round"),value_new_native_function(do_round));
+    map_set(library, string_copy("ceil"),value_new_native_function(do_ceil));
 
-    map_set(library, "sin", value_new_native_function(do_sin));
-    map_set(library, "asin", value_new_native_function(do_asin));
-    map_set(library, "cos", value_new_native_function(do_cos));
-    map_set(library, "acos", value_new_native_function(do_acos));
-    map_set(library, "tan", value_new_native_function(do_tan));
-    map_set(library, "atan", value_new_native_function(do_atan));
+    map_set(library, string_copy("sin"),value_new_native_function(do_sin));
+    map_set(library, string_copy("asin"),value_new_native_function(do_asin));
+    map_set(library, string_copy("cos"),value_new_native_function(do_cos));
+    map_set(library, string_copy("acos"),value_new_native_function(do_acos));
+    map_set(library, string_copy("tan"), value_new_native_function(do_tan));
+    map_set(library, string_copy("atan"), value_new_native_function(do_atan));
 
     return library;
+}
+
+void free_library() {
+    MapItem *map_item = library->first;
+    while (map_item != NULL) {
+        free(map_item->key);
+        value_free(map_item->value);
+        map_item = map_item->next;
+    }
+    map_free(library);
 }

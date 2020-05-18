@@ -5,4 +5,6 @@
 
 Map *get_library(void);
 
+void free_library(void);
+
 #endif

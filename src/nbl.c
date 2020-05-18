@@ -140,13 +140,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Free global vars map
-    MapItem *global_vars_map_item = global_vars_map->first;
-    while (global_vars_map_item != NULL) {
-        value_free(global_vars_map_item->value);
-        global_vars_map_item = global_vars_map_item->next;
-    }
-    map_free(global_vars_map);
+    free_library();
 
     return EXIT_SUCCESS;
 }

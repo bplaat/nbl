@@ -5,13 +5,28 @@
 
 #include "interpreter.h"
 #include "node.h"
+#include "state.h"
 #include "map.h"
 #include "value.h"
 #include "utils.h"
 
 Map *vars_map;
 
-Value *interpreter(Node *node) {
+void interpreter_set(Map *map, char *key, Value *value) {
+    Value *old_value = map_get(map, key);
+    if (old_value == NULL) {
+        map_set(map, string_copy(key), value_copy(value));
+    } else {
+        value_free(old_value);
+        map_set(map, key, value_copy(value));
+    }
+}
+
+Value *interpreter(Node *node, State *state) {
+    if (state->type == STATE_TYPE_LOOP_BREAK || state->type == STATE_TYPE_LOOP_CONTINUE) {
+        return NULL;
+    }
+
     // Value nodes
     if (node->type == NODE_TYPE_NULL) {
         return value_new_null();
@@ -48,7 +63,7 @@ Value *interpreter(Node *node) {
             // Interpreter the arguments
             ListItem *list_item = arguments->first;
             while (list_item != NULL) {
-                list_add(value_arguments, interpreter(list_item->value));
+                list_add(value_arguments, interpreter(list_item->value, state));
                 list_item = list_item->next;
             }
 
@@ -73,21 +88,20 @@ Value *interpreter(Node *node) {
 
     // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
-        Value *value = interpreter(node->value.assign.node);
-        map_set(vars_map, string_copy(node->value.assign.variable), value_copy(value));
+        Value *value = interpreter(node->value.assign.node, state);
+        interpreter_set(vars_map, node->value.assign.variable, value);
         return value;
     }
 
     if (node->type == NODE_TYPE_ADD_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number + value->value.number);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -96,8 +110,7 @@ Value *interpreter(Node *node) {
             Value *new_value = value_new_string(concat_string);
             free(concat_string);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -108,8 +121,7 @@ Value *interpreter(Node *node) {
             free(value_string);
             free(concat_string);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -120,8 +132,7 @@ Value *interpreter(Node *node) {
             free(value_string);
             free(concat_string);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -130,15 +141,14 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_SUB_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number - value->value.number);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -149,15 +159,14 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MUL_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number * value->value.number);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -168,15 +177,14 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_EXP_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(pow(old_value->value.number, value->value.number));
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -187,15 +195,14 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_DIV_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number / value->value.number);
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -206,15 +213,14 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MOD_ASSIGN) {
-        char *variable = string_copy(node->value.assign.variable);
-        Value *value = interpreter(node->value.assign.node);
+        char *variable = node->value.assign.variable;
+        Value *value = interpreter(node->value.assign.node, state);
         Value *old_value = map_get(vars_map, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(fmod(old_value->value.number, value->value.number));
             value_free(value);
-            value_free(old_value);
-            map_set(vars_map, variable, value_copy(new_value));
+            interpreter_set(vars_map, variable, new_value);
             return new_value;
         }
 
@@ -226,7 +232,7 @@ Value *interpreter(Node *node) {
 
     // Unaries
     if (node->type == NODE_TYPE_UNARY_ADD) {
-        Value *value = interpreter(node->value.node);
+        Value *value = interpreter(node->value.node, state);
 
         if (value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(+value->value.number);
@@ -241,7 +247,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_UNARY_SUB) {
-        Value *value = interpreter(node->value.node);
+        Value *value = interpreter(node->value.node, state);
 
         if (value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(-value->value.number);
@@ -256,7 +262,7 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_NOT) {
-        Value *value = interpreter(node->value.node);
+        Value *value = interpreter(node->value.node, state);
 
         if (value->type == VALUE_TYPE_BOOLEAN) {
             Value *new_value = value_new_boolean(!value->value.boolean);
@@ -272,8 +278,8 @@ Value *interpreter(Node *node) {
 
     // Number operations
     if (node->type == NODE_TYPE_ADD) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(left->value.number + right->value.number);
@@ -318,8 +324,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_SUB) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(left->value.number - right->value.number);
@@ -335,8 +341,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MUL) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(left->value.number * right->value.number);
@@ -352,8 +358,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_EXP) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(pow(left->value.number, right->value.number));
@@ -369,8 +375,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_DIV) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(left->value.number / right->value.number);
@@ -386,8 +392,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_MOD) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(fmod(left->value.number, right->value.number));
@@ -404,8 +410,8 @@ Value *interpreter(Node *node) {
 
     // Boolean operations
     if (node->type == NODE_TYPE_EQUALS) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NULL && right->type == VALUE_TYPE_NULL) {
             value_free(left);
@@ -440,8 +446,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_NOT_EQUALS) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NULL && right->type == VALUE_TYPE_NULL) {
             value_free(left);
@@ -476,8 +482,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_GREATER) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_boolean(left->value.number > right->value.number);
@@ -493,8 +499,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_GREATER_EQUALS) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_boolean(left->value.number >= right->value.number);
@@ -510,8 +516,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_LOWER) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_boolean(left->value.number < right->value.number);
@@ -527,8 +533,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_LOWER_EQUALS) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_boolean(left->value.number <= right->value.number);
@@ -544,8 +550,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_AND) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
             Value *new_value = value_new_boolean(left->value.boolean && right->value.boolean);
@@ -561,8 +567,8 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_OR) {
-        Value *left = interpreter(node->value.operation.left);
-        Value *right = interpreter(node->value.operation.right);
+        Value *left = interpreter(node->value.operation.left, state);
+        Value *right = interpreter(node->value.operation.right, state);
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
             Value *new_value = value_new_boolean(left->value.boolean || right->value.boolean);
@@ -578,22 +584,24 @@ Value *interpreter(Node *node) {
     }
 
     if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSE_IF) {
-        Value *value = interpreter(node->value.condition.cond);
+        Value *value = interpreter(node->value.condition.cond, state);
 
         if (value->type == VALUE_TYPE_BOOLEAN) {
             if (value->value.boolean) {
                 value_free(value);
                 ListItem *list_item = node->value.condition.nodes->first;
                 while (list_item != NULL) {
-                    Value *new_value = interpreter(list_item->value);
-                    value_free(new_value);
+                    Value *new_value = interpreter(list_item->value, state);
+                    if (new_value != NULL) {
+                        value_free(new_value);
+                    }
                     list_item = list_item->next;
                 }
                 return value_new_null();
             } else {
                 value_free(value);
                 if (node->value.condition.next != NULL) {
-                    return interpreter(node->value.condition.next);
+                    return interpreter(node->value.condition.next, state);
                 }
                 return value_new_null();
             }
@@ -608,32 +616,51 @@ Value *interpreter(Node *node) {
     if (node->type == NODE_TYPE_ELSE) {
         ListItem *list_item = node->value.nodes->first;
         while (list_item != NULL) {
-            Value *value = interpreter(list_item->value);
-            value_free(value);
+            Value *value = interpreter(list_item->value, state);
+            if (value != NULL) {
+                value_free(value);
+            }
             list_item = list_item->next;
         }
         return value_new_null();
     }
 
     if (node->type == NODE_TYPE_WHILE) {
-        Value *value = interpreter(node->value.while_loop.cond);
+        Value *value = interpreter(node->value.while_loop.cond, state);
         if (value->type == VALUE_TYPE_BOOLEAN) {
             while (value->value.boolean) {
                 value_free(value);
 
+                State *new_state = state_new(STATE_TYPE_RUNNING);
+
                 ListItem *list_item = node->value.while_loop.nodes->first;
                 while (list_item != NULL) {
-                    Value *new_value = interpreter(list_item->value);
-                    value_free(new_value);
+                    Value *new_value = interpreter(list_item->value, new_state);
+                    if (new_value != NULL) {
+                        value_free(new_value);
+                    }
+                    else {
+                        if (new_state->type == STATE_TYPE_LOOP_BREAK) {
+                            state_free(new_state);
+                            return value_new_null();
+                        }
+
+                        if (new_state->type == STATE_TYPE_LOOP_CONTINUE) {
+                            break;
+                        }
+                    }
                     list_item = list_item->next;
                 }
 
-                value = interpreter(node->value.while_loop.cond);
+                state_free(new_state);
+
+                value = interpreter(node->value.while_loop.cond, state);
                 if (value->type != VALUE_TYPE_BOOLEAN) {
                     printf("[ERROR] Type error by while\n");
                     exit(EXIT_FAILURE);
                 }
             }
+
             value_free(value);
             return value_new_null();
         }
@@ -651,39 +678,100 @@ Value *interpreter(Node *node) {
                 value_free(value);
             }
 
+            State *new_state = state_new(STATE_TYPE_RUNNING);
+
             ListItem *list_item = node->value.while_loop.nodes->first;
             while (list_item != NULL) {
-                Value *new_value = interpreter(list_item->value);
-                value_free(new_value);
+                Value *new_value = interpreter(list_item->value, new_state);
+                if (new_value != NULL) {
+                    value_free(new_value);
+                }
+                else {
+                    if (new_state->type == STATE_TYPE_LOOP_BREAK) {
+                        state_free(new_state);
+                        return value_new_null();
+                    }
+
+                    if (new_state->type == STATE_TYPE_LOOP_CONTINUE) {
+                        break;
+                    }
+                }
                 list_item = list_item->next;
             }
 
-            value = interpreter(node->value.while_loop.cond);
+            state_free(new_state);
+
+            value = interpreter(node->value.while_loop.cond, state);
             if (value->type != VALUE_TYPE_BOOLEAN) {
-                printf("[ERROR] Type error by while\n");
+                printf("[ERROR] Type error by do while\n");
                 exit(EXIT_FAILURE);
             }
-        } while (value->value.boolean);
+        } while(value->value.boolean);
+
         value_free(value);
         return value_new_null();
     }
 
     if (node->type == NODE_TYPE_FOR) {
-        // TODO
+        value_free(interpreter(node->value.for_loop.init, state));
+
+        Value *value = interpreter(node->value.for_loop.cond, state);
+        if (value->type == VALUE_TYPE_BOOLEAN) {
+            while (value->value.boolean) {
+                value_free(value);
+
+                State *new_state = state_new(STATE_TYPE_RUNNING);
+
+                ListItem *list_item = node->value.for_loop.nodes->first;
+                while (list_item != NULL) {
+                    Value *new_value = interpreter(list_item->value, new_state);
+                    if (new_value != NULL) {
+                        value_free(new_value);
+                    }
+                    else {
+                        if (new_state->type == STATE_TYPE_LOOP_BREAK) {
+                            state_free(new_state);
+                            return value_new_null();
+                        }
+
+                        if (new_state->type == STATE_TYPE_LOOP_CONTINUE) {
+                            break;
+                        }
+                    }
+                    list_item = list_item->next;
+                }
+
+                state_free(new_state);
+
+                value_free(interpreter(node->value.for_loop.inc, state));
+
+                value = interpreter(node->value.for_loop.cond, state);
+                if (value->type != VALUE_TYPE_BOOLEAN) {
+                    printf("[ERROR] Type error by while\n");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            value_free(value);
+            return value_new_null();
+        }
+
+        else {
+            printf("[ERROR] Type error by while\n");
+            exit(EXIT_FAILURE);
+        }
 
         return value_new_null();
     }
 
     if (node->type == NODE_TYPE_BREAK) {
-        // TODO
-
-        return value_new_null();
+        state->type = STATE_TYPE_LOOP_BREAK;
+        return NULL;
     }
 
     if (node->type == NODE_TYPE_CONTINUE) {
-        // TODO
-
-        return value_new_null();
+        state->type = STATE_TYPE_LOOP_CONTINUE;
+        return NULL;
     }
 
     printf("[ERROR] Interpreter unkown node type: %d\n", node->type);
@@ -692,5 +780,8 @@ Value *interpreter(Node *node) {
 
 Value *start_interpreter(Node *node, Map *global_vars_map) {
     vars_map = global_vars_map;
-    return interpreter(node);
+    State *state = state_new(STATE_TYPE_RUNNING);
+    Value *value = interpreter(node, state);
+    state_free(state);
+    return value;
 }
