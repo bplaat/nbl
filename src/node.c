@@ -70,7 +70,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s = %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -80,7 +79,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s += %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -90,7 +88,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s -= %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -100,7 +97,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s *= %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -110,7 +106,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s **= %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -120,7 +115,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s /= %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -130,7 +124,6 @@ char *node_to_string(Node *node) {
         char *right_string = node_to_string(node->value.assign.node);
         char *string_buffer = malloc(BUFFER_SIZE);
         sprintf(string_buffer, "( %s %%= %s )", left_string, right_string);
-        free(left_string);
         free(right_string);
         return string_buffer;
     }
@@ -304,22 +297,27 @@ char *node_to_string(Node *node) {
 }
 
 void node_free(Node *node) {
+    if (node->type == NODE_TYPE_STRING || node->type == NODE_TYPE_VARIABLE) {
+        free(node->value.string);
+    }
+
     if (node->type == NODE_TYPE_CALL) {
+        free(node->value.assign.variable);
         ListItem *list_item = node->value.call.arguments->first;
         while (list_item != NULL) {
             node_free(list_item->value);
             list_item = list_item->next;
         }
-
         list_free(node->value.call.arguments);
     }
 
-    if (node->type == NODE_TYPE_STRING || node->type == NODE_TYPE_VARIABLE) {
-        free(node->value.string);
+    if (node->type >= NODE_TYPE_ASSIGN && node->type <= NODE_TYPE_MOD_ASSIGN) {
+        free(node->value.assign.variable);
+        node_free(node->value.assign.node);
     }
 
     if (node->type >= NODE_TYPE_UNARY_ADD && node->type <= NODE_TYPE_NOT) {
-        free(node->value.node);
+        node_free(node->value.node);
     }
 
     if (node->type >= NODE_TYPE_ADD && node->type <= NODE_TYPE_OR) {

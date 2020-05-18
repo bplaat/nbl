@@ -42,13 +42,29 @@ Value *interpreter(Node *node) {
         Value *value = map_get(vars_map, node->value.call.variable);
         if (value != NULL) {
             List *arguments = node->value.call.arguments;
+
+            List *value_arguments = list_new();
+
+            // Interpreter the arguments
             ListItem *list_item = arguments->first;
             while (list_item != NULL) {
-                list_item->value = interpreter(list_item->value);
+                list_add(value_arguments, interpreter(list_item->value));
                 list_item = list_item->next;
             }
 
-            return value->value.native_function(arguments);
+            // Run native function with arguments
+            Value *new_value = value->value.native_function(value_arguments);
+
+            // Free value arguments
+            list_item = value_arguments->first;
+            while (list_item != NULL) {
+                value_free(list_item->value);
+                list_item = list_item->next;
+            }
+            list_free(value_arguments);
+
+            // Return the returend value
+            return new_value;
         } else {
             printf("[ERROR] Function call error\n");
             exit(EXIT_FAILURE);
@@ -58,7 +74,7 @@ Value *interpreter(Node *node) {
     // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
         Value *value = interpreter(node->value.assign.node);
-        map_set(vars_map, node->value.assign.variable, value);
+        map_set(vars_map, node->value.assign.variable, value_copy(value));
         return value;
     }
 
@@ -69,25 +85,43 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number + value->value.number);
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
-            Value *new_value = value_new_string(string_concat(old_value->value.string, value->value.string));
-            map_set(vars_map, variable, new_value);
+            char *concat_string = string_concat(old_value->value.string, value->value.string);
+            Value *new_value = value_new_string(concat_string);
+            free(concat_string);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_STRING && value->type != VALUE_TYPE_STRING) {
-            Value *new_value = value_new_string(string_concat(old_value->value.string, value_to_string(value)));
-            map_set(vars_map, variable, new_value);
+            char *value_string = value_to_string(value);
+            char *concat_string = string_concat(old_value->value.string, value_string);
+            Value *new_value = value_new_string(concat_string);
+            free(value_string);
+            free(concat_string);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
         if (old_value != NULL && old_value->type != VALUE_TYPE_STRING && value->type == VALUE_TYPE_STRING) {
-            Value *new_value = value_new_string(string_concat(value_to_string(old_value), value->value.string));
-            map_set(vars_map, variable, new_value);
+            char *value_string = value_to_string(old_value);
+            char *concat_string = string_concat(value_string, value->value.string);
+            Value *new_value = value_new_string(concat_string);
+            free(value_string);
+            free(concat_string);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -102,7 +136,9 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number - value->value.number);
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -119,7 +155,9 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number * value->value.number);
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -136,7 +174,9 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(pow(old_value->value.number, value->value.number));
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -153,7 +193,9 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number / value->value.number);
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -170,7 +212,9 @@ Value *interpreter(Node *node) {
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(fmod(old_value->value.number, value->value.number));
-            map_set(vars_map, variable, new_value);
+            value_free(value);
+            value_free(old_value);
+            map_set(vars_map, variable, value_copy(new_value));
             return new_value;
         }
 
@@ -185,7 +229,9 @@ Value *interpreter(Node *node) {
         Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(+value->value.number);
+            Value *new_value = value_new_number(+value->value.number);
+            value_free(value);
+            return new_value;
         }
 
         else {
@@ -198,7 +244,9 @@ Value *interpreter(Node *node) {
         Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(-value->value.number);
+            Value *new_value = value_new_number(-value->value.number);
+            value_free(value);
+            return new_value;
         }
 
         else {
@@ -211,7 +259,9 @@ Value *interpreter(Node *node) {
         Value *value = interpreter(node->value.node);
 
         if (value->type == VALUE_TYPE_BOOLEAN) {
-            return value_new_boolean(!value->value.boolean);
+            Value *new_value = value_new_boolean(!value->value.boolean);
+            value_free(value);
+            return new_value;
         }
 
         else {
@@ -226,19 +276,41 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(left->value.number + right->value.number);
+            Value *new_value = value_new_number(left->value.number + right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
-            return value_new_string(string_concat(left->value.string, right->value.string));
+            char *concat_string = string_concat(left->value.string, right->value.string);
+            Value *new_value = value_new_string(concat_string);
+            free(concat_string);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_STRING && right->type != VALUE_TYPE_STRING) {
-            return value_new_string(string_concat(left->value.string, value_to_string(right)));
+            char *right_string = value_to_string(right);
+            char *concat_string = string_concat(left->value.string, right_string);
+            Value *new_value = value_new_string(concat_string);
+            free(right_string);
+            free(concat_string);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type != VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
-            return value_new_string(string_concat(value_to_string(left), right->value.string));
+            char *left_string = value_to_string(left);
+            char *concat_string = string_concat(left_string, right->value.string);
+            Value *new_value = value_new_string(concat_string);
+            free(left_string);
+            free(concat_string);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         printf("[ERROR] Type error by add\n");
@@ -250,7 +322,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(left->value.number - right->value.number);
+            Value *new_value = value_new_number(left->value.number - right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -264,7 +339,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(left->value.number * right->value.number);
+            Value *new_value = value_new_number(left->value.number * right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -278,7 +356,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(pow(left->value.number, right->value.number));
+            Value *new_value = value_new_number(pow(left->value.number, right->value.number));
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -292,7 +373,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(left->value.number / right->value.number);
+            Value *new_value = value_new_number(left->value.number / right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -306,7 +390,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_number(fmod(left->value.number, right->value.number));
+            Value *new_value = value_new_number(fmod(left->value.number, right->value.number));
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -321,21 +408,34 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NULL && right->type == VALUE_TYPE_NULL) {
+            value_free(left);
+            value_free(right);
             return value_new_boolean(true);
         }
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number == right->value.number);
+            Value *new_value = value_new_boolean(left->value.number == right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
-            return value_new_boolean(!strcmp(left->value.string, right->value.string));
+            Value *new_value = value_new_boolean(!strcmp(left->value.string, right->value.string));
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
-            return value_new_boolean(left->value.boolean == right->value.boolean);
+            Value *new_value = value_new_boolean(left->value.boolean == right->value.boolean);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
+        value_free(left);
+        value_free(right);
         return value_new_boolean(false);
     }
 
@@ -344,21 +444,34 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NULL && right->type == VALUE_TYPE_NULL) {
+            value_free(left);
+            value_free(right);
             return value_new_boolean(false);
         }
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number != right->value.number);
+            Value *new_value = value_new_boolean(left->value.number != right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_STRING && right->type == VALUE_TYPE_STRING) {
-            return value_new_boolean(strcmp(left->value.string, right->value.string));
+            Value *new_value = value_new_boolean(strcmp(left->value.string, right->value.string));
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
-            return value_new_boolean(left->value.boolean != right->value.boolean);
+            Value *new_value = value_new_boolean(left->value.boolean != right->value.boolean);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
+        value_free(left);
+        value_free(right);
         return value_new_boolean(true);
     }
 
@@ -367,7 +480,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number > right->value.number);
+            Value *new_value = value_new_boolean(left->value.number > right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -381,7 +497,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number >= right->value.number);
+            Value *new_value = value_new_boolean(left->value.number >= right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -395,7 +514,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number < right->value.number);
+            Value *new_value = value_new_boolean(left->value.number < right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -409,7 +531,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_NUMBER && right->type == VALUE_TYPE_NUMBER) {
-            return value_new_boolean(left->value.number <= right->value.number);
+            Value *new_value = value_new_boolean(left->value.number <= right->value.number);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -423,7 +548,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
-            return value_new_boolean(left->value.boolean && right->value.boolean);
+            Value *new_value = value_new_boolean(left->value.boolean && right->value.boolean);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {
@@ -437,7 +565,10 @@ Value *interpreter(Node *node) {
         Value *right = interpreter(node->value.operation.right);
 
         if (left->type == VALUE_TYPE_BOOLEAN && right->type == VALUE_TYPE_BOOLEAN) {
-            return value_new_boolean(left->value.boolean || right->value.boolean);
+            Value *new_value = value_new_boolean(left->value.boolean || right->value.boolean);
+            value_free(left);
+            value_free(right);
+            return new_value;
         }
 
         else {

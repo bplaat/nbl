@@ -8,8 +8,21 @@ println('x = ' + x + ', y = ' + y + ', z = ' + z);
 
 // fsdjjlsdakjfsdajl
 
-name = input('Name > ');
+name = 'Bastiaan'//input('Name > ');
 println('Hello ', name, '!');
+
+x += 2
+println(x)
+x -= 2
+println(x)
+x %= 2
+println(x)
+x **= 2
+println(x)
+x /= 2
+println(x)
+x *= 2
+println(x)
 
 /*
 

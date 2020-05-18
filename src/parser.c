@@ -8,13 +8,14 @@
 #include "utils.h"
 
 /*
+root = (stat | stat STOP)*
 stat = bool | VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool
 bool = equals ((AND | OR) equals)*
 equals = expr ((EQUALS | NOT_EQUALS | GREATER | GREATER_EQUALS | LOWER | LOWER_EQUALS) expr)*
 expr = term ((ADD | SUB) term)* |
 term = factor ((MUL | EXP | DIV | MOD) factor)*
 factor = ADD factor | SUB factor | NOT factor | LPAREN bool RPAREN | NULL | NUMBER | STRING | BOOLEAN | VARIABLE | VARIABLE LPAREN args RPAREN
-args = bool (COMMA bool)*
+args = (bool | bool COMMA)*
 */
 
 ListItem *list_item;
@@ -409,11 +410,13 @@ List *parser(List *tokens) {
         Node *node = parse_stat();
         if (node != NULL) list_add(nodes_list, node);
 
-        while (list_item != NULL && ((Token *)list_item->value)->type == TOKEN_TYPE_STOP && list_item->next != NULL) {
-            list_item = list_item->next;
-
+        while (list_item != NULL) {
             node = parse_stat();
             if (node != NULL) list_add(nodes_list, node);
+
+            if (list_item != NULL && ((Token *)list_item->value)->type == TOKEN_TYPE_STOP) {
+                list_item = list_item->next;
+            }
         }
     }
 

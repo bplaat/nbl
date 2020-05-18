@@ -91,5 +91,6 @@ void value_free(Value *value) {
     if (value->type == VALUE_TYPE_STRING) {
         free(value->value.string);
     }
+
     free(value);
 }

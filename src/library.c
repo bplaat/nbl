@@ -72,7 +72,9 @@ Value *do_string(List *arguments) {
 Value *do_print(List *arguments) {
     ListItem *list_item = arguments->first;
     while (list_item != NULL) {
-        printf("%s", value_to_string(list_item->value));
+        char *value_string = value_to_string(list_item->value);
+        printf("%s", value_string);
+        free(value_string);
         list_item = list_item->next;
     }
 
@@ -86,7 +88,7 @@ Value *do_println(List *arguments) {
 }
 
 Value *do_input(List *arguments) {
-    do_print(arguments);
+    value_free(do_print(arguments));
 
     char line_buffer[BUFFER_SIZE];
     fgets(line_buffer, BUFFER_SIZE, stdin);

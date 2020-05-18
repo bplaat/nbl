@@ -149,8 +149,9 @@ char *token_to_string(Token *token) {
 }
 
 void token_free(Token *token) {
-    if (token->type == TOKEN_TYPE_VARIABLE) {
+    if (token->type == TOKEN_TYPE_STRING || token->type == TOKEN_TYPE_VARIABLE) {
         free(token->value.string);
     }
+
     free(token);
 }

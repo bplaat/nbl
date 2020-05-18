@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #include "constants.h"
 #include "library.h"
@@ -86,7 +87,13 @@ void run(char *text, bool print_result) {
     list_free(nodes_list);
 }
 
+void closeHandler() {
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv) {
+    signal(SIGINT, closeHandler);
+
     // Get the NBL standard library
     global_vars_map = get_library();
 
@@ -102,6 +109,8 @@ int main(int argc, char **argv) {
         fclose(file);
 
         run(file_buffer, false);
+
+        free(file_buffer);
     }
 
     // Else run REPL loop
