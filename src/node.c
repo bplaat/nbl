@@ -292,6 +292,88 @@ char *node_to_string(Node *node) {
         return string_buffer;
     }
 
+    if (node->type == NODE_TYPE_IF) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.condition.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        char *node_string = node_to_string(node->value.condition.node);
+        if (node->value.condition.next != NULL) {
+            char *next_string = node_to_string(node->value.condition.next);
+            sprintf(string_buffer, "( if (%s) { %s } %s)", node_string, statements_string_buffer, next_string);
+            free(next_string);
+        } else {
+            sprintf(string_buffer, "( if (%s) { %s } )", node_string, statements_string_buffer);
+        }
+        free(node_string);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_ELSEIF) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.condition.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        char *node_string = node_to_string(node->value.condition.node);
+        if (node->value.condition.next != NULL) {
+            char *next_string = node_to_string(node->value.condition.next);
+            sprintf(string_buffer, "( else if (%s) { %s } %s)", node_string, statements_string_buffer, next_string);
+            free(next_string);
+        } else {
+            sprintf(string_buffer, "( else if (%s) { %s } )", node_string, statements_string_buffer);
+        }
+        free(node_string);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
+    if (node->type == NODE_TYPE_ELSE) {
+        char *statements_string_buffer = malloc(BUFFER_SIZE);
+        statements_string_buffer[0] = '\0';
+
+        ListItem *list_item = node->value.nodes->first;
+        while (list_item != NULL) {
+            char *node_string = node_to_string(list_item->value);
+            strcat(statements_string_buffer, node_string);
+            free(node_string);
+
+            if (list_item->next != NULL) {
+                strcat(statements_string_buffer, "; ");
+            }
+            list_item = list_item->next;
+        }
+
+        char *string_buffer = malloc(BUFFER_SIZE);
+        sprintf(string_buffer, "( else { %s } )", statements_string_buffer);
+        free(statements_string_buffer);
+        return string_buffer;
+    }
+
     printf("[ERROR] Unkown node type: %d\n", node->type);
     exit(EXIT_FAILURE);
 }
@@ -323,6 +405,26 @@ void node_free(Node *node) {
     if (node->type >= NODE_TYPE_ADD && node->type <= NODE_TYPE_OR) {
         node_free(node->value.operation.left);
         node_free(node->value.operation.right);
+    }
+
+    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSEIF) {
+        node_free(node->value.condition.node);
+        ListItem *list_item = node->value.condition.nodes->first;
+        while (list_item != NULL) {
+            node_free(list_item->value);
+            list_item = list_item->next;
+        }
+        list_free(node->value.condition.nodes);
+        node_free(node->value.condition.next);
+    }
+
+    if (node->type == NODE_TYPE_ELSE) {
+        ListItem *list_item = node->value.nodes->first;
+        while (list_item != NULL) {
+            node_free(list_item->value);
+            list_item = list_item->next;
+        }
+        list_free(node->value.nodes);
     }
 
     free(node);

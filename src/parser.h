@@ -1,10 +1,12 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "node.h"
 #include "list.h"
+#include "node.h"
 
 List *parse_args(void);
+
+List *parse_block(void);
 
 Node *parse_factor(void);
 

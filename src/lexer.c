@@ -91,6 +91,22 @@ List *lexer(char *text) {
             text += 5;
         }
 
+        else if (*text == 'i' && *(text + 1) == 'f') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_IF));
+            text += 2;
+        }
+
+        else if (*text == 'e' && *(text + 1) == 'l' && *(text + 2) == 's' && *(text + 3) == 'e') {
+            if (*(text + 4) == ' ' && *(text + 5) == 'i' && *(text + 6) == 'f') {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ELSEIF));
+                text += 7;
+            }
+            else {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE));
+                text += 4;
+            }
+        }
+
         else if (isalpha(*text) || *text == '_') {
             char *string_buffer_current = string_buffer;
             while (isalnum(*text) || *text == '_') {
@@ -111,6 +127,16 @@ List *lexer(char *text) {
                 list_add(tokens_list, token_new(TOKEN_TYPE_ASSIGN));
                 text++;
             }
+        }
+
+        else if (*text == '{') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_LBLOCK));
+            text++;
+        }
+
+        else if (*text == '}') {
+            list_add(tokens_list, token_new(TOKEN_TYPE_RBLOCK));
+            text++;
         }
 
         else if (*text == '(') {

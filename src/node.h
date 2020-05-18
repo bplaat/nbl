@@ -39,7 +39,11 @@ typedef enum NodeType {
     NODE_TYPE_LOWER,
     NODE_TYPE_LOWER_EQUALS,
     NODE_TYPE_AND,
-    NODE_TYPE_OR
+    NODE_TYPE_OR,
+
+    NODE_TYPE_IF,
+    NODE_TYPE_ELSEIF,
+    NODE_TYPE_ELSE
 } NodeType;
 
 typedef struct Node {
@@ -67,6 +71,14 @@ typedef struct Node {
             struct Node *left;
             struct Node *right;
         } operation;
+
+        struct {
+            struct Node *node;
+            List *nodes;
+            struct Node *next;
+        } condition;
+
+        List *nodes;
     } value;
 } Node;
 

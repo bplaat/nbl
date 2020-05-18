@@ -577,6 +577,43 @@ Value *interpreter(Node *node) {
         }
     }
 
+    if (node->type == NODE_TYPE_IF || node->type == NODE_TYPE_ELSEIF) {
+        Value *value = interpreter(node->value.condition.node);
+
+        if (value->type == VALUE_TYPE_BOOLEAN) {
+            if (value->value.boolean) {
+                value_free(value);
+                ListItem *list_item = node->value.condition.nodes->first;
+                while (list_item != NULL) {
+                    Value *new_value = interpreter(list_item->value);
+                    value_free(new_value);
+                    list_item = list_item->next;
+                }
+                return value_new_null();
+            } else {
+                value_free(value);
+                if (node->value.condition.next != NULL) {
+                    return interpreter(node->value.condition.next);
+                }
+            }
+        }
+
+        else {
+            printf("[ERROR] Type error by (else) if\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (node->type == NODE_TYPE_ELSE) {
+        ListItem *list_item = node->value.nodes->first;
+        while (list_item != NULL) {
+            Value *value = interpreter(list_item->value);
+            value_free(value);
+            list_item = list_item->next;
+        }
+        return value_new_null();
+    }
+
     printf("[ERROR] Unkown node type\n");
     exit(EXIT_FAILURE);
 }

@@ -68,6 +68,26 @@ char *token_to_string(Token *token) {
         return string_copy("%=");
     }
 
+    if (token->type == TOKEN_TYPE_IF) {
+        return string_copy("if");
+    }
+
+    if (token->type == TOKEN_TYPE_ELSEIF) {
+        return string_copy("else if");
+    }
+
+    if (token->type == TOKEN_TYPE_ELSE) {
+        return string_copy("else");
+    }
+
+    if (token->type == TOKEN_TYPE_LBLOCK) {
+        return string_copy("{");
+    }
+
+    if (token->type == TOKEN_TYPE_RBLOCK) {
+        return string_copy("}");
+    }
+
     if (token->type == TOKEN_TYPE_LPAREN) {
         return string_copy("(");
     }

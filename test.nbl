@@ -1,5 +1,11 @@
 # hoi
 
+n = 4
+
+if (n > 5) println('n > 5') else if (n < 3) {
+    println('n < 3')
+} else print('else')
+
 x = pi;;;
 y = x * 5;;;
 z = e / 2;;;;
