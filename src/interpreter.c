@@ -10,20 +10,12 @@
 #include "value.h"
 #include "utils.h"
 
-Map *vars_map;
-
-void interpreter_set(Map *map, char *key, Value *value) {
-    Value *old_value = map_get(map, key);
-    if (old_value == NULL) {
-        map_set(map, string_copy(key), value_copy(value));
-    } else {
-        value_free(old_value);
-        map_set(map, key, value_copy(value));
-    }
-}
-
 Value *interpreter(Node *node, State *state) {
-    if (state->type == STATE_TYPE_LOOP_BREAK || state->type == STATE_TYPE_LOOP_CONTINUE) {
+    if (
+        state->type == STATE_TYPE_LOOP_BREAK ||
+        state->type == STATE_TYPE_LOOP_CONTINUE // ||
+        // state->type == STATE_TYPE_FUNCTION_RETURN
+    ) {
         return NULL;
     }
 
@@ -45,7 +37,7 @@ Value *interpreter(Node *node, State *state) {
     }
 
     if (node->type == NODE_TYPE_VARIABLE) {
-        Value *value = map_get(vars_map, node->value.string);
+        Value *value = map_get(state->vars, node->value.string);
         if (value != NULL) {
             return value_copy(value);
         } else {
@@ -53,9 +45,13 @@ Value *interpreter(Node *node, State *state) {
         }
     }
 
+    // if (node->type == NODE_TYPE_FUNCTION) {
+    //     return value_new_function(node->value.function.variables, node->value.function.nodes);
+    // }
+
     if (node->type == NODE_TYPE_CALL) {
-        Value *value = map_get(vars_map, node->value.call.variable);
-        if (value != NULL) {
+        Value *value = map_get(state->vars, node->value.call.variable);
+        if (value != NULL && value->type == VALUE_TYPE_NATIVE_FUNCTION) {
             List *arguments = node->value.call.arguments;
 
             List *value_arguments = list_new();
@@ -80,7 +76,39 @@ Value *interpreter(Node *node, State *state) {
 
             // Return the returend value
             return new_value;
-        } else {
+        }
+
+        // else if (value != NULL && value->type == VALUE_TYPE_FUNCTION) {
+        //     State *new_state = state_copy(state);
+
+        //     ListItem *variables_list_item = value->value.function.variables->first;
+        //     ListItem *arguments_list_item = node->value.call.arguments->first;
+        //     while (variables_list_item != NULL) {
+        //         state_set(new_state, variables_list_item->value, interpreter(arguments_list_item->value, state));
+        //         variables_list_item = variables_list_item->next;
+        //         arguments_list_item = arguments_list_item->next;
+        //     }
+
+        //     ListItem *list_item = node->value.function.nodes->first;
+        //     while (list_item != NULL) {
+        //         Value *new_value = interpreter(list_item->value, new_state);
+        //         if (new_value != NULL) {
+        //             value_free(new_value);
+        //         }
+        //         else {
+        //             if (new_state->type == STATE_TYPE_FUNCTION_RETURN) {
+        //                 state_free(new_state);
+        //                 return new_value;
+        //             }
+        //         }
+        //         list_item = list_item->next;
+        //     }
+
+        //     state_free(new_state);
+        //     return value_new_null();
+        // }
+
+        else {
             printf("[ERROR] Function call error\n");
             exit(EXIT_FAILURE);
         }
@@ -89,19 +117,19 @@ Value *interpreter(Node *node, State *state) {
     // Assignments
     if (node->type == NODE_TYPE_ASSIGN) {
         Value *value = interpreter(node->value.assign.node, state);
-        interpreter_set(vars_map, node->value.assign.variable, value);
+        state_set(state, node->value.assign.variable, value);
         return value;
     }
 
     if (node->type == NODE_TYPE_ADD_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number + value->value.number);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -110,7 +138,7 @@ Value *interpreter(Node *node, State *state) {
             Value *new_value = value_new_string(concat_string);
             free(concat_string);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -121,7 +149,7 @@ Value *interpreter(Node *node, State *state) {
             free(value_string);
             free(concat_string);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -132,7 +160,7 @@ Value *interpreter(Node *node, State *state) {
             free(value_string);
             free(concat_string);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -143,12 +171,12 @@ Value *interpreter(Node *node, State *state) {
     if (node->type == NODE_TYPE_SUB_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number - value->value.number);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -161,12 +189,12 @@ Value *interpreter(Node *node, State *state) {
     if (node->type == NODE_TYPE_MUL_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number * value->value.number);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -179,12 +207,12 @@ Value *interpreter(Node *node, State *state) {
     if (node->type == NODE_TYPE_EXP_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(pow(old_value->value.number, value->value.number));
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -197,12 +225,12 @@ Value *interpreter(Node *node, State *state) {
     if (node->type == NODE_TYPE_DIV_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(old_value->value.number / value->value.number);
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -215,12 +243,12 @@ Value *interpreter(Node *node, State *state) {
     if (node->type == NODE_TYPE_MOD_ASSIGN) {
         char *variable = node->value.assign.variable;
         Value *value = interpreter(node->value.assign.node, state);
-        Value *old_value = map_get(vars_map, variable);
+        Value *old_value = map_get(state->vars, variable);
 
         if (old_value != NULL && old_value->type == VALUE_TYPE_NUMBER && value->type == VALUE_TYPE_NUMBER) {
             Value *new_value = value_new_number(fmod(old_value->value.number, value->value.number));
             value_free(value);
-            interpreter_set(vars_map, variable, new_value);
+            state_set(state, variable, new_value);
             return new_value;
         }
 
@@ -631,7 +659,7 @@ Value *interpreter(Node *node, State *state) {
             while (value->value.boolean) {
                 value_free(value);
 
-                State *new_state = state_new(STATE_TYPE_RUNNING);
+                State *new_state = state_copy(state);
 
                 ListItem *list_item = node->value.while_loop.nodes->first;
                 while (list_item != NULL) {
@@ -678,7 +706,7 @@ Value *interpreter(Node *node, State *state) {
                 value_free(value);
             }
 
-            State *new_state = state_new(STATE_TYPE_RUNNING);
+            State *new_state = state_copy(state);
 
             ListItem *list_item = node->value.while_loop.nodes->first;
             while (list_item != NULL) {
@@ -720,7 +748,7 @@ Value *interpreter(Node *node, State *state) {
             while (value->value.boolean) {
                 value_free(value);
 
-                State *new_state = state_new(STATE_TYPE_RUNNING);
+                State *new_state = state_copy(state);
 
                 ListItem *list_item = node->value.for_loop.nodes->first;
                 while (list_item != NULL) {
@@ -774,14 +802,11 @@ Value *interpreter(Node *node, State *state) {
         return NULL;
     }
 
+    // if (node->type == NODE_TYPE_RETURN) {
+    //     state->type = STATE_TYPE_FUNCTION_RETURN;
+    //     return interpreter(node->value.node, state);
+    // }
+
     printf("[ERROR] Interpreter unkown node type: %d\n", node->type);
     exit(EXIT_FAILURE);
-}
-
-Value *start_interpreter(Node *node, Map *global_vars_map) {
-    vars_map = global_vars_map;
-    State *state = state_new(STATE_TYPE_RUNNING);
-    Value *value = interpreter(node, state);
-    state_free(state);
-    return value;
 }

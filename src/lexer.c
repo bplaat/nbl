@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
 
@@ -15,12 +16,7 @@ List *lexer(char *text) {
     char string_buffer[BUFFER_SIZE];
 
     while (*text != '\0') {
-        if (*text == 'n' && *(text + 1) == 'u' && *(text + 2) == 'l' && *(text + 3) == 'l') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_NULL));
-            text += 4;
-        }
-
-        else if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
+        if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
             char *string_buffer_current = string_buffer;
             while (
                 isdigit(*text) || *text == '.' || *text == 'e' || *text == 'E' ||
@@ -67,7 +63,21 @@ List *lexer(char *text) {
             text++;
             char *string_buffer_current = string_buffer;
             while (*text != '"') {
-                *string_buffer_current++ = *text++;
+                if (*text == '\\') {
+                    text++;
+                    if (*text == '\\') {
+                        *string_buffer_current++ = '\\';
+                    }
+                    if (*text == '\'') {
+                        *string_buffer_current++ = '\'';
+                    }
+                    if (*text == '"') {
+                        *string_buffer_current++ = '"';
+                    }
+                    text++;
+                } else {
+                    *string_buffer_current++ = *text++;
+                }
             }
             *string_buffer_current = 0;
             text++;
@@ -77,61 +87,6 @@ List *lexer(char *text) {
             list_add(tokens_list, token);
         }
 
-        else if (*text == 't' && *(text + 1) == 'r' && *(text + 2) == 'u' && *(text + 3) == 'e') {
-            Token *token = token_new(TOKEN_TYPE_BOOLEAN);
-            token->value.boolean = true;
-            list_add(tokens_list, token);
-            text += 4;
-        }
-
-        else if (*text == 'f' && *(text + 1) == 'a' && *(text + 2) == 'l' && *(text + 3) == 's' && *(text + 4) == 'e') {
-            Token *token = token_new(TOKEN_TYPE_BOOLEAN);
-            token->value.boolean = false;
-            list_add(tokens_list, token);
-            text += 5;
-        }
-
-        else if (*text == 'i' && *(text + 1) == 'f') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_IF));
-            text += 2;
-        }
-
-        else if (*text == 'e' && *(text + 1) == 'l' && *(text + 2) == 's' && *(text + 3) == 'e') {
-            if (*(text + 4) == ' ' && *(text + 5) == 'i' && *(text + 6) == 'f') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE_IF));
-                text += 7;
-            }
-            else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE));
-                text += 4;
-            }
-        }
-
-        else if (*text == 'w' && *(text + 1) == 'h' && *(text + 2) == 'i' && *(text + 3) == 'l' && *(text + 4) == 'e') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_WHILE));
-            text += 5;
-        }
-
-        else if (*text == 'd' && *(text + 1) == 'o') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_DO));
-            text += 2;
-        }
-
-        else if (*text == 'f' && *(text + 1) == 'o' && *(text + 2) == 'r') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_FOR));
-            text += 3;
-        }
-
-        else if (*text == 'b' && *(text + 1) == 'r' && *(text + 2) == 'e' && *(text + 3) == 'a' && *(text + 4) == 'k') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_BREAK));
-            text += 5;
-        }
-
-        else if (*text == 'c' && *(text + 1) == 'o' && *(text + 2) == 'n' && *(text + 3) == 't' && *(text + 4) == 'i' && *(text + 5) == 'n' && *(text + 6) == 'u' && *(text + 7) == 'e') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_CONTINUE));
-            text += 8;
-        }
-
         else if (isalpha(*text) || *text == '_') {
             char *string_buffer_current = string_buffer;
             while (isalnum(*text) || *text == '_') {
@@ -139,9 +94,55 @@ List *lexer(char *text) {
             }
             *string_buffer_current = 0;
 
-            Token *token = token_new(TOKEN_TYPE_VARIABLE);
-            token->value.string = string_copy(string_buffer);
-            list_add(tokens_list, token);
+            if (!strcmp(string_buffer, "null")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_NULL));
+            }
+            else if (!strcmp(string_buffer, "true")) {
+                Token *token = token_new(TOKEN_TYPE_BOOLEAN);
+                token->value.boolean = true;
+                list_add(tokens_list, token);
+            }
+            else if (!strcmp(string_buffer, "false")) {
+                Token *token = token_new(TOKEN_TYPE_BOOLEAN);
+                token->value.boolean = false;
+                list_add(tokens_list, token);
+            }
+            else if (!strcmp(string_buffer, "if")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_IF));
+            }
+            else if (!strcmp(string_buffer, "else if")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE_IF));
+            }
+            else if (!strcmp(string_buffer, "else")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE));
+            }
+            else if (!strcmp(string_buffer, "while")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_WHILE));
+            }
+            else if (!strcmp(string_buffer, "do")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_DO));
+            }
+            else if (!strcmp(string_buffer, "for")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_FOR));
+            }
+            else if (!strcmp(string_buffer, "break")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_BREAK));
+            }
+            else if (!strcmp(string_buffer, "continue")) {
+                list_add(tokens_list, token_new(TOKEN_TYPE_CONTINUE));
+            }
+            // else if (!strcmp(string_buffer, "function")) {
+            //     list_add(tokens_list, token_new(TOKEN_TYPE_FUNCTION));
+            // }
+            // else if (!strcmp(string_buffer, "return")) {
+            //     list_add(tokens_list, token_new(TOKEN_TYPE_RETURN));
+            // }
+
+            else {
+                Token *token = token_new(TOKEN_TYPE_VARIABLE);
+                token->value.string = string_copy(string_buffer);
+                list_add(tokens_list, token);
+            }
         }
 
         else if (*text == '=') {

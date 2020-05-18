@@ -11,6 +11,7 @@ typedef enum NodeType {
     NODE_TYPE_STRING,
     NODE_TYPE_BOOLEAN,
     NODE_TYPE_VARIABLE,
+    // NODE_TYPE_FUNCTION,
     NODE_TYPE_CALL,
 
     NODE_TYPE_ASSIGN,
@@ -49,6 +50,7 @@ typedef enum NodeType {
     NODE_TYPE_FOR,
     NODE_TYPE_BREAK,
     NODE_TYPE_CONTINUE,
+    // NODE_TYPE_RETURN
 } NodeType;
 
 typedef struct Node {
@@ -59,6 +61,11 @@ typedef struct Node {
         char *string;
 
         bool boolean;
+
+        // struct {
+        //     List *variables;
+        //     List *nodes;
+        // } function;
 
         struct {
             char *variable;
@@ -102,6 +109,8 @@ typedef struct Node {
 Node *node_new(NodeType type);
 
 char *node_to_string(Node *node);
+
+Node *node_copy(Node *node);
 
 void node_free(Node *node);
 

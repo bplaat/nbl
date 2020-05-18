@@ -6,10 +6,10 @@ if [[ $1 = "release" ]]; then
     tcc $(find src -name *.c) -o nbl.exe
 elif [[ $1 = "debug" ]]; then
     if gcc -g -DDEBUG -Wall -Wextra -Wpedantic -Werror -Wshadow -std=c99 $(find src -name *.c) -o nbl.exe; then
-        drmemory -- ./nbl test.nbl
+        drmemory -- ./nbl
     fi
 else
     if gcc -DDEBUG -Wall -Wextra -Wpedantic -Werror -Wshadow -std=c99 $(find src -name *.c) -o nbl.exe; then
-        ./nbl test.nbl
+        ./nbl
     fi
 fi

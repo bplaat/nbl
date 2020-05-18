@@ -32,7 +32,7 @@ Value *do_type(List *arguments) {
         return value_new_string("boolean");
     }
 
-    if (value->type == VALUE_TYPE_NATIVE_FUNCTION) {
+    if (value->type == VALUE_TYPE_NATIVE_FUNCTION) { // || value->type == VALUE_TYPE_FUNCTION) {
         return value_new_string("function");
     }
 
@@ -72,7 +72,6 @@ Value *do_string(List *arguments) {
 }
 
 Value *do_exit(List *arguments) {
-    free_library();
     if (arguments->first != NULL && ((Value *)arguments->first->value)->type == VALUE_TYPE_NUMBER) {
         Value *value = arguments->first->value;
         exit(floor(value->value.number));
@@ -186,14 +185,4 @@ Map *get_library(void) {
     map_set(library, string_copy("atan"), value_new_native_function(do_atan));
 
     return library;
-}
-
-void free_library() {
-    MapItem *map_item = library->first;
-    while (map_item != NULL) {
-        free(map_item->key);
-        value_free(map_item->value);
-        map_item = map_item->next;
-    }
-    map_free(library);
 }

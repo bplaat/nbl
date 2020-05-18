@@ -100,6 +100,14 @@ char *token_to_string(Token *token) {
         return string_copy("continue");
     }
 
+    // if (token->type == TOKEN_TYPE_FUNCTION) {
+    //     return string_copy("function");
+    // }
+
+    // if (token->type == TOKEN_TYPE_RETURN) {
+    //     return string_copy("return");
+    // }
+
     if (token->type == TOKEN_TYPE_LBLOCK) {
         return string_copy("{");
     }

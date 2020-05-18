@@ -14,9 +14,10 @@ stat = bool | assign |
     IF LPAREN bool RPAREN block (ELSE_IF LPAREN bool RPAREN block)* (ELSE block)? |
     WHILE LPAREN bool RPAREN block |
     DO block WHILE LPAREN bool RPAREN |
-    FOR LPAREN assign STOP bool STOP assign RPAREN block
+    FOR LPAREN assign STOP bool STOP assign RPAREN block | BREAK | CONTINUE | RETURN bool?
 
-assign = VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool
+assign = VARIABLE (ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | EXP_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) bool |
+    FUNCTION VARIABLE LPAREN vars RPAREN BLOCK
 
 bool = equals ((AND | OR) equals)*
 
@@ -27,14 +28,35 @@ expr = term ((ADD | SUB) term)* |
 term = factor ((MUL | EXP | DIV | MOD) factor)*
 
 factor = ADD factor | SUB factor | NOT factor | LPAREN bool RPAREN |
-    NULL | NUMBER | STRING | BOOLEAN | VARIABLE | VARIABLE LPAREN args RPAREN
+    NULL | NUMBER | STRING | BOOLEAN | VARIABLE | VARIABLE LPAREN args RPAREN | FUNCTION LPAREN vars RPAREN block
 
 block = stat | LBLOCK (stat STOP?)* RBLOCK
 
 args = (bool COMMA?)*
+
+vars = (VARIABLE COMMA?)*
 */
 
 ListItem *list_item;
+
+List *parse_vars(void) {
+    List *variables = list_new();
+
+    while (((Token *)list_item->value)->type != TOKEN_TYPE_RPAREN) {
+        if (((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE) {
+            list_add(variables, string_copy(((Token *)list_item->value)->value.string));
+        }
+
+        list_item = list_item->next;
+
+        if (((Token *)list_item->value)->type == TOKEN_TYPE_COMMA) {
+            list_item = list_item->next;
+        }
+    }
+
+    return variables;
+}
+
 
 List *parse_args(void) {
     List *arguments = list_new();
@@ -150,6 +172,16 @@ Node *parse_factor(void) {
         list_item = list_item->next;
         return node;
     }
+
+    // if (token->type == TOKEN_TYPE_FUNCTION) {
+    //     Node *node = node_new(NODE_TYPE_FUNCTION);
+    //     list_item = list_item->next;
+    //     list_item = list_item->next;
+    //     node->value.function.variables = parse_vars();
+    //     list_item = list_item->next;
+    //     node->value.function.nodes = parse_block();
+    //     return node;
+    // }
 
     if (token->type == TOKEN_TYPE_STOP) {
         return NULL;
@@ -435,6 +467,24 @@ Node *parse_assign(void) {
         return new_node;
     }
 
+    // if (
+    //     ((Token *)list_item->value)->type == TOKEN_TYPE_FUNCTION &&
+    //     list_item->next != NULL &&
+    //     ((Token *)list_item->next->value)->type == TOKEN_TYPE_VARIABLE
+    // ) {
+    //     Node *assign_node = node_new(NODE_TYPE_ASSIGN);
+    //     Node *function_node = node_new(NODE_TYPE_FUNCTION);
+    //     list_item = list_item->next;
+    //     assign_node->value.assign.variable = string_copy(((Token *)list_item->value)->value.string);
+    //     list_item = list_item->next;
+    //     list_item = list_item->next;
+    //     function_node->value.function.variables = parse_vars();
+    //     list_item = list_item->next;
+    //     function_node->value.function.nodes = parse_block();
+    //     assign_node->value.assign.node = function_node;
+    //     return assign_node;
+    // }
+
     char *token_string = token_to_string((Token *)list_item->value);
     printf("[ERROR] Unexpected token: %s\n", token_string);
     exit(EXIT_FAILURE);
@@ -442,10 +492,17 @@ Node *parse_assign(void) {
 
 Node *parse_stat(void) {
     if (
-        ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
-        list_item->next != NULL &&
-        ((Token *)list_item->next->value)->type >= TOKEN_TYPE_ASSIGN &&
-        ((Token *)list_item->next->value)->type <= TOKEN_TYPE_MOD_ASSIGN
+        // (
+            ((Token *)list_item->value)->type == TOKEN_TYPE_VARIABLE &&
+            list_item->next != NULL &&
+            ((Token *)list_item->next->value)->type >= TOKEN_TYPE_ASSIGN &&
+            ((Token *)list_item->next->value)->type <= TOKEN_TYPE_MOD_ASSIGN
+        // ) ||
+        // (
+        //     ((Token *)list_item->value)->type == TOKEN_TYPE_FUNCTION &&
+        //     list_item->next != NULL &&
+        //     ((Token *)list_item->next->value)->type == TOKEN_TYPE_VARIABLE
+        // )
     ) {
         return parse_assign();
     }
@@ -538,6 +595,16 @@ Node *parse_stat(void) {
         list_item = list_item->next;
         return node_new(NODE_TYPE_CONTINUE);
     }
+
+    // if (((Token *)list_item->value)->type == TOKEN_TYPE_RETURN) {
+    //     list_item = list_item->next;
+    //     Node *node = node_new(NODE_TYPE_RETURN);
+    //     node->value.node = parse_bool();
+    //     if (node->value.node == NULL) {
+    //         node->value.node = node_new(NODE_TYPE_NULL);
+    //     }
+    //     return node;
+    // }
 
     return parse_bool();
 }

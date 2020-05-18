@@ -4,6 +4,8 @@
 #include "list.h"
 #include "node.h"
 
+List *parse_vars(void);
+
 List *parse_args(void);
 
 List *parse_block(void);

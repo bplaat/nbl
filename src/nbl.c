@@ -15,7 +15,7 @@
 #include "value.h"
 #include "interpreter.h"
 
-Map *global_vars_map;
+State *global_state;
 
 void run(char *text, bool print_result) {
     // Lexer the text
@@ -56,7 +56,7 @@ void run(char *text, bool print_result) {
     // Interpreter the nodes list
     list_item = nodes_list->first;
     while (list_item != NULL) {
-        Value *value = start_interpreter(list_item->value, global_vars_map);
+        Value *value = interpreter(list_item->value, global_state);
         if (print_result) {
             char *value_string = value_to_string(value);
             printf("%s\n", value_string);
@@ -90,8 +90,8 @@ void closeHandler() {
 int main(int argc, char **argv) {
     signal(SIGINT, closeHandler);
 
-    // Get the NBL standard library
-    global_vars_map = get_library();
+    global_state = state_new(STATE_TYPE_RUNNING);
+    global_state->vars = get_library();
 
     // When file is given run file
     if (argc >= 2) {
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 
             if (line_buffer[0] != '\0') {
                 if (!strcmp(line_buffer, ".dump")) {
-                    MapItem *global_vars_map_item = global_vars_map->first;
+                    MapItem *global_vars_map_item = global_state->vars->first;
                     while (global_vars_map_item != NULL) {
                         printf("%s = %s\n", global_vars_map_item->key, value_to_string(global_vars_map_item->value));
 
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    free_library();
+    state_free(global_state);
 
     return EXIT_SUCCESS;
 }

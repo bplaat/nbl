@@ -10,7 +10,8 @@ typedef enum ValueType {
     VALUE_TYPE_NUMBER,
     VALUE_TYPE_STRING,
     VALUE_TYPE_BOOLEAN,
-    VALUE_TYPE_NATIVE_FUNCTION
+    VALUE_TYPE_NATIVE_FUNCTION,
+    // VALUE_TYPE_FUNCTION
 } ValueType;
 
 typedef struct Value {
@@ -23,6 +24,11 @@ typedef struct Value {
         bool boolean;
 
         struct Value *(*native_function)(List *list);
+
+        // struct {
+        //     List *variables;
+        //     List *nodes;
+        // } function;
     } value;
 } Value;
 
@@ -38,6 +44,8 @@ Value *value_new_string(char *string);
 Value *value_new_boolean(bool boolean);
 
 Value *value_new_native_function(Value *(*native_function)(List *list));
+
+// Value *value_new_function(List *variables, List *nodes);
 
 char *value_to_string(Value *value);
 

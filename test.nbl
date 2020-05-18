@@ -1,4 +1,16 @@
-// While loops
+double = function (number) return number * 2;
+
+function add(a, b) {
+    print('LALA: ' + (double(a) + b))
+    return;
+
+    return double(a) + b;
+}
+
+println(add(4, 3));
+
+
+/* While loops
 x = 0;
 while (x < 10) {
     if (x == 5) {
@@ -56,10 +68,11 @@ println(x)
 x *= 2
 println(x)
 
-/*
+
 
 JOJO
 
-*/
+
 
 age = 17;;;;
+*/
