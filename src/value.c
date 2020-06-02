@@ -2,9 +2,8 @@
 #include <stdlib.h>
 
 #include "value.h"
-#include "constants.h"
 #include "utils.h"
-#include "node.h"
+#include "list.h"
 
 Value *value_new(ValueType type) {
     Value *value = malloc(sizeof(Value));
@@ -25,13 +24,6 @@ Value *value_new_number(double number) {
     return value;
 }
 
-Value *value_new_string(char *string) {
-    Value *value = malloc(sizeof(Value));
-    value->type = VALUE_TYPE_STRING;
-    value->value.string = string_copy(string);
-    return value;
-}
-
 Value *value_new_boolean(bool boolean) {
     Value *value = malloc(sizeof(Value));
     value->type = VALUE_TYPE_BOOLEAN;
@@ -39,35 +31,20 @@ Value *value_new_boolean(bool boolean) {
     return value;
 }
 
-Value *value_new_native_function(Value *(*native_function)(List *list)) {
+Value *value_new_string(char *string) {
+    Value *value = malloc(sizeof(Value));
+    value->type = VALUE_TYPE_STRING;
+    value->value.string = string_copy(string);
+    return value;
+}
+
+Value *value_new_native_function(Value *(*native_function)(List *args)) {
     Value *value = malloc(sizeof(Value));
     value->type = VALUE_TYPE_NATIVE_FUNCTION;
     value->value.native_function = native_function;
     return value;
 }
 
-// Value *value_new_function(List *variables, List *nodes) {
-//     Value *value = malloc(sizeof(Value));
-//     value->type = VALUE_TYPE_FUNCTION;
-
-//     value->value.function.variables = list_new();
-//     ListItem *list_item = variables->first;
-//     while (list_item != NULL) {
-//         printf("var %s\n", (char *)list_item->value);
-//         list_add(value->value.function.variables, string_copy(list_item->value));
-//         list_item = list_item->next;
-//     }
-
-//     value->value.function.nodes = list_new();
-//     list_item = nodes->first;
-//     while (list_item != NULL) {
-//         printf("node %s\n", node_to_string((Node *)list_item->value));
-//         list_add(value->value.function.nodes, node_copy(list_item->value));
-//         list_item = list_item->next;
-//     }
-
-//     return value;
-// }
 
 char *value_to_string(Value *value) {
     if (value->type == VALUE_TYPE_NULL) {
@@ -75,62 +52,54 @@ char *value_to_string(Value *value) {
     }
 
     if (value->type == VALUE_TYPE_NUMBER) {
-        char *string_buffer = malloc(BUFFER_SIZE);
-        sprintf(string_buffer, "%g", value->value.number);
-        return string_buffer;
+        return string_format("%g", value->value.number);
+    }
+
+    if (value->type == VALUE_TYPE_BOOLEAN) {
+        return string_copy(value->value.boolean ? "true" : "false");
     }
 
     if (value->type == VALUE_TYPE_STRING) {
         return string_copy(value->value.string);
     }
 
-    if (value->type == VALUE_TYPE_BOOLEAN) {
-        if (value->value.boolean) {
-            return string_copy("true");
-        } else {
-            return string_copy("false");
-        }
+    if (value->type == VALUE_TYPE_NATIVE_FUNCTION) {
+        return string_copy("function");
     }
 
-    // if (value->type == VALUE_TYPE_NATIVE_FUNCTION || value->type == VALUE_TYPE_FUNCTION) {
-    //     return string_copy("function");
-    // }
-
-    printf("[ERROR] Unkown value type: %d\n", value->type);
+    fprintf(stderr, "[ERROR] value_to_string(): Unexpected value type: %d\n", value->type);
     exit(EXIT_FAILURE);
 }
 
 Value *value_copy(Value *value) {
-    Value *new_value = malloc(sizeof(Value));
-    new_value->type = value->type;
-    if (value->type == VALUE_TYPE_STRING) {
-        new_value->value.string = string_copy(value->value.string);
-    } else {
-        new_value->value = value->value;
+    if (value->type == VALUE_TYPE_NULL) {
+        return value_new_null();
     }
-    return new_value;
+
+    if (value->type == VALUE_TYPE_NUMBER) {
+        return value_new_number(value->value.number);
+    }
+
+    if (value->type == VALUE_TYPE_BOOLEAN) {
+        return value_new_boolean(value->value.boolean);
+    }
+
+    if (value->type == VALUE_TYPE_STRING) {
+        return value_new_string(value->value.string);
+    }
+
+    if (value->type == VALUE_TYPE_NATIVE_FUNCTION) {
+        return value_new_native_function(value->value.native_function);
+    }
+
+    fprintf(stderr, "[ERROR] value_copy(): Unexpected value type: %d\n", value->type);
+    exit(EXIT_FAILURE);
 }
 
 void value_free(Value *value) {
     if (value->type == VALUE_TYPE_STRING) {
         free(value->value.string);
     }
-
-    // if (value->type == VALUE_TYPE_FUNCTION) {
-    //     ListItem *list_item = value->value.function.variables->first;
-    //     while (list_item != NULL) {
-    //         free(list_item->value);
-    //         list_item = list_item->next;
-    //     }
-    //     list_free(value->value.function.variables);
-
-    //     list_item = value->value.function.nodes->first;
-    //     while (list_item != NULL) {
-    //         node_free(list_item->value);
-    //         list_item = list_item->next;
-    //     }
-    //     list_free(value->value.function.nodes);
-    // }
 
     free(value);
 }

@@ -12,12 +12,14 @@ typedef struct Map {
     MapItem *last;
 } Map;
 
-Map *map_new(void);
+Map *map_new(void) ;
 
 void *map_get(Map *map, char *key);
 
 void map_set(Map *map, char *key, void *value);
 
-void map_free(Map *map);
+Map *map_copy(Map *map, void *(*copy_function)(void *value));
+
+void map_free(Map *map, void (*free_function)(void *value));
 
 #endif

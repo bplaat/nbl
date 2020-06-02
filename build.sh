@@ -1,15 +1,5 @@
-# Run './build.sh' to build and run the interpreter
-# Run './build.sh debug' when you want to compile and debug the interpreter
-# Run './build.sh release' when you want to compile to a smaller executable
-
-if [[ $1 = "release" ]]; then
-    tcc $(find src -name *.c) -o nbl.exe
-elif [[ $1 = "debug" ]]; then
-    if gcc -g -DDEBUG -Wall -Wextra -Wpedantic -Werror -Wshadow -std=c99 $(find src -name *.c) -o nbl.exe; then
-        drmemory -- ./nbl
-    fi
+if [ "$1" = "release" ]; then
+    gcc -s -O2 -Wno-incompatible-pointer-types $(find src -name *.c) -lm -o nbl
 else
-    if gcc -DDEBUG -Wall -Wextra -Wpedantic -Werror -Wshadow -std=c99 $(find src -name *.c) -o nbl.exe; then
-        ./nbl
-    fi
+    gcc -g -DDEBUG -Wall -Wextra -Werror -Wshadow -Wpedantic --std=c99 -Wno-incompatible-pointer-types $(find src -name *.c) -lm -o nbl
 fi

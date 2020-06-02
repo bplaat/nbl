@@ -1,8 +1,8 @@
 #ifndef LIBRARY_H
 #define LIBRARY_H
 
-#include "map.h"
+#include "state.h"
 
-Map *get_library(void);
+void library_load(State *state);
 
 #endif

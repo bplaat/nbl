@@ -8,10 +8,9 @@
 typedef enum NodeType {
     NODE_TYPE_NULL,
     NODE_TYPE_NUMBER,
-    NODE_TYPE_STRING,
     NODE_TYPE_BOOLEAN,
+    NODE_TYPE_STRING,
     NODE_TYPE_VARIABLE,
-    // NODE_TYPE_FUNCTION,
     NODE_TYPE_CALL,
 
     NODE_TYPE_ASSIGN,
@@ -21,6 +20,10 @@ typedef enum NodeType {
     NODE_TYPE_EXP_ASSIGN,
     NODE_TYPE_DIV_ASSIGN,
     NODE_TYPE_MOD_ASSIGN,
+
+    NODE_TYPE_IF,
+    NODE_TYPE_ELSE_IF,
+    NODE_TYPE_ELSE,
 
     NODE_TYPE_UNARY_ADD,
     NODE_TYPE_UNARY_SUB,
@@ -40,17 +43,7 @@ typedef enum NodeType {
     NODE_TYPE_LOWER,
     NODE_TYPE_LOWER_EQUALS,
     NODE_TYPE_AND,
-    NODE_TYPE_OR,
-
-    NODE_TYPE_IF,
-    NODE_TYPE_ELSE_IF,
-    NODE_TYPE_ELSE,
-    NODE_TYPE_WHILE,
-    NODE_TYPE_DO_WHILE,
-    NODE_TYPE_FOR,
-    NODE_TYPE_BREAK,
-    NODE_TYPE_CONTINUE,
-    // NODE_TYPE_RETURN
+    NODE_TYPE_OR
 } NodeType;
 
 typedef struct Node {
@@ -58,18 +51,13 @@ typedef struct Node {
     union {
         double number;
 
-        char *string;
-
         bool boolean;
 
-        // struct {
-        //     List *variables;
-        //     List *nodes;
-        // } function;
+        char *string;
 
         struct {
             char *variable;
-            List *arguments;
+            List *args;
         } call;
 
         struct {
@@ -77,40 +65,28 @@ typedef struct Node {
             struct Node *node;
         } assign;
 
-        struct Node *node;
-
         struct {
-            struct Node *left;
-            struct Node *right;
-        } operation;
-
-        struct {
-            struct Node *cond;
+            struct Node *condition;
             List *nodes;
             struct Node *next;
         } condition;
 
         List *nodes;
 
-        struct {
-            struct Node *cond;
-            List *nodes;
-        } while_loop;
+        struct Node *node;
 
         struct {
-            struct Node *init;
-            struct Node *cond;
-            struct Node *inc;
-            List *nodes;
-        } for_loop;
+            struct Node *left;
+            struct Node *right;
+        } operation;
     } value;
 } Node;
 
 Node *node_new(NodeType type);
 
-char *node_to_string(Node *node);
+char *nodes_to_string(List *nodes);
 
-Node *node_copy(Node *node);
+char *node_to_string(Node *node);
 
 void node_free(Node *node);
 

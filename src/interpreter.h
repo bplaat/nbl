@@ -1,10 +1,10 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
-#include "node.h"
-#include "state.h"
 #include "value.h"
+#include "state.h"
+#include "node.h"
 
-Value *interpreter(Node *node, State *state);
+Value *interpreter(State *state, Node *node);
 
 #endif

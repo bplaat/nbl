@@ -2,36 +2,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
 
 #include "lexer.h"
-#include "constants.h"
-#include "list.h"
 #include "token.h"
 #include "utils.h"
 
 List *lexer(char *text) {
-    List *tokens_list = list_new();
+    List *tokens = list_new();
 
-    char string_buffer[BUFFER_SIZE];
+    char string_buffer[64];
 
     while (*text != '\0') {
         if (isdigit(*text) || (*text == '.' && isdigit(*(text + 1)))) {
             char *string_buffer_current = string_buffer;
             while (
                 isdigit(*text) || *text == '.' || *text == 'e' || *text == 'E' ||
-                (*text == '-' && (*(string_buffer_current - 1) == 'e' || *(string_buffer_current - 1) == 'E'))
+                (*text == '-' && (*(text - 1) == 'e' || *(text - 1) == 'E'))
             ) {
                 *string_buffer_current++ = *text++;
             }
-            *string_buffer_current = 0;
+            *string_buffer_current = '\0';
 
             Token *token = token_new(TOKEN_TYPE_NUMBER);
             token->value.number = atof(string_buffer);
-            list_add(tokens_list, token);
+            list_add(tokens, token);
+            continue;
         }
 
-        else if (*text == '\'') {
+        if (*text == '\'') {
             text++;
             char *string_buffer_current = string_buffer;
             while (*text != '\'') {
@@ -56,10 +54,11 @@ List *lexer(char *text) {
 
             Token *token = token_new(TOKEN_TYPE_STRING);
             token->value.string = string_copy(string_buffer);
-            list_add(tokens_list, token);
+            list_add(tokens, token);
+            continue;
         }
 
-        else if (*text == '"') {
+        if (*text == '"') {
             text++;
             char *string_buffer_current = string_buffer;
             while (*text != '"') {
@@ -84,241 +83,271 @@ List *lexer(char *text) {
 
             Token *token = token_new(TOKEN_TYPE_STRING);
             token->value.string = string_copy(string_buffer);
-            list_add(tokens_list, token);
+            list_add(tokens, token);
+            continue;
         }
 
-        else if (isalpha(*text) || *text == '_') {
+        if (isalpha(*text) || *text == '_') {
             char *string_buffer_current = string_buffer;
             while (isalnum(*text) || *text == '_') {
                 *string_buffer_current++ = *text++;
             }
-            *string_buffer_current = 0;
+            *string_buffer_current = '\0';
 
             if (!strcmp(string_buffer, "null")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_NULL));
+                list_add(tokens, token_new(TOKEN_TYPE_NULL));
+                continue;
             }
-            else if (!strcmp(string_buffer, "true")) {
+
+            if (!strcmp(string_buffer, "true")) {
                 Token *token = token_new(TOKEN_TYPE_BOOLEAN);
                 token->value.boolean = true;
-                list_add(tokens_list, token);
+                list_add(tokens, token);
+                continue;
             }
-            else if (!strcmp(string_buffer, "false")) {
+
+            if (!strcmp(string_buffer, "false")) {
                 Token *token = token_new(TOKEN_TYPE_BOOLEAN);
                 token->value.boolean = false;
-                list_add(tokens_list, token);
+                list_add(tokens, token);
+                continue;
             }
-            else if (!strcmp(string_buffer, "if")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_IF));
-            }
-            else if (!strcmp(string_buffer, "else if")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE_IF));
-            }
-            else if (!strcmp(string_buffer, "else")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ELSE));
-            }
-            else if (!strcmp(string_buffer, "while")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_WHILE));
-            }
-            else if (!strcmp(string_buffer, "do")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_DO));
-            }
-            else if (!strcmp(string_buffer, "for")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_FOR));
-            }
-            else if (!strcmp(string_buffer, "break")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_BREAK));
-            }
-            else if (!strcmp(string_buffer, "continue")) {
-                list_add(tokens_list, token_new(TOKEN_TYPE_CONTINUE));
-            }
-            // else if (!strcmp(string_buffer, "function")) {
-            //     list_add(tokens_list, token_new(TOKEN_TYPE_FUNCTION));
-            // }
-            // else if (!strcmp(string_buffer, "return")) {
-            //     list_add(tokens_list, token_new(TOKEN_TYPE_RETURN));
-            // }
 
-            else {
-                Token *token = token_new(TOKEN_TYPE_VARIABLE);
-                token->value.string = string_copy(string_buffer);
-                list_add(tokens_list, token);
+            if (!strcmp(string_buffer, "if")) {
+                list_add(tokens, token_new(TOKEN_TYPE_IF));
+                continue;
             }
+
+            if (!strcmp(string_buffer, "elif")) {
+                list_add(tokens, token_new(TOKEN_TYPE_ELSE_IF));
+                continue;
+            }
+
+            if (!strcmp(string_buffer, "elseif")) {
+                list_add(tokens, token_new(TOKEN_TYPE_ELSE_IF));
+                continue;
+            }
+
+            if (!strcmp(string_buffer, "else")) {
+                list_add(tokens, token_new(TOKEN_TYPE_ELSE));
+                continue;
+            }
+
+            Token *token = token_new(TOKEN_TYPE_VARIABLE);
+            token->value.string = string_copy(string_buffer);
+            list_add(tokens, token);
+            continue;
         }
 
-        else if (*text == '=') {
+        if (*text == 'e' && *(text + 1) == 'l' && *(text + 2) == 's' && *(text + 3) == 'e' && *(text + 4) == ' ' && *(text + 5) == 'i' && *(text + 6) == 'f') {
+            list_add(tokens, token_new(TOKEN_TYPE_ELSE_IF));
+            text += 7;
+            continue;
+        }
+
+        if (*text == '=') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_EQUALS));
+                list_add(tokens, token_new(TOKEN_TYPE_EQUALS));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ASSIGN));
-                text++;
+                continue;
             }
-        }
 
-        else if (*text == '{') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_LBLOCK));
+            list_add(tokens, token_new(TOKEN_TYPE_ASSIGN));
             text++;
+            continue;
         }
 
-        else if (*text == '}') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_RBLOCK));
+        if (*text == '{') {
+            list_add(tokens, token_new(TOKEN_TYPE_LBLOCK));
             text++;
+            continue;
         }
 
-        else if (*text == '(') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_LPAREN));
+        if (*text == '}') {
+            list_add(tokens, token_new(TOKEN_TYPE_RBLOCK));
             text++;
+            continue;
         }
 
-        else if (*text == ')') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_RPAREN));
+        if (*text == '(') {
+            list_add(tokens, token_new(TOKEN_TYPE_LPAREN));
             text++;
+            continue;
         }
 
-        else if (*text == '+') {
+        if (*text == ')') {
+            list_add(tokens, token_new(TOKEN_TYPE_RPAREN));
+            text++;
+            continue;
+        }
+
+        if (*text == ',') {
+            list_add(tokens, token_new(TOKEN_TYPE_COMMA));
+            text++;
+            continue;
+        }
+
+        if (*text == ';') {
+            list_add(tokens, token_new(TOKEN_TYPE_STOP));
+            text++;
+            continue;
+        }
+
+        if (*text == '+') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ADD_ASSIGN));
+                list_add(tokens, token_new(TOKEN_TYPE_ADD_ASSIGN));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_ADD));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_ADD));
+            text++;
+            continue;
         }
 
-        else if (*text == '-') {
+        if (*text == '-') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_SUB_ASSIGN));
+                list_add(tokens, token_new(TOKEN_TYPE_SUB_ASSIGN));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_SUB));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_SUB));
+            text++;
+            continue;
         }
 
-        else if (*text == '*') {
+        if (*text == '*') {
             if (*(text + 1) == '*') {
                 if (*(text + 2) == '=') {
-                    list_add(tokens_list, token_new(TOKEN_TYPE_EXP_ASSIGN));
+                    list_add(tokens, token_new(TOKEN_TYPE_EXP_ASSIGN));
                     text += 3;
-                } else {
-                    list_add(tokens_list, token_new(TOKEN_TYPE_EXP));
-                    text += 2;
+                    continue;
                 }
+
+                list_add(tokens, token_new(TOKEN_TYPE_EXP));
+                text += 2;
+                continue;
             }
 
-            else if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_MUL_ASSIGN));
+            if (*(text + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_TYPE_MUL_ASSIGN));
                 text += 2;
+                continue;
             }
-            else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_MUL));
-                text++;
-            }
+
+            list_add(tokens, token_new(TOKEN_TYPE_MUL));
+            text++;
+            continue;
         }
 
-        else if (*text == '/') {
-            if (*(text + 1) == '*') {
+        if (*text == '/') {
+            if (*(text + 1) == '/') {
                 text += 2;
-                while (*text != '*' || *(text + 1) != '/') {
-                    text++;
-                }
-                text += 2;
-            }
-
-            else if (*(text + 1) == '/') {
-                text += 2;
-
                 while (*text != '\r' && *text != '\n' && *text != '\0') {
                     text++;
                 }
+                continue;
             }
 
-            else if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_DIV_ASSIGN));
+            if (*(text + 1) == '*') {
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_DIV));
-                text++;
+                while (*text != '*' && *(text + 1) != '/') {
+                    text++;
+                }
+                text += 2;
+                continue;
             }
-        }
 
-        else if (*text == '%') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_MOD_ASSIGN));
+                list_add(tokens, token_new(TOKEN_TYPE_DIV_ASSIGN));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_MOD));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_DIV));
+            text++;
+            continue;
         }
 
-        else if (*text == '>') {
+        if (*text == '%') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_GREATER_EQUALS));
+                list_add(tokens, token_new(TOKEN_TYPE_MOD_ASSIGN));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_GREATER));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_MOD));
+            text++;
+            continue;
         }
 
-        else if (*text == '<') {
+        if (*text == '>') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_LOWER_EQUALS));
+                list_add(tokens, token_new(TOKEN_TYPE_GREATER_EQUALS));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_LOWER));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_GREATER));
+            text++;
+            continue;
         }
 
-        else if (*text == '!') {
+        if (*text == '<') {
             if (*(text + 1) == '=') {
-                list_add(tokens_list, token_new(TOKEN_TYPE_NOT_EQUALS));
+                list_add(tokens, token_new(TOKEN_TYPE_LOWER_EQUALS));
                 text += 2;
-            } else {
-                list_add(tokens_list, token_new(TOKEN_TYPE_NOT));
-                text++;
+                continue;
             }
+
+            list_add(tokens, token_new(TOKEN_TYPE_LOWER));
+            text++;
+            continue;
         }
 
-        else if (*text == '&' && *(text + 1) == '&') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_AND));
+        if (*text == '!') {
+            if (*(text + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_TYPE_NOT_EQUALS));
+                text += 2;
+                continue;
+            }
+
+            list_add(tokens, token_new(TOKEN_TYPE_NOT));
+            text++;
+            continue;
+        }
+
+        if (*text == '&' && *(text + 1) == '&') {
+            list_add(tokens, token_new(TOKEN_TYPE_AND));
             text += 2;
+            continue;
         }
 
-        else if (*text == '|' && *(text + 1) == '|') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_OR));
+        if (*text == '|' && *(text + 1) == '|') {
+            list_add(tokens, token_new(TOKEN_TYPE_OR));
             text += 2;
+            continue;
         }
 
-        else if (*text == ',') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_COMMA));
+        if (*text == '#') {
             text++;
-        }
-
-        else if (*text == ';') {
-            list_add(tokens_list, token_new(TOKEN_TYPE_STOP));
-            text++;
-        }
-
-        else if (*text == '#') {
-            text++;
-
             while (*text != '\r' && *text != '\n' && *text != '\0') {
                 text++;
             }
+            continue;
         }
 
-        else if (isspace(*text)) {
+        if (isspace(*text)) {
             text++;
+            continue;
         }
 
-        else {
-            printf("[ERROR] Unexpected character: %c\n", *text);
-            exit(EXIT_FAILURE);
-        }
+        fprintf(stderr, "[ERROR] lexer(): Unexpected character: %c\n", *text);
+        exit(EXIT_FAILURE);
     }
 
-    return tokens_list;
+    list_add(tokens, token_new(TOKEN_TYPE_END));
+
+    return tokens;
 }

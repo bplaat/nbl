@@ -1,78 +1,24 @@
-double = function (number) return number * 2;
+println('Hello World!');
 
-function add(a, b) {
-    print('LALA: ' + (double(a) + b))
-    return;
-
-    return double(a) + b;
-}
-
-println(add(4, 3));
+x = 5;
 
 
-/* While loops
-x = 0;
-while (x < 10) {
-    if (x == 5) {
-        x += 2;
-        continue
+if (x > 2) {
+    println('x > 2');
+
+    x = 3;
+
+    if (x >= 3) {
+        if (x > 2) {
+            x = 1;
+        }
     }
-
-    println(x);
-    x += 1;
+}
+else if (x < 3) {
+    println('x < 3');
+}
+else {
+    println('else');
 }
 
-// Do while loops
-x = 0;
-do {
-    x = x + 1;
-    println(x);
-} while(x < 5);
-
-// For loops
-for (i = 0; i < 100; i += 1) {
-    println('- ' + i);
-}
-
-exit();
-
-# hoi
-
-n = 4
-
-if (n > 5) println('n > 5') else if (n < 3) {
-    println('n < 3')
-} else print('else')
-
-x = pi;;;
-y = x * 5;;;
-z = e / 2;;;;
-
-println('x = ' + x + ', y = ' + y + ', z = ' + z);
-
-// fsdjjlsdakjfsdajl
-
-name = 'Bastiaan'//input('Name > ');
-println('Hello ', name, '!');
-
-x += 2
-println(x)
-x -= 2
-println(x)
-x %= 2
-println(x)
-x **= 2
-println(x)
-x /= 2
-println(x)
-x *= 2
-println(x)
-
-
-
-JOJO
-
-
-
-age = 17;;;;
-*/
+println('x = ', x);

@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "token.h"
-#include "constants.h"
 #include "utils.h"
 
 Token *token_new(TokenType type) {
@@ -17,23 +16,15 @@ char *token_to_string(Token *token) {
     }
 
     if (token->type == TOKEN_TYPE_NUMBER) {
-        char *string_buffer = malloc(BUFFER_SIZE);
-        sprintf(string_buffer, "%g", token->value.number);
-        return string_buffer;
-    }
-
-    if (token->type == TOKEN_TYPE_STRING) {
-        char *string_buffer = malloc(BUFFER_SIZE);
-        sprintf(string_buffer, "'%s'", token->value.string);
-        return string_buffer;
+        return string_format("%g", token->value.number);
     }
 
     if (token->type == TOKEN_TYPE_BOOLEAN) {
-        if (token->value.boolean) {
-            return string_copy("true");
-        } else {
-            return string_copy("false");
-        }
+        return string_copy(token->value.boolean ? "true" : "false");
+    }
+
+    if (token->type == TOKEN_TYPE_STRING) {
+        return string_format("'%s'", token->value.string);
     }
 
     if (token->type == TOKEN_TYPE_VARIABLE) {
@@ -80,34 +71,6 @@ char *token_to_string(Token *token) {
         return string_copy("else");
     }
 
-    if (token->type == TOKEN_TYPE_WHILE) {
-        return string_copy("while");
-    }
-
-    if (token->type == TOKEN_TYPE_DO) {
-        return string_copy("do");
-    }
-
-    if (token->type == TOKEN_TYPE_FOR) {
-        return string_copy("for");
-    }
-
-    if (token->type == TOKEN_TYPE_BREAK) {
-        return string_copy("break");
-    }
-
-    if (token->type == TOKEN_TYPE_CONTINUE) {
-        return string_copy("continue");
-    }
-
-    // if (token->type == TOKEN_TYPE_FUNCTION) {
-    //     return string_copy("function");
-    // }
-
-    // if (token->type == TOKEN_TYPE_RETURN) {
-    //     return string_copy("return");
-    // }
-
     if (token->type == TOKEN_TYPE_LBLOCK) {
         return string_copy("{");
     }
@@ -130,6 +93,10 @@ char *token_to_string(Token *token) {
 
     if (token->type == TOKEN_TYPE_STOP) {
         return string_copy(";");
+    }
+
+    if (token->type == TOKEN_TYPE_END) {
+        return string_copy("END");
     }
 
     if (token->type == TOKEN_TYPE_ADD) {
@@ -192,7 +159,7 @@ char *token_to_string(Token *token) {
         return string_copy("||");
     }
 
-    printf("[ERROR] Unkown token type: %d\n", token->type);
+    fprintf(stderr, "[ERROR] token_to_string(): Unkown token type: %d\n", token->type);
     exit(EXIT_FAILURE);
 }
 

@@ -4,23 +4,18 @@
 #include "map.h"
 #include "value.h"
 
-typedef enum StateType {
-    STATE_TYPE_RUNNING,
-    STATE_TYPE_LOOP_BREAK,
-    STATE_TYPE_LOOP_CONTINUE,
-    STATE_TYPE_FUNCTION_RETURN
-} StateType;
-
 typedef struct State {
-    StateType type;
-    Map *vars;
+    struct State *parent;
+    Map *env;
 } State;
 
-State *state_new(StateType type);
+State *state_new(void);
 
-State *state_copy(State *state);
+Value *state_get(State *state, char *key);
 
 void state_set(State *state, char *key, Value *value);
+
+State *state_fork(State *state);
 
 void state_free(State *state);
 
