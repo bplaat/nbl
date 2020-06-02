@@ -16,8 +16,8 @@ The language has the syntax of **JavaScript**, the strong but dynamic type syste
 ## Types:
 - `null`
 - `number`
-- `string`
 - `boolean`
+- `string`
 - `array`
 - `object`
 - `function`
@@ -25,17 +25,21 @@ The language has the syntax of **JavaScript**, the strong but dynamic type syste
 ## Operations
 ```
 variable = value
-variable (number) += number
-variable (number) -= number
-variable (number) *= number
-variable (number) **= number
-variable (number) /= number
-variable (number) %= number
+variable (number) += number -> number
+variable (number) -= number -> number
+variable (number) *= number -> number
+variable (number) **= number -> number
+variable (number) /= number -> number
+variable (number) %= number -> number
 
-variable (string) += string
-variable (string) += null
-variable (string) += number
-variable (string) += boolean
+variable (string) += string -> string
+variable (string) += null -> string
+variable (string) += number -> string
+variable (string) += boolean -> string
+
+variable (null) += string -> string
+variable (number) += string -> string
+variable (boolean) += string -> string
 
 + number    ->    number
 - number    ->    number
