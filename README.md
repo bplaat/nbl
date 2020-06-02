@@ -3,6 +3,16 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 
 The language has the syntax of **JavaScript**, the strong but dynamic type system of **Lua** en the standard functions of **PHP**. But not all the language features are implemented in the interpreter yet.
 
+## Things todo:
+- While, do while and for loops
+    - [ ] token, lexer
+    - [ ] node, parser
+    - [ ] interpreter
+- Functions
+    - [ ] token, lexer
+    - [ ] node, parser
+    - [ ] interpreter
+
 ## Types:
 - `null`
 - `number`
@@ -101,7 +111,13 @@ number = 4.56
 if (number > 3) {
     println('Number is greater then 3!')
 }
- (number > 4) {
+else if (number > 4) {
+
+}
+elseif (number > 4) {
+
+}
+elif (number > 4) {
 
 }
 else {
@@ -157,5 +173,5 @@ array = {
     }
 }
 
-println(add(3, 4));
+println(add(double(4), 4)); // -> 12
 ```

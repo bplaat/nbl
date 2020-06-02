@@ -14,12 +14,6 @@
 #include "library.h"
 #include "interpreter.h"
 
-// TODO:
-// - While, do while and for loops
-//      - [ ] token, lexer
-//      - [ ] node, parser
-//      - [ ] interpreter
-
 List *run(State *state, char *text) {
     // Lexer line buffer
     List *tokens = lexer(text);
