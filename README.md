@@ -4,8 +4,6 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
 
 ## Things todo:
-- Variable block scope
-- continue and break
 - string array thing
 - for in
     - array
@@ -41,7 +39,7 @@ Multi line comment
 ```
 
 ## Variables
-```js
+```
 let x = 0;
 x = 1;
 const y = 2;
@@ -49,14 +47,14 @@ y = 3; // Error: can't mutate a const variable
 ```
 
 ## Arrays
-```js
+```
 const names = [ 'Bastiaan', 'Jan', 'Dirk' ];
 println(array_length(names)); // -> 3
 println(names[1]); // -> 'Jan'
 ```
 
 ## Objects
-```js
+```
 const person = {
     name = 'Bastiaan',
     age = 17
@@ -66,7 +64,7 @@ println('Name = ' + person.name + ', Age = ' + (string)person['age'])
 ```
 
 ## Conditions
-```js
+```
 const number = 4.56;
 
 if (number > 3) {
@@ -87,7 +85,7 @@ else {
 ```
 
 ## Loops
-```js
+```
 // While loops
 let x = 10;
 while (x > 0) {
@@ -115,7 +113,7 @@ for (const name in names) {
 ```
 
 ## Functions
-```js
+```
 fn double(number) {
     return number * 2;
 }

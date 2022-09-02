@@ -142,6 +142,8 @@ Map *map_new_child(size_t capacity, Map *parent);
 
 void *map_get(Map *map, char *key);
 
+void *map_get_without_parent(Map *map, char *key);
+
 void map_set(Map *map, char *key, void *item);
 
 void map_set_without_parent(Map *map, char *key, void *item);
@@ -176,6 +178,15 @@ void *map_get(Map *map, char *key) {
     }
     if (map->parent != NULL) {
         return map_get(map->parent, key);
+    }
+    return NULL;
+}
+
+void *map_get_without_parent(Map *map, char *key) {
+    for (size_t i = 0; i < map->size; i++) {
+        if (!strcmp(map->keys[i], key)) {
+            return map->items[i];
+        }
     }
     return NULL;
 }
@@ -972,10 +983,14 @@ void value_free(Value *value) {
 // Parser header
 typedef enum NodeType {
     NODE_PROGRAM,
+    NODE_NODES,
     NODE_BLOCK,
     NODE_IF,
     NODE_WHILE,
     NODE_DOWHILE,
+    NODE_FOR,
+    NODE_CONTINUE,
+    NODE_BREAK,
     NODE_RETURN,
 
     NODE_VALUE,
@@ -1033,7 +1048,10 @@ struct Node {
         struct {
             Node *condition;
             Node *thenBlock;
-            Node *elseBlock;
+            union {
+                Node *elseBlock;
+                Node *incrementBlock;
+            };
         };
         struct {
             Node *function;
@@ -1151,7 +1169,7 @@ void node_free(Node *node) {
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
     }
-    if (node->type == NODE_PROGRAM || node->type == NODE_BLOCK || (node->type >= NODE_ARRAY && node->type <= NODE_CALL)) {
+    if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || (node->type >= NODE_ARRAY && node->type <= NODE_CALL)) {
         if (node->type == NODE_CALL) node_free(node->function);
         if (node->type == NODE_OBJECT) list_free(node->keys, free);
         list_free(node->nodes, (ListFreeFunction *)node_free);
@@ -1257,8 +1275,7 @@ Node *parser_statement(Parser *parser) {
     if (current()->type == TOKEN_FOR) {
         Node *blockNode = node_new_multiple(NODE_BLOCK, current());
 
-        Node *node = node_new(NODE_WHILE, current());
-        node->elseBlock = NULL;
+        Node *node = node_new(NODE_FOR, current());
         parser_eat(parser, TOKEN_FOR);
         parser_eat(parser, TOKEN_LPAREN);
         if (current()->type != TOKEN_SEMICOLON) {
@@ -1271,16 +1288,15 @@ Node *parser_statement(Parser *parser) {
             node->condition = NULL;
         }
         parser_eat(parser, TOKEN_SEMICOLON);
-        Node *incNode = NULL;
+
         if (current()->type != TOKEN_RPAREN) {
-            incNode = parser_assigns(parser);
+            node->incrementBlock = parser_assigns(parser);
+        } else {
+            node->incrementBlock = NULL;
         }
         parser_eat(parser, TOKEN_RPAREN);
 
         node->thenBlock = parser_block(parser);
-        if (incNode != NULL) {
-            list_add(node->thenBlock->nodes, incNode);
-        }
         list_add(blockNode->nodes, node);
 
         if (blockNode->nodes->size == 1) {
@@ -1289,6 +1305,18 @@ Node *parser_statement(Parser *parser) {
         return blockNode;
     }
 
+    if (current()->type == TOKEN_CONTINUE) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_CONTINUE);
+        parser_eat(parser, TOKEN_SEMICOLON);
+        return node_new(NODE_CONTINUE, token);
+    }
+    if (current()->type == TOKEN_BREAK) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_BREAK);
+        parser_eat(parser, TOKEN_SEMICOLON);
+        return node_new(NODE_BREAK, token);
+    }
     if (current()->type == TOKEN_RETURN) {
         Token *token = current();
         parser_eat(parser, TOKEN_RETURN);
@@ -1347,7 +1375,7 @@ Node *parser_statement(Parser *parser) {
 
 Node *parser_declarations(Parser *parser) {
     if (current()->type == TOKEN_CONST || current()->type == TOKEN_LET) {
-        Node *blockNode = node_new_multiple(NODE_BLOCK, current());
+        Node *blockNode = node_new_multiple(NODE_NODES, current());
         NodeType assignType;
         if (current()->type == TOKEN_CONST) {
             assignType = NODE_CONST_ASSIGN;
@@ -1400,7 +1428,7 @@ Node *parser_declarations(Parser *parser) {
 }
 
 Node *parser_assigns(Parser *parser) {
-    Node *blockNode = node_new_multiple(NODE_BLOCK, current());
+    Node *blockNode = node_new_multiple(NODE_NODES, current());
     for (;;) {
         Node *node = parser_assign(parser);
         list_add(blockNode->nodes, node);
@@ -1419,7 +1447,7 @@ Node *parser_assigns(Parser *parser) {
 }
 
 Node *parser_assign(Parser *parser) {
-    Node *lhs = parser_logical(parser); // TODO
+    Node *lhs = parser_logical(parser);  // TODO
     if (current()->type == TOKEN_ASSIGN) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN);
@@ -1736,7 +1764,6 @@ Node *parser_identifier_suffix(Parser *parser, Node *node) {
             node = node_new_operation(NODE_GET, token, node, indexOrKey);
         }
         if (current()->type == TOKEN_POINT) {
-            Token *token = current();
             parser_eat(parser, TOKEN_POINT);
             Node *indexOrKey = node_new_value(current(), value_new_string(strdup(current()->string)));
             parser_eat(parser, TOKEN_KEYWORD);
@@ -1868,9 +1895,24 @@ typedef struct Interpreter {
     Map *env;
 } Interpreter;
 
-typedef struct Scope {
-    Map *env;
+typedef struct FunctionScope {
     Value *returnValue;
+} FunctionScope;
+
+typedef struct LoopScope {
+    bool inLoop;
+    bool isContinuing;
+    bool isBreaking;
+} LoopScope;
+
+typedef struct BlockScope {
+    Map *env;
+} BlockScope;
+
+typedef struct Scope {
+    FunctionScope *function;
+    LoopScope *loop;
+    BlockScope *block;
 } Scope;
 
 void interpreter(char *text, Node *node);
@@ -1895,18 +1937,26 @@ void interpreter(char *text, Node *node) {
     interpreter.text = text;
     interpreter.env = env;
 
-    Scope scope;
-    scope.env = env;
-    scope.returnValue = NULL;
+    Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
+                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                   .block = &(BlockScope){.env = map_new_child(8, env)}};
     interpreter_node(&interpreter, &scope, node);
-    if (scope.returnValue != NULL && scope.returnValue->type == VALUE_INT) {
-        exit(scope.returnValue->integer);
+    if (scope.function->returnValue != NULL && scope.function->returnValue->type == VALUE_INT) {
+        exit(scope.function->returnValue->integer);
     }
 }
 
-#define interpreter_statement(interpreter, scope, node) \
-    interpreter_node(interpreter, scope, node);         \
-    if (scope->returnValue != NULL) return NULL;
+#define interpreter_statement(interpreter, scope, node)      \
+    interpreter_node(interpreter, scope, node);              \
+    if ((scope)->function->returnValue != NULL) return NULL; \
+    if ((scope)->loop->inLoop) {                             \
+        if ((scope)->loop->isContinuing) return NULL;        \
+        if ((scope)->loop->isBreaking) return NULL;          \
+    }
+
+#define interpreter_statement_in_loop(interpreter, scope, node) \
+    interpreter_node(interpreter, scope, node);                 \
+    if ((scope)->function->returnValue != NULL) return NULL;
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_PROGRAM) {
@@ -1916,10 +1966,18 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         return NULL;
     }
-    if (node->type == NODE_BLOCK) {
+    if (node->type == NODE_NODES) {
         for (size_t i = 0; i < node->nodes->size; i++) {
             Node *child = list_get(node->nodes, i);
             interpreter_statement(interpreter, scope, child);
+        }
+        return NULL;
+    }
+    if (node->type == NODE_BLOCK) {
+        Scope newScope = {.function = scope->function, .loop = scope->loop, .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
+        for (size_t i = 0; i < node->nodes->size; i++) {
+            Node *child = list_get(node->nodes, i);
+            interpreter_statement(interpreter, &newScope, child);
         }
         return NULL;
     }
@@ -1937,6 +1995,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_WHILE) {
+        Scope newScope = {.function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOLEAN) {
@@ -1945,13 +2004,26 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             if (!condition->boolean) {
                 break;
             }
-            interpreter_statement(interpreter, scope, node->thenBlock);
+            interpreter_statement_in_loop(interpreter, &newScope, node->thenBlock);
+            if (newScope.loop->isContinuing) {
+                newScope.loop->isContinuing = false;
+            }
+            if (newScope.loop->isBreaking) {
+                break;
+            }
         }
         return NULL;
     }
     if (node->type == NODE_DOWHILE) {
+        Scope newScope = {.function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
         for (;;) {
-            interpreter_statement(interpreter, scope, node->thenBlock);
+            interpreter_statement_in_loop(interpreter, &newScope, node->thenBlock);
+            if (newScope.loop->isContinuing) {
+                newScope.loop->isContinuing = false;
+            }
+            if (newScope.loop->isBreaking) {
+                break;
+            }
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOLEAN) {
                 error(interpreter->text, node->token->line, node->token->position, "Type error");
@@ -1962,8 +2034,43 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         return NULL;
     }
+    if (node->type == NODE_FOR) {
+        Scope newScope = {.function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
+        for (;;) {
+            Value *condition = interpreter_node(interpreter, scope, node->condition);
+            if (condition->type != VALUE_BOOLEAN) {
+                error(interpreter->text, node->token->line, node->token->position, "Type error");
+            }
+            if (!condition->boolean) {
+                break;
+            }
+            interpreter_statement_in_loop(interpreter, &newScope, node->thenBlock);
+            if (newScope.loop->isContinuing) {
+                newScope.loop->isContinuing = false;
+            }
+            if (newScope.loop->isBreaking) {
+                break;
+            }
+            interpreter_node(interpreter, &newScope, node->incrementBlock);
+        }
+        return NULL;
+    }
+    if (node->type == NODE_CONTINUE) {
+        if (!scope->loop->inLoop) {
+            error(interpreter->text, node->token->line, node->token->position, "Not in a loop");
+        }
+        scope->loop->isContinuing = true;
+        return NULL;
+    }
+    if (node->type == NODE_BREAK) {
+        if (!scope->loop->inLoop) {
+            error(interpreter->text, node->token->line, node->token->position, "Not in a loop");
+        }
+        scope->loop->isBreaking = true;
+        return NULL;
+    }
     if (node->type == NODE_RETURN) {
-        scope->returnValue = interpreter_node(interpreter, scope, node->unary);
+        scope->function->returnValue = interpreter_node(interpreter, scope, node->unary);
         return NULL;
     }
 
@@ -1987,15 +2094,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_CALL) {
         Value *functionValue = interpreter_node(interpreter, scope, node->function);
         if (functionValue->type == VALUE_FUNCTION) {
-            Scope functionScope;
-            functionScope.env = map_new_child(align(functionValue->args->size, 8), scope->env);
-            functionScope.returnValue = false;
+            Scope newScope = {.function = &(FunctionScope){.returnValue = NULL},
+                              .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                              .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
+
             for (size_t i = 0; i < functionValue->args->size; i++) {
                 Argument *arg = list_get(functionValue->args, i);
-                map_set_without_parent(functionScope.env, arg->name, variable_new(true, interpreter_node(interpreter, scope, list_get(node->nodes, i))));
+                map_set_without_parent(newScope.block->env, arg->name, variable_new(true, interpreter_node(interpreter, scope, list_get(node->nodes, i))));
             }
-            interpreter_node(interpreter, &functionScope, functionValue->node);
-            return functionScope.returnValue != NULL ? functionScope.returnValue : value_new_null();
+            interpreter_node(interpreter, &newScope, functionValue->node);
+            return newScope.function->returnValue != NULL ? newScope.function->returnValue : value_new_null();
         }
         if (functionValue->type == VALUE_NATIVE_FUNCTION) {
             List *args = list_new(align(node->nodes->size, 8));
@@ -2008,7 +2116,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
 
     if (node->type == NODE_VARIABLE) {
-        Variable *variable = map_get(scope->env, node->string);
+        Variable *variable = map_get(scope->block->env, node->string);
         if (variable != NULL) {
             return variable->value;
         }
@@ -2018,7 +2126,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
         if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
             error(interpreter->text, node->token->line, node->token->position, "Variable is not an array or object it is: %s",
-            value_type_to_string(containerValue->type));
+                  value_type_to_string(containerValue->type));
         }
 
         Value *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
@@ -2094,16 +2202,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
     if (node->type == NODE_CONST_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
-        if (map_get(scope->env, node->lhs->string) == NULL) {
-            map_set(scope->env, node->lhs->string, variable_new(false, rhs));
+        if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(false, rhs));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare const variable: '%s'", node->lhs->string);
     }
     if (node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
-        if (map_get(scope->env, node->lhs->string) == NULL) {
-            map_set(scope->env, node->lhs->string, variable_new(true, rhs));
+        if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(true, rhs));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare variable: '%s'", node->lhs->string);
@@ -2114,7 +2222,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
             if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
                 error(interpreter->text, node->token->line, node->token->position, "Variable is not an array or object it is: %s",
-                value_type_to_string(containerValue->type));
+                      value_type_to_string(containerValue->type));
             }
 
             Value *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
@@ -2131,7 +2239,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 map_set(containerValue->object, indexOrKey->string, rhs);
             }
         } else {
-            Variable *variable = map_get(scope->env, node->lhs->string);
+            Variable *variable = map_get(scope->block->env, node->lhs->string);
             if (variable == NULL) {
                 error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Variable: '%s' is not declared", node->lhs->string);
             }

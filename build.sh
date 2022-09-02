@@ -6,5 +6,5 @@ fi
 if [ "$1" = "debug" ]; then
     gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 nbl.c -lm -o nbl && lldb -- ./nbl test.nbl
 else
-    gcc -Wall -Wextra -Wpedantic --std=c11 nbl.c -o nbl && ./nbl test.nbl
+    gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 nbl.c -o nbl && ./nbl test.nbl
 fi
