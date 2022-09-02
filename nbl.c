@@ -76,15 +76,15 @@ typedef struct List {
 
 List *list_new(size_t capacity);
 
-#define list_get(list, index) ((list)->items[index])
+void *list_get(List *list, size_t index);
 
 void list_set(List *list, size_t index, void *item);
 
 void list_add(List *list, void *item);
 
-typedef void ListFreeFunction(void *item);
+typedef void ListFreeFunc(void *item);
 
-void list_free(List *list, ListFreeFunction *free_function);
+void list_free(List *list, ListFreeFunc *freeFunc);
 
 // List
 List *list_new(size_t capacity) {
@@ -93,6 +93,13 @@ List *list_new(size_t capacity) {
     list->capacity = capacity;
     list->size = 0;
     return list;
+}
+
+void *list_get(List *list, size_t index) {
+    if (index < list->size) {
+        return list->items[index];
+    }
+    return NULL;
 }
 
 void list_set(List *list, size_t index, void *item) {
@@ -117,9 +124,9 @@ void list_add(List *list, void *item) {
     list->items[list->size++] = item;
 }
 
-void list_free(List *list, ListFreeFunction *free_function) {
+void list_free(List *list, ListFreeFunc *freeFunction) {
     for (size_t i = 0; i < list->size; i++) {
-        free_function(list_get(list, i));
+        freeFunction(list_get(list, i));
     }
     free(list->items);
     free(list);
@@ -148,11 +155,11 @@ void map_set(Map *map, char *key, void *item);
 
 void map_set_without_parent(Map *map, char *key, void *item);
 
-typedef void MapFreeFunction(void *item);
+typedef void MapFreeFunc(void *item);
 
-void map_free(Map *map, MapFreeFunction *free_function);
+void map_free(Map *map, MapFreeFunc *freeFunction);
 
-void map_free_without_parent(Map *map, MapFreeFunction *free_function);
+void map_free_without_parent(Map *map, MapFreeFunc *freeFunction);
 
 // Map
 Map *map_new(size_t capacity) {
@@ -230,17 +237,17 @@ void map_set_without_parent(Map *map, char *key, void *item) {
     }
 }
 
-void map_free(Map *map, MapFreeFunction *free_function) {
+void map_free(Map *map, MapFreeFunc *freeFunction) {
     if (map->parent != NULL) {
-        map_free(map->parent, free_function);
+        map_free(map->parent, freeFunction);
     }
-    map_free_without_parent(map, free_function);
+    map_free_without_parent(map, freeFunction);
 }
 
-void map_free_without_parent(Map *map, MapFreeFunction *free_function) {
+void map_free_without_parent(Map *map, MapFreeFunc *freeFunction) {
     for (size_t i = 0; i < map->size; i++) {
         free(map->keys[i]);
-        free_function(map->items[i]);
+        freeFunction(map->items[i]);
     }
     free(map->keys);
     free(map->items);
@@ -517,7 +524,17 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '/' && *(c + 1) == '*') {
-            while (!(*c == '*' && *(c + 1) == '/')) c++;
+            c += 2;
+            while (*c != '*' && *(c + 1) != '/') {
+                if (*c == '\n' || *c == '\r') {
+                    if (*c == '\r') c++;
+                    c++;
+                    line++;
+                    lineStart = c;
+                    continue;
+                }
+                c++;
+            }
             c += 2;
             continue;
         }
@@ -763,9 +780,7 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '\n' || *c == '\r') {
-            if (*c == '\r') {
-                c++;
-            }
+            if (*c == '\r') c++;
             c++;
             line++;
             lineStart = c;
@@ -818,11 +833,13 @@ struct Value {
         List *array;
         Map *object;
         struct {
-            List *args;
+            List *arguments;
             ValueType returnType;
-            Node *node;
+            union {
+                Node *functionNode;
+                Value *(*nativeFunc)(List *values);
+            };
         };
-        Value *(*native_function)(List *args);
     };
 };
 
@@ -838,13 +855,13 @@ Value *value_new_float(double integer);
 
 Value *value_new_string(char *string);
 
-Value *value_new_array(size_t capacity);
+Value *value_new_array(List *array);
 
-Value *value_new_object(size_t capacity);
+Value *value_new_object(Map *map);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
-Value *value_new_native_function(Value *(*native_function)(List *args));
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(List *values));
 
 char *value_type_to_string(ValueType type);
 
@@ -900,29 +917,31 @@ Value *value_new_string(char *string) {
     return value;
 }
 
-Value *value_new_array(size_t capacity) {
+Value *value_new_array(List *array) {
     Value *value = value_new(VALUE_ARRAY);
-    value->array = list_new(capacity);
+    value->array = array;
     return value;
 }
 
-Value *value_new_object(size_t capacity) {
+Value *value_new_object(Map *object) {
     Value *value = value_new(VALUE_OBJECT);
-    value->object = map_new(capacity);
+    value->object = object;
     return value;
 }
 
-Value *value_new_function(List *args, ValueType returnType, Node *node) {
+Value *value_new_function(List *args, ValueType returnType, Node *functionNode) {
     Value *value = value_new(VALUE_FUNCTION);
-    value->args = args;
+    value->arguments = args;
     value->returnType = returnType;
-    value->node = node;
+    value->functionNode = functionNode;
     return value;
 }
 
-Value *value_new_native_function(Value *(*native_function)(List *args)) {
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(List *values)) {
     Value *value = value_new(VALUE_NATIVE_FUNCTION);
-    value->native_function = native_function;
+    value->arguments = args;
+    value->returnType = returnType;
+    value->nativeFunc = nativeFunc;
     return value;
 }
 
@@ -968,14 +987,16 @@ void value_free(Value *value) {
         free(value->string);
     }
     if (value->type == VALUE_ARRAY) {
-        list_free(value->array, (ListFreeFunction *)value_free);
+        list_free(value->array, (ListFreeFunc *)value_free);
     }
     if (value->type == VALUE_OBJECT) {
-        map_free(value->object, (MapFreeFunction *)value_free);
+        map_free(value->object, (MapFreeFunc *)value_free);
+    }
+    if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
+        list_free(value->arguments, (ListFreeFunc *)argument_free);
     }
     if (value->type == VALUE_FUNCTION) {
-        list_free(value->args, (ListFreeFunction *)argument_free);
-        node_free(value->node);
+        node_free(value->functionNode);
     }
     free(value);
 }
@@ -1172,7 +1193,7 @@ void node_free(Node *node) {
     if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || (node->type >= NODE_ARRAY && node->type <= NODE_CALL)) {
         if (node->type == NODE_CALL) node_free(node->function);
         if (node->type == NODE_OBJECT) list_free(node->keys, free);
-        list_free(node->nodes, (ListFreeFunction *)node_free);
+        list_free(node->nodes, (ListFreeFunc *)node_free);
     }
     free(node);
 }
@@ -1332,10 +1353,10 @@ Node *parser_statement(Parser *parser) {
         char *name = strdup(current()->string);
         parser_eat(parser, TOKEN_KEYWORD);
 
-        List *args = list_new(4);
+        List *arguments = list_new(4);
         parser_eat(parser, TOKEN_LPAREN);
         while (current()->type != TOKEN_RPAREN) {
-            list_add(args, parser_argument(parser));
+            list_add(arguments, parser_argument(parser));
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1360,10 +1381,10 @@ Node *parser_statement(Parser *parser) {
             parser_eat(parser, TOKEN_FAT_ARROW);
             Node *returnNode = node_new_unary(NODE_RETURN, token, parser_logical(parser));
             return node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name),
-                                      node_new_value(functionToken, value_new_function(args, returnType, returnNode)));
+                                      node_new_value(functionToken, value_new_function(arguments, returnType, returnNode)));
         }
 
-        Value *functionValue = value_new_function(args, returnType, parser_block(parser));
+        Value *functionValue = value_new_function(arguments, returnType, parser_block(parser));
         return node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name),
                                   node_new_value(functionToken, functionValue));
     }
@@ -1708,10 +1729,10 @@ Node *parser_primary(Parser *parser) {
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
-        List *args = list_new(4);
+        List *arguments = list_new(4);
         parser_eat(parser, TOKEN_LPAREN);
         while (current()->type != TOKEN_RPAREN) {
-            list_add(args, parser_argument(parser));
+            list_add(arguments, parser_argument(parser));
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1735,9 +1756,9 @@ Node *parser_primary(Parser *parser) {
             Token *token = current();
             parser_eat(parser, TOKEN_FAT_ARROW);
             Node *returnNode = node_new_unary(NODE_RETURN, token, parser_logical(parser));
-            return node_new_value(functionToken, value_new_function(args, returnType, returnNode));
+            return node_new_value(functionToken, value_new_function(arguments, returnType, returnNode));
         }
-        return node_new_value(functionToken, value_new_function(args, returnType, parser_block(parser)));
+        return node_new_value(functionToken, value_new_function(arguments, returnType, parser_block(parser)));
     }
 
     return parser_identifier(parser);
@@ -1804,40 +1825,37 @@ Argument *parser_argument(Parser *parser) {
 }
 
 // Standard library header
-Value *env_type(List *args);
-Value *env_print(List *args);
-Value *env_println(List *args);
-Value *env_exit(List *args);
-Value *env_array_length(List *args);
-Value *env_array_push(List *args);
-Value *env_string_length(List *args);
+Value *env_type(List *values);
+Value *env_print(List *values);
+Value *env_println(List *values);
+Value *env_exit(List *values);
+Value *env_array_length(List *values);
+Value *env_array_push(List *values);
+Value *env_string_length(List *values);
 
 // Stanard library
-Value *env_type(List *args) {
-    if (args->size > 0) {
-        Value *value = list_get(args, 0);
-        return value_new_string(strdup(value_type_to_string(value->type)));
+Value *env_type(List *values) {
+    Value *value = list_get(values, 0);
+    return value_new_string(strdup(value_type_to_string(value->type)));
+}
+
+Value *env_print(List *values) {
+    for (size_t i = 0; i < values->size; i++) {
+        printf("%s", value_to_string(list_get(values, i)));
+        if (i != values->size - 1) printf(" ");
     }
     return value_new_null();
 }
 
-Value *env_print(List *args) {
-    for (size_t i = 0; i < args->size; i++) {
-        printf("%s", value_to_string(list_get(args, i)));
-        if (i != args->size - 1) printf(" ");
-    }
-    return value_new_null();
-}
-
-Value *env_println(List *args) {
-    Value *value = env_print(args);
+Value *env_println(List *values) {
+    Value *value = env_print(values);
     printf("\n");
     return value;
 }
 
-Value *env_exit(List *args) {
-    if (args->size > 0) {
-        Value *exitCode = list_get(args, 0);
+Value *env_exit(List *values) {
+    if (values->size > 0) {
+        Value *exitCode = list_get(values, 0);
         if (exitCode->type == VALUE_INT) {
             exit(exitCode->integer);
         }
@@ -1845,31 +1863,22 @@ Value *env_exit(List *args) {
     exit(EXIT_SUCCESS);
 }
 
-Value *env_array_length(List *args) {
-    if (args->size > 0) {
-        Value *arrayValue = list_get(args, 0);
-        return value_new_int(arrayValue->array->size);
-    }
-    return value_new_null();
+Value *env_array_length(List *values) {
+    Value *arrayValue = list_get(values, 0);
+    return value_new_int(arrayValue->array->size);
 }
 
-Value *env_array_push(List *args) {
-    if (args->size > 1) {
-        Value *arrayValue = list_get(args, 0);
-        for (size_t i = 1; i < args->size; i++) {
-            list_add(arrayValue->array, list_get(args, i));
-        }
-        return value_new_int(arrayValue->array->size);
+Value *env_array_push(List *values) {
+    Value *arrayValue = list_get(values, 0);
+    for (size_t i = 1; i < values->size; i++) {
+        list_add(arrayValue->array, list_get(values, i));
     }
-    return value_new_null();
+    return value_new_int(arrayValue->array->size);
 }
 
-Value *env_string_length(List *args) {
-    if (args->size > 0) {
-        Value *stringValue = list_get(args, 0);
-        return value_new_int(strlen(stringValue->string));
-    }
-    return value_new_null();
+Value *env_string_length(List *values) {
+    Value *stringValue = list_get(values, 0);
+    return value_new_int(strlen(stringValue->string));
 }
 
 // Interpreter header
@@ -1923,14 +1932,26 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
 void interpreter(char *text, Node *node) {
     // Init standard library
     Map *env = map_new(16);
-    map_set(env, "type", variable_new(false, value_new_native_function(env_type)));
-    map_set(env, "print", variable_new(false, value_new_native_function(env_print)));
-    map_set(env, "println", variable_new(false, value_new_native_function(env_println)));
-    map_set(env, "exit", variable_new(false, value_new_native_function(env_exit)));
 
-    map_set(env, "array_length", variable_new(false, value_new_native_function(env_array_length)));
-    map_set(env, "array_push", variable_new(false, value_new_native_function(env_array_push)));
-    map_set(env, "string_length", variable_new(false, value_new_native_function(env_string_length)));
+    List *type_args = list_new(4);
+    list_add(type_args, argument_new("value", VALUE_ANY));
+    map_set(env, "type", variable_new(false, value_new_native_function(type_args, VALUE_ANY, env_type)));
+
+    map_set(env, "print", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_println)));
+    map_set(env, "exit", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_exit)));
+
+    List *array_length_args = list_new(4);
+    list_add(array_length_args, argument_new("array", VALUE_ARRAY));
+    map_set(env, "array_length", variable_new(false, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
+
+    List *array_push_args = list_new(4);
+    list_add(array_push_args, argument_new("array", VALUE_ARRAY));
+    map_set(env, "array_push", variable_new(false, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
+
+    List *string_length_args = list_new(4);
+    list_add(string_length_args, argument_new("string", VALUE_STRING));
+    map_set(env, "string_length", variable_new(false, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
     // Start running code!
     Interpreter interpreter;
@@ -2078,14 +2099,14 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return node->value;
     }
     if (node->type == NODE_ARRAY) {
-        Value *arrayValue = value_new_array(align(node->nodes->size, 8));
+        Value *arrayValue = value_new_array(list_new(align(node->nodes->size, 8)));
         for (size_t i = 0; i < node->nodes->size; i++) {
             list_add(arrayValue->array, interpreter_node(interpreter, scope, list_get(node->nodes, i)));
         }
         return arrayValue;
     }
     if (node->type == NODE_OBJECT) {
-        Value *objectValue = value_new_object(align(node->nodes->size, 8));
+        Value *objectValue = value_new_object(map_new(align(node->nodes->size, 8)));
         for (size_t i = 0; i < node->nodes->size; i++) {
             map_set(objectValue->object, list_get(node->keys, i), interpreter_node(interpreter, scope, list_get(node->nodes, i)));
         }
@@ -2093,26 +2114,49 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_CALL) {
         Value *functionValue = interpreter_node(interpreter, scope, node->function);
+        if (functionValue->type != VALUE_FUNCTION && functionValue->type != VALUE_NATIVE_FUNCTION) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a function");
+        }
+        if (node->nodes->size < functionValue->arguments->size) {
+            error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
+        }
+
+        List *values = list_new(align(node->nodes->size, 8));
+        for (size_t i = 0; i < node->nodes->size; i++) {
+            Argument *argument = list_get(functionValue->arguments, i);
+            Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
+            if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
+                error(interpreter->text, node->token->line, node->token->position, "Unexpected function argument type: '%s' needed '%s'",
+                    value_type_to_string(nodeValue->type), value_type_to_string(argument->type));
+            }
+            list_add(values, nodeValue);
+        }
+
         if (functionValue->type == VALUE_FUNCTION) {
             Scope newScope = {.function = &(FunctionScope){.returnValue = NULL},
                               .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                               .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
-
-            for (size_t i = 0; i < functionValue->args->size; i++) {
-                Argument *arg = list_get(functionValue->args, i);
-                map_set_without_parent(newScope.block->env, arg->name, variable_new(true, interpreter_node(interpreter, scope, list_get(node->nodes, i))));
+            for (size_t i = 0; i < functionValue->arguments->size; i++) {
+                Argument *argument = list_get(functionValue->arguments, i);
+                map_set_without_parent(newScope.block->env, argument->name, variable_new(true, list_get(values, i)));
             }
-            interpreter_node(interpreter, &newScope, functionValue->node);
+            map_set_without_parent(newScope.block->env, "arguments", variable_new(false, value_new_array(values)));
+            interpreter_node(interpreter, &newScope, functionValue->functionNode);
+
+            if (functionValue->returnType != VALUE_ANY && newScope.function->returnValue->type != functionValue->returnType) {
+                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                    value_type_to_string(newScope.function->returnValue->type), value_type_to_string(functionValue->returnType));
+            }
             return newScope.function->returnValue != NULL ? newScope.function->returnValue : value_new_null();
         }
         if (functionValue->type == VALUE_NATIVE_FUNCTION) {
-            List *args = list_new(align(node->nodes->size, 8));
-            for (size_t i = 0; i < node->nodes->size; i++) {
-                list_add(args, interpreter_node(interpreter, scope, list_get(node->nodes, i)));
+            Value *returnValue = functionValue->nativeFunc(values);
+            if (functionValue->returnType != VALUE_ANY && returnValue->type != functionValue->returnType) {
+                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                    value_type_to_string(returnValue->type), value_type_to_string(functionValue->returnType));
             }
-            return functionValue->native_function(args);
+            return returnValue;
         }
-        error(interpreter->text, node->token->line, node->token->position, "Variable is not a function");
     }
 
     if (node->type == NODE_VARIABLE) {
@@ -2399,11 +2443,17 @@ int main(int argc, char **argv) {
 
     char *text = file_read(argv[1]);
     List *tokens = lexer(text);
+    // printf("Tokens:\n");
+    // for (size_t i = 0; i < tokens->size; i++) {
+    //     Token *token = list_get(tokens, i);
+    //     printf("%s ", token_type_to_string(token->type));
+    // }
+    // printf("\n");
 
     Node *node = parser(text, tokens);
     interpreter(text, node);
 
     node_free(node);
-    list_free(tokens, (ListFreeFunction *)token_free);
+    list_free(tokens, (ListFreeFunc *)token_free);
     free(text);
 }

@@ -4,14 +4,13 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
 
 ## Things todo:
+- Type check variables
+- Function default argument
 - string array thing
 - for in
     - array
     - object
 - Free stuff: no mem leaks
-- Type checking functions, args size check
-    - working
-- Type check variables
 - Tenary operator
 - Expand stdlib
 - Classes?
