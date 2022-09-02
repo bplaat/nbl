@@ -320,6 +320,7 @@ typedef enum TokenType {
     TOKEN_WHILE,
     TOKEN_DO,
     TOKEN_FOR,
+    TOKEN_IN,
     TOKEN_CONTINUE,
     TOKEN_BREAK,
     TOKEN_RETURN
@@ -455,6 +456,7 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_WHILE) return "while";
     if (type == TOKEN_DO) return "do";
     if (type == TOKEN_FOR) return "for";
+    if (type == TOKEN_IN) return "in";
     if (type == TOKEN_CONTINUE) return "continue";
     if (type == TOKEN_BREAK) return "break";
     if (type == TOKEN_RETURN) return "return";
@@ -506,6 +508,7 @@ List *lexer(char *text) {
                           {"while", TOKEN_WHILE},
                           {"do", TOKEN_DO},
                           {"for", TOKEN_FOR},
+                          {"in", TOKEN_IN},
                           {"continue", TOKEN_CONTINUE},
                           {"break", TOKEN_BREAK},
                           {"return", TOKEN_RETURN}};
@@ -1045,6 +1048,7 @@ typedef enum NodeType {
     NODE_WHILE,
     NODE_DOWHILE,
     NODE_FOR,
+    NODE_FORIN,
     NODE_CONTINUE,
     NODE_BREAK,
     NODE_RETURN,
@@ -1103,11 +1107,15 @@ struct Node {
             Node *rhs;
         };
         struct {
-            Node *condition;
+            union {
+                Node *condition;
+                Node *iterator;
+            };
             Node *thenBlock;
             union {
                 Node *elseBlock;
                 Node *incrementBlock;
+                Node *variable;
             };
         };
         struct {
@@ -1221,7 +1229,7 @@ void node_free(Node *node) {
         node_free(node->lhs);
         node_free(node->rhs);
     }
-    if (node->type >= NODE_IF && node->type <= NODE_DOWHILE) {
+    if (node->type >= NODE_IF && node->type <= NODE_FORIN) {
         node_free(node->condition);
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
@@ -1330,14 +1338,30 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_FOR) {
-        Node *blockNode = node_new_multiple(NODE_BLOCK, current());
-
-        Node *node = node_new(NODE_FOR, current());
         parser_eat(parser, TOKEN_FOR);
         parser_eat(parser, TOKEN_LPAREN);
+        Node *declarations;
         if (current()->type != TOKEN_SEMICOLON) {
-            list_add(blockNode->nodes, parser_declarations(parser));
+            declarations = parser_declarations(parser);
         }
+
+        if (current()->type == TOKEN_IN) {
+            Node *node = node_new(NODE_FORIN, current());
+            if (declarations->type == NODE_NODES) {
+                error(parser->text, declarations->token->line, declarations->token->position, "You can only declare one variable in a for in loop");
+            }
+            node->variable = declarations;
+            parser_eat(parser, TOKEN_IN);
+            node->iterator = parser_logical(parser);
+            parser_eat(parser, TOKEN_RPAREN);
+            node->thenBlock = parser_block(parser);
+            return node;
+        }
+
+        Node *blockNode = node_new_multiple(NODE_BLOCK, current());
+        list_add(blockNode->nodes, declarations);
+
+        Node *node = node_new(NODE_FOR, current());
         parser_eat(parser, TOKEN_SEMICOLON);
         if (current()->type != TOKEN_SEMICOLON) {
             node->condition = parser_assigns(parser);
@@ -2126,6 +2150,42 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         return NULL;
     }
+    if (node->type == NODE_FORIN) {
+        Value *iterator = interpreter_node(interpreter, scope, node->iterator);
+        if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array or object it is: %s",
+                  value_type_to_string(iterator->type));
+        }
+
+        Scope newScope = {.function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
+        size_t size;
+        if (iterator->type == VALUE_STRING) size = strlen(iterator->string);
+        if (iterator->type == VALUE_ARRAY) size = iterator->array->size;
+        if (iterator->type == VALUE_OBJECT) size = iterator->object->size;
+        for (size_t i = 0; i < size; i++) {
+            Scope newIteratorScope = {.function = newScope.function, .loop = newScope.loop, .block = &(BlockScope){.env = map_new_child(8, newScope.block->env)}};
+            Value *iteratorValue;
+            if (iterator->type == VALUE_STRING) {
+                char character[] = {iterator->string[i], '\0'};
+                iteratorValue = value_new_string(strdup(character));
+            }
+            if (iterator->type == VALUE_ARRAY) {
+                iteratorValue = list_get(iterator->array, i);
+            }
+            if (iterator->type == VALUE_OBJECT) {
+                iteratorValue = value_new_string(strdup(iterator->object->keys[i]));
+            }
+            map_set(newIteratorScope.block->env, node->variable->lhs->string, variable_new(node->variable->type == NODE_LET_ASSIGN, node->variable->declarationType, iteratorValue));
+            interpreter_statement_in_loop(interpreter, &newIteratorScope, node->thenBlock);
+            if (newScope.loop->isContinuing) {
+                newScope.loop->isContinuing = false;
+            }
+            if (newScope.loop->isBreaking) {
+                break;
+            }
+        }
+        return NULL;
+    }
     if (node->type == NODE_CONTINUE) {
         if (!scope->loop->inLoop) {
             error(interpreter->text, node->token->line, node->token->position, "Not in a loop");
@@ -2175,8 +2235,9 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 if (argument->defaultNode != NULL) {
                     Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
                     if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
-                        error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position, "Unexpected function default argument type: '%s' needed '%s'",
-                            value_type_to_string(defaultValue->type), value_type_to_string(argument->type));
+                        error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position,
+                              "Unexpected function default argument type: '%s' needed '%s'", value_type_to_string(defaultValue->type),
+                              value_type_to_string(argument->type));
                     }
                     list_add(values, defaultValue);
                     continue;
@@ -2240,7 +2301,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "String index is not an int");
             }
             if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
-                char character[] = { containerValue->string[indexOrKey->integer], '\0' };
+                char character[] = {containerValue->string[indexOrKey->integer], '\0'};
                 return value_new_string(strdup(character));
             }
             return value_new_null();
