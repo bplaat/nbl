@@ -9,6 +9,9 @@
 #include <string.h>
 
 // Utils header
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 size_t align(size_t size, size_t alignment);
 
 char *file_read(char *path);
@@ -815,9 +818,10 @@ typedef enum ValueType {
 typedef struct Argument {
     char *name;
     ValueType type;
+    Node *defaultNode;
 } Argument;
 
-Argument *argument_new(char *name, ValueType type);
+Argument *argument_new(char *name, ValueType type, Node *defaultNode);
 
 void argument_free(Argument *argument);
 
@@ -873,15 +877,19 @@ void value_free(Value *value);
 
 // Value
 
-Argument *argument_new(char *name, ValueType type) {
+Argument *argument_new(char *name, ValueType type, Node *defaultNode) {
     Argument *argument = malloc(sizeof(Argument));
     argument->name = name;
     argument->type = type;
+    argument->defaultNode = defaultNode;
     return argument;
 }
 
 void argument_free(Argument *argument) {
     free(argument->name);
+    if (argument->defaultNode != NULL) {
+        node_free(argument->defaultNode);
+    }
     free(argument);
 }
 
@@ -1819,16 +1827,21 @@ Node *parser_identifier_suffix(Parser *parser, Node *node) {
 Argument *parser_argument(Parser *parser) {
     char *name = strdup(current()->string);
     parser_eat(parser, TOKEN_KEYWORD);
+    ValueType type = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
         parser_eat(parser, TOKEN_COLON);
-        if (token_type_is_type(current()->type)) {
-            Argument *argument = argument_new(name, token_type_to_value_type(current()->type));
-            parser_eat(parser, current()->type);
-            return argument;
+        if (!token_type_is_type(current()->type)) {
+            error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
         }
-        error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
+        type = token_type_to_value_type(current()->type);
+        parser_eat(parser, current()->type);
     }
-    return argument_new(name, VALUE_ANY);
+    Node *defaultNode = NULL;
+    if (current()->type == TOKEN_ASSIGN) {
+        parser_eat(parser, TOKEN_ASSIGN);
+        defaultNode = parser_logical(parser);
+    }
+    return argument_new(name, type, defaultNode);
 }
 
 // Standard library header
@@ -1861,13 +1874,11 @@ Value *env_println(List *values) {
 }
 
 Value *env_exit(List *values) {
-    if (values->size > 0) {
-        Value *exitCode = list_get(values, 0);
-        if (exitCode->type == VALUE_INT) {
-            exit(exitCode->integer);
-        }
+    Value *exitCode = list_get(values, 0);
+    if (exitCode->type == VALUE_INT) {
+        exit(exitCode->integer);
     }
-    exit(EXIT_SUCCESS);
+    return value_new_null();
 }
 
 Value *env_array_length(List *values) {
@@ -1943,23 +1954,26 @@ void interpreter(char *text, Node *node) {
     Map *env = map_new(16);
 
     List *type_args = list_new(4);
-    list_add(type_args, argument_new("value", VALUE_ANY));
+    list_add(type_args, argument_new("value", VALUE_ANY, NULL));
     map_set(env, "type", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
     map_set(env, "print", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_print)));
     map_set(env, "println", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_println)));
-    map_set(env, "exit", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_exit)));
+
+    List *exit_args = list_new(4);
+    list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
+    map_set(env, "exit", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
 
     List *array_length_args = list_new(4);
-    list_add(array_length_args, argument_new("array", VALUE_ARRAY));
+    list_add(array_length_args, argument_new("array", VALUE_ARRAY, NULL));
     map_set(env, "array_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
 
     List *array_push_args = list_new(4);
-    list_add(array_push_args, argument_new("array", VALUE_ARRAY));
+    list_add(array_push_args, argument_new("array", VALUE_ARRAY, NULL));
     map_set(env, "array_push", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
 
     List *string_length_args = list_new(4);
-    list_add(string_length_args, argument_new("string", VALUE_STRING));
+    list_add(string_length_args, argument_new("string", VALUE_STRING, NULL));
     map_set(env, "string_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
     // Start running code!
@@ -2126,13 +2140,24 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (functionValue->type != VALUE_FUNCTION && functionValue->type != VALUE_NATIVE_FUNCTION) {
             error(interpreter->text, node->token->line, node->token->position, "Variable is not a function");
         }
-        if (node->nodes->size < functionValue->arguments->size) {
-            error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
-        }
 
         List *values = list_new(align(node->nodes->size, 8));
-        for (size_t i = 0; i < node->nodes->size; i++) {
+        for (size_t i = 0; i < MAX(functionValue->arguments->size, node->nodes->size); i++) {
             Argument *argument = list_get(functionValue->arguments, i);
+            if (list_get(node->nodes, i) == NULL && argument != NULL) {
+                if (argument->defaultNode != NULL) {
+                    Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
+                    if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
+                        error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position, "Unexpected function default argument type: '%s' needed '%s'",
+                            value_type_to_string(defaultValue->type), value_type_to_string(argument->type));
+                    }
+                    list_add(values, defaultValue);
+                    continue;
+                }
+
+                error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
+            }
+
             Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
             if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function argument type: '%s' needed '%s'",
