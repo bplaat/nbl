@@ -6,7 +6,6 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language fea
 ## Things todo:
 - Expand stdlib
 - Tenary operator
-- Assign operators
 - Free stuff: no mem leaks
 - Classes?
 - Syntax hightlighting vscode?
@@ -83,19 +82,21 @@ else {
 // While loops
 let x = 10;
 while (x > 0) {
-    x = x - 1;
+    x -= 1;
     continue;
 }
+println(x);
 
 // Do while loops
-let x = 0;
+x = 0;
 do {
-    x = x + 1;
+    x += 1;
     break;
 } while(x > 10);
+println(x);
 
 // For loops
-for (let i = 0; i < 100; i = i + 1) {
+for (let i = 0; i < 100; i += 1) {
     println('-', i);
 }
 

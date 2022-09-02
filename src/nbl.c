@@ -223,6 +223,17 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_FAT_ARROW) return "=>";
 
     if (type == TOKEN_ASSIGN) return "=";
+    if (type == TOKEN_ASSIGN_ADD) return "+=";
+    if (type == TOKEN_ASSIGN_SUB) return "-=";
+    if (type == TOKEN_ASSIGN_MUL) return "*=";
+    if (type == TOKEN_ASSIGN_EXP) return "**=";
+    if (type == TOKEN_ASSIGN_DIV) return "/=";
+    if (type == TOKEN_ASSIGN_MOD) return "%=";
+    if (type == TOKEN_ASSIGN_AND) return "&=";
+    if (type == TOKEN_ASSIGN_XOR) return "^=";
+    if (type == TOKEN_ASSIGN_OR) return "|=";
+    if (type == TOKEN_ASSIGN_SHL) return "<<=";
+    if (type == TOKEN_ASSIGN_SHR) return ">>=";
     if (type == TOKEN_ADD) return "+";
     if (type == TOKEN_SUB) return "-";
     if (type == TOKEN_MUL) return "*";
@@ -516,17 +527,37 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '+') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_ADD, line, position));
+                c += 2;
+                continue;
+            }
             list_add(tokens, token_new(TOKEN_ADD, line, position));
             c++;
             continue;
         }
         if (*c == '-') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_SUB, line, position));
+                c += 2;
+                continue;
+            }
             list_add(tokens, token_new(TOKEN_SUB, line, position));
             c++;
             continue;
         }
         if (*c == '*') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_MUL, line, position));
+                c += 2;
+                continue;
+            }
             if (*(c + 1) == '*') {
+                if (*(c + 2) == '=') {
+                    list_add(tokens, token_new(TOKEN_ASSIGN_EXP, line, position));
+                    c += 3;
+                    continue;
+                }
                 list_add(tokens, token_new(TOKEN_EXP, line, position));
                 c += 2;
                 continue;
@@ -536,16 +567,31 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '/') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_DIV, line, position));
+                c += 2;
+                continue;
+            }
             list_add(tokens, token_new(TOKEN_DIV, line, position));
             c++;
             continue;
         }
         if (*c == '%') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_MOD, line, position));
+                c += 2;
+                continue;
+            }
             list_add(tokens, token_new(TOKEN_MOD, line, position));
             c++;
             continue;
         }
         if (*c == '^') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_XOR, line, position));
+                c += 2;
+                continue;
+            }
             list_add(tokens, token_new(TOKEN_XOR, line, position));
             c++;
             continue;
@@ -557,6 +603,11 @@ List *lexer(char *text) {
         }
         if (*c == '<') {
             if (*(c + 1) == '<') {
+                if (*(c + 2) == '=') {
+                    list_add(tokens, token_new(TOKEN_ASSIGN_SHL, line, position));
+                    c += 3;
+                    continue;
+                }
                 list_add(tokens, token_new(TOKEN_SHL, line, position));
                 c += 2;
                 continue;
@@ -572,6 +623,11 @@ List *lexer(char *text) {
         }
         if (*c == '>') {
             if (*(c + 1) == '>') {
+                if (*(c + 2) == '=') {
+                    list_add(tokens, token_new(TOKEN_ASSIGN_SHR, line, position));
+                    c += 3;
+                    continue;
+                }
                 list_add(tokens, token_new(TOKEN_SHR, line, position));
                 c += 2;
                 continue;
@@ -596,6 +652,11 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '|') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_OR, line, position));
+                c += 2;
+                continue;
+            }
             if (*(c + 1) == '|') {
                 list_add(tokens, token_new(TOKEN_LOGICAL_OR, line, position));
                 c += 2;
@@ -606,6 +667,11 @@ List *lexer(char *text) {
             continue;
         }
         if (*c == '&') {
+            if (*(c + 1) == '=') {
+                list_add(tokens, token_new(TOKEN_ASSIGN_AND, line, position));
+                c += 2;
+                continue;
+            }
             if (*(c + 1) == '&') {
                 list_add(tokens, token_new(TOKEN_LOGICAL_AND, line, position));
                 c += 2;
@@ -1138,6 +1204,56 @@ Node *parser_assign(Parser *parser) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN);
         return node_new_operation(NODE_ASSIGN, token, lhs, parser_assign(parser));
+    }
+    if (current()->type == TOKEN_ASSIGN_ADD) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_ADD);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_ADD, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_SUB) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_SUB);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SUB, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_MUL) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_MUL);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MUL, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_EXP) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_EXP);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_EXP, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_MOD) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_MOD);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MOD, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_AND) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_AND);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_AND, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_XOR) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_XOR);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_XOR, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_OR) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_OR);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_OR, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_SHL) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_SHL);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHL, token, lhs, parser_assign(parser)));
+    }
+    if (current()->type == TOKEN_ASSIGN_SHR) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_ASSIGN_SHR);
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, lhs, parser_assign(parser)));
     }
     return lhs;
 }
