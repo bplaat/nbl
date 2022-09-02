@@ -1,85 +1,36 @@
-# New Bastiaan Language
-This is a prototype interpreter for the NBL (New Bastiaan Language) programming language written in C99 C. It only uses the standard C library so it is very protable.
+# NBL - New Bastiaan Language
+This is a prototype interpreter for the NBL (New Bastiaan Language) programming language written in C11 C. It only uses the standard C library so it is very protable.
 
-The language has the syntax of **JavaScript**, the strong but dynamic type system of **Lua** en the standard functions of **PHP**. But not all the language features are implemented in the interpreter yet.
+It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
 
 ## Things todo:
-- While, do while and for loops
-    - [ ] token, lexer
-    - [ ] node, parser
-    - [ ] interpreter
-- Functions
-    - [ ] token, lexer
-    - [ ] node, parser
-    - [ ] interpreter
+- Variable block scope
+- continue and break
+- string array thing
+- for in
+    - array
+    - object
+- Free stuff: no mem leaks
+- Type checking functions, args size check
+    - working
+- Type check variables
+- Tenary operator
+- Expand stdlib
+- Classes?
+- Syntax hightlighting vscode?
 
 ## Types:
 - `null`
-- `number`
 - `boolean`
+- `int`
+- `float`
 - `string`
 - `array`
 - `object`
 - `function`
 
-## Operations
-```
-variable = value
-variable (number) += number -> number
-variable (number) -= number -> number
-variable (number) *= number -> number
-variable (number) **= number -> number
-variable (number) /= number -> number
-variable (number) %= number -> number
-
-variable (string) += string -> string
-variable (string) += null -> string
-variable (string) += number -> string
-variable (string) += boolean -> string
-
-variable (null) += string -> string
-variable (number) += string -> string
-variable (boolean) += string -> string
-
-+ number    ->    number
-- number    ->    number
-number + number    ->    number
-number - number    ->    number
-number * number    ->    number
-number ** number    ->    number
-number / number    ->    number
-number % number    ->    number
-
-string + string    ->    string
-null + string    ->    string
-string + null    ->    string
-number + string    ->    string
-string + number    ->    string
-boolean + string    ->    string
-string + boolean    ->    string
-
-null == null    ->    boolean
-number == number    ->    boolean
-boolean == boolean    ->    boolean
-string == string    ->    boolean
-
-null != null    ->    boolean
-number != number    ->    boolean
-boolean != boolean    ->    boolean
-string != string    ->    boolean
-
-number > number    ->    boolean
-number >= number    ->    boolean
-number < number    ->    boolean
-number <= number    ->    boolean
-
-! boolean    ->    boolean
-boolean && boolean    ->    boolean
-boolean || boolean    ->    boolean
-```
-
 ## Comments
-```js
+```
 # Single line comment
 
 // Single line comment
@@ -89,31 +40,37 @@ Multi line comment
 */
 ```
 
+## Variables
+```js
+let x = 0;
+x = 1;
+const y = 2;
+y = 3; // Error: can't mutate a const variable
+```
+
 ## Arrays
 ```js
-names = [ 'Bastiaan', 'Jan', 'Dirk' ]
-
-array_length(names)    ->    3
-
-names[0]    ->    'Bastiaan'
+const names = [ 'Bastiaan', 'Jan', 'Dirk' ];
+println(array_length(names)); // -> 3
+println(names[1]); // -> 'Jan'
 ```
 
 ## Objects
 ```js
-person = {
+const person = {
     name = 'Bastiaan',
     age = 17
 };
 
-println('Name = ' + person.name + ', Age = ' + person['age'])
+println('Name = ' + person.name + ', Age = ' + (string)person['age'])
 ```
 
 ## Conditions
 ```js
-number = 4.56
+const number = 4.56;
 
 if (number > 3) {
-    println('Number is greater then 3!')
+    println('Number is greater then 3!');
 }
 else if (number > 4) {
 
@@ -132,50 +89,40 @@ else {
 ## Loops
 ```js
 // While loops
-x = 10;
+let x = 10;
 while (x > 0) {
     x = x - 1;
     continue;
 }
 
 // Do while loops
-x = 0;
+let x = 0;
 do {
     x = x + 1;
     break;
 } while(x > 10);
 
 // For loops
-for (i = 0; i < 100; i += 1) {
-    println('- ' + i);
+for (let i = 0; i < 100; i = i + 1) {
+    println('-', i);
 }
 
 // For in loop
-names = [ 'Bastiaan', 'Dirk', 'Willem' ]
-for (name in names) {
-    println(name)
+const names = [ 'Bastiaan', 'Dirk', 'Willem' ];
+for (const name in names) {
+    println(name);
 }
 ```
 
 ## Functions
 ```js
-function double(number) {
+fn double(number) {
     return number * 2;
 }
 
-add = function (a, b) {
+const add = fn (a: int, b: int): int {
     return a + b;
-}
-
-array = {
-    length = function (array) {
-        length = 0;
-        while (array[length] != null) {
-            length += 1;
-        }
-        return length;
-    }
-}
+};
 
 println(add(double(4), 4)); // -> 12
 ```
