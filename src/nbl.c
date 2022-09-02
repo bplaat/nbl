@@ -174,6 +174,7 @@ void map_free(Map *map, MapFreeFunc *freeFunction) {
 // Lexer
 Token *token_new(TokenType type, size_t line, size_t position) {
     Token *token = malloc(sizeof(Token));
+    token->refs = 1;
     token->type = type;
     token->line = line;
     token->position = position;
@@ -195,6 +196,11 @@ Token *token_new_float(size_t line, size_t position, double floating) {
 Token *token_new_string(TokenType type, size_t line, size_t position, char *string) {
     Token *token = token_new(type, line, position);
     token->string = string;
+    return token;
+}
+
+Token *token_ref(Token *token) {
+    token->refs++;
     return token;
 }
 
@@ -284,6 +290,9 @@ char *token_type_to_string(TokenType type) {
 }
 
 void token_free(Token *token) {
+    token->refs--;
+    if (token->refs > 0) return;
+
     if (token->type == TOKEN_KEYWORD || token->type == TOKEN_STRING) free(token->string);
     free(token);
 }
@@ -720,6 +729,7 @@ void argument_free(Argument *argument) {
 
 Value *value_new(ValueType type) {
     Value *value = malloc(sizeof(Value));
+    value->refs = 1;
     value->type = type;
     return value;
 }
@@ -766,7 +776,7 @@ Value *value_new_function(List *args, ValueType returnType, Node *functionNode) 
     Value *value = value_new(VALUE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
-    value->functionNode = functionNode;
+    value->functionNode = node_ref(functionNode);
     return value;
 }
 
@@ -815,7 +825,15 @@ ValueType token_type_to_value_type(TokenType type) {
     return 0;
 }
 
+Value *value_ref(Value *value) {
+    value->refs++;
+    return value;
+}
+
 void value_free(Value *value) {
+    value->refs--;
+    if (value->refs > 0) return;
+
     if (value->type == VALUE_STRING) {
         free(value->string);
     }
@@ -837,8 +855,11 @@ void value_free(Value *value) {
 // Parser
 Node *node_new(NodeType type, Token *token) {
     Node *node = malloc(sizeof(Node));
+    node->refs = 1;
     node->type = type;
-    node->token = token;
+    if (token != NULL) {
+        node->token = token_ref(token);
+    }
     return node;
 }
 
@@ -880,7 +901,16 @@ Node *node_new_multiple(NodeType type, Token *token) {
     return node;
 }
 
+Node *node_ref(Node *node) {
+    node->refs++;
+    return node;
+}
+
 void node_free(Node *node) {
+    node->refs--;
+    if (node->refs > 0) return;
+
+    token_free(node->token);
     if (node->type == NODE_VALUE) {
         value_free(node->value);
     }
@@ -1208,52 +1238,52 @@ Node *parser_assign(Parser *parser) {
     if (current()->type == TOKEN_ASSIGN_ADD) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_ADD);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_ADD, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_ADD, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SUB) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SUB);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SUB, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SUB, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_MUL) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_MUL);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MUL, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MUL, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_EXP) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_EXP);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_EXP, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_EXP, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_MOD) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_MOD);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MOD, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MOD, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_AND) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_AND);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_AND, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_AND, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_XOR) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_XOR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_XOR, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_XOR, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_OR) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_OR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_OR, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_OR, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SHL) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SHL);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHL, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHL, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SHR) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SHR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, lhs, parser_assign(parser)));
+        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, node_ref(lhs), parser_assign(parser)));
     }
     return lhs;
 }

@@ -148,6 +148,7 @@ typedef enum TokenType {
 } TokenType;
 
 typedef struct Token {
+    int32_t refs;
     TokenType type;
     size_t line;
     size_t position;
@@ -165,6 +166,8 @@ Token *token_new_int(size_t line, size_t position, int64_t integer);
 Token *token_new_float(size_t line, size_t position, double floating);
 
 Token *token_new_string(TokenType type, size_t line, size_t position, char *string);
+
+Token *token_ref(Token *token);
 
 bool token_type_is_type(TokenType type);
 
@@ -184,10 +187,7 @@ typedef struct Keyword {
 List *lexer(char *text);
 
 // Value
-
-// Forward defines
-typedef struct Node Node;
-void node_free(Node *node);
+typedef struct Node Node; // Forward define
 
 typedef enum ValueType {
     VALUE_ANY,
@@ -215,6 +215,7 @@ void argument_free(Argument *argument);
 typedef struct Value Value;
 
 struct Value {
+    int32_t refs;
     ValueType type;
     union {
         bool boolean;
@@ -259,6 +260,8 @@ char *value_type_to_string(ValueType type);
 ValueType token_type_to_value_type(TokenType type);
 
 char *value_to_string(Value *value);
+
+Value *value_ref(Value *value);
 
 void value_free(Value *value);
 
@@ -315,6 +318,7 @@ typedef enum NodeType {
 } NodeType;
 
 struct Node {
+    int32_t refs;
     NodeType type;
     Token *token;
     union {
@@ -362,6 +366,10 @@ Node *node_new_cast(Token *token, ValueType castType, Node *unary);
 Node *node_new_operation(NodeType type, Token *token, Node *lhs, Node *rhs);
 
 Node *node_new_multiple(NodeType type, Token *token);
+
+Node *node_ref(Node *node);
+
+void node_free(Node *node);
 
 typedef struct Parser {
     char *text;
