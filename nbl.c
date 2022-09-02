@@ -576,10 +576,37 @@ List *lexer(char *text) {
             while (*c != endChar) c++;
             size_t size = c - ptr;
             c++;
+
             char *string = malloc(size + 1);
-            memcpy(string, ptr, size);
-            string[size] = '\0';
-            // TODO
+            int32_t strpos = 0;
+            for (size_t i = 0; i < size; i++) {
+                if (ptr[i] == '\\') {
+                    i++;
+                    if (ptr[i] == 'b')
+                        string[strpos++] = '\b';
+                    else if (ptr[i] == 'f')
+                        string[strpos++] = '\f';
+                    else if (ptr[i] == 'n')
+                        string[strpos++] = '\n';
+                    else if (ptr[i] == 'r')
+                        string[strpos++] = '\r';
+                    else if (ptr[i] == 't')
+                        string[strpos++] = '\t';
+                    else if (ptr[i] == 'v')
+                        string[strpos++] = '\v';
+                    else if (ptr[i] == '\'')
+                        string[strpos++] = '\'';
+                    else if (ptr[i] == '"')
+                        string[strpos++] = '"';
+                    else if (ptr[i] == '\\')
+                        string[strpos++] = '\\';
+                    else
+                        string[strpos++] = ptr[i];
+                } else {
+                    string[strpos++] = ptr[i];
+                }
+            }
+            string[strpos] = '\0';
             list_add(tokens, token_new_string(TOKEN_STRING, line, position, string));
             continue;
         }
@@ -2202,12 +2229,22 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_GET) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
-        if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not an array or object it is: %s",
+        if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array or object it is: %s",
                   value_type_to_string(containerValue->type));
         }
 
         Value *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
+        if (containerValue->type == VALUE_STRING) {
+            if (indexOrKey->type != VALUE_INT) {
+                error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "String index is not an int");
+            }
+            if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
+                char character[] = { containerValue->string[indexOrKey->integer], '\0' };
+                return value_new_string(strdup(character));
+            }
+            return value_new_null();
+        }
         if (containerValue->type == VALUE_ARRAY) {
             if (indexOrKey->type != VALUE_INT) {
                 error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
