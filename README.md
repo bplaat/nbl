@@ -4,7 +4,6 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
 
 ## Things todo:
-- Type check variables
 - Function default argument
 - string array thing
 - for in

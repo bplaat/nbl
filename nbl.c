@@ -1063,6 +1063,7 @@ struct Node {
             Node *unary;
         };
         struct {
+            ValueType declarationType;
             Node *lhs;
             Node *rhs;
         };
@@ -1376,17 +1377,21 @@ Node *parser_statement(Parser *parser) {
             }
         }
 
+        Node *variable = node_new_string(NODE_VARIABLE, nameToken, name);
         if (current()->type == TOKEN_FAT_ARROW) {
             Token *token = current();
             parser_eat(parser, TOKEN_FAT_ARROW);
             Node *returnNode = node_new_unary(NODE_RETURN, token, parser_logical(parser));
-            return node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name),
-                                      node_new_value(functionToken, value_new_function(arguments, returnType, returnNode)));
+            Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, variable,
+                                            node_new_value(functionToken, value_new_function(arguments, returnType, returnNode)));
+            node->declarationType = VALUE_FUNCTION;
+            return node;
         }
 
         Value *functionValue = value_new_function(arguments, returnType, parser_block(parser));
-        return node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name),
-                                  node_new_value(functionToken, functionValue));
+        Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, variable, node_new_value(functionToken, functionValue));
+        node->declarationType = VALUE_FUNCTION;
+        return node;
     }
 
     Node *node = parser_declarations(parser);
@@ -1411,27 +1416,29 @@ Node *parser_declarations(Parser *parser) {
             Node *variable = node_new_string(NODE_VARIABLE, current(), strdup(current()->string));
             parser_eat(parser, TOKEN_KEYWORD);
 
-            ValueType variableType = VALUE_ANY;
+            ValueType declarationType = VALUE_ANY;
             if (current()->type == TOKEN_COLON) {
                 parser_eat(parser, TOKEN_COLON);
                 if (token_type_is_type(current()->type)) {
-                    variableType = token_type_to_value_type(current()->type);
+                    declarationType = token_type_to_value_type(current()->type);
                     parser_eat(parser, current()->type);
                 } else {
                     error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token",
                           token_type_to_string(current()->type));
                 }
             }
-            // TODO
-            (void)variableType;
 
+            Node *node;
             if (current()->type == TOKEN_ASSIGN) {
                 Token *token = current();
                 parser_eat(parser, TOKEN_ASSIGN);
-                list_add(blockNode->nodes, node_new_operation(assignType, token, variable, parser_assign(parser)));
+                node = node_new_operation(assignType, token, variable, parser_assign(parser));
             } else {
-                list_add(blockNode->nodes, node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null())));
+                node = node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null()));
             }
+            node->declarationType = declarationType;
+            list_add(blockNode->nodes, node);
+
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1884,12 +1891,14 @@ Value *env_string_length(List *values) {
 // Interpreter header
 typedef struct Variable {
     bool mutable;
+    ValueType type;
     Value *value;
 } Variable;
 
-Variable *variable_new(bool mutable, Value *value) {
+Variable *variable_new(bool mutable, ValueType type, Value *value) {
     Variable *variable = malloc(sizeof(Variable));
     variable->mutable = mutable;
+    variable->type = type;
     variable->value = value;
     return variable;
 }
@@ -1935,23 +1944,23 @@ void interpreter(char *text, Node *node) {
 
     List *type_args = list_new(4);
     list_add(type_args, argument_new("value", VALUE_ANY));
-    map_set(env, "type", variable_new(false, value_new_native_function(type_args, VALUE_ANY, env_type)));
+    map_set(env, "type", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
-    map_set(env, "print", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_println)));
-    map_set(env, "exit", variable_new(false, value_new_native_function(list_new(4), VALUE_NULL, env_exit)));
+    map_set(env, "print", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_println)));
+    map_set(env, "exit", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_exit)));
 
     List *array_length_args = list_new(4);
     list_add(array_length_args, argument_new("array", VALUE_ARRAY));
-    map_set(env, "array_length", variable_new(false, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
+    map_set(env, "array_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
 
     List *array_push_args = list_new(4);
     list_add(array_push_args, argument_new("array", VALUE_ARRAY));
-    map_set(env, "array_push", variable_new(false, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
+    map_set(env, "array_push", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
 
     List *string_length_args = list_new(4);
     list_add(string_length_args, argument_new("string", VALUE_STRING));
-    map_set(env, "string_length", variable_new(false, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
+    map_set(env, "string_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
     // Start running code!
     Interpreter interpreter;
@@ -2127,7 +2136,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
             if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function argument type: '%s' needed '%s'",
-                    value_type_to_string(nodeValue->type), value_type_to_string(argument->type));
+                      value_type_to_string(nodeValue->type), value_type_to_string(argument->type));
             }
             list_add(values, nodeValue);
         }
@@ -2138,14 +2147,14 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                               .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
             for (size_t i = 0; i < functionValue->arguments->size; i++) {
                 Argument *argument = list_get(functionValue->arguments, i);
-                map_set_without_parent(newScope.block->env, argument->name, variable_new(true, list_get(values, i)));
+                map_set_without_parent(newScope.block->env, argument->name, variable_new(true, argument->type, list_get(values, i)));
             }
-            map_set_without_parent(newScope.block->env, "arguments", variable_new(false, value_new_array(values)));
+            map_set_without_parent(newScope.block->env, "arguments", variable_new(false, VALUE_ARRAY, value_new_array(values)));
             interpreter_node(interpreter, &newScope, functionValue->functionNode);
 
             if (functionValue->returnType != VALUE_ANY && newScope.function->returnValue->type != functionValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                    value_type_to_string(newScope.function->returnValue->type), value_type_to_string(functionValue->returnType));
+                      value_type_to_string(newScope.function->returnValue->type), value_type_to_string(functionValue->returnType));
             }
             return newScope.function->returnValue != NULL ? newScope.function->returnValue : value_new_null();
         }
@@ -2153,7 +2162,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *returnValue = functionValue->nativeFunc(values);
             if (functionValue->returnType != VALUE_ANY && returnValue->type != functionValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                    value_type_to_string(returnValue->type), value_type_to_string(functionValue->returnType));
+                      value_type_to_string(returnValue->type), value_type_to_string(functionValue->returnType));
             }
             return returnValue;
         }
@@ -2247,7 +2256,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_CONST_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
-            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(false, rhs));
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(false, node->declarationType, rhs));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare const variable: '%s'", node->lhs->string);
@@ -2255,7 +2264,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
-            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(true, rhs));
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(true, node->declarationType, rhs));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare variable: '%s'", node->lhs->string);
@@ -2289,6 +2298,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (!variable->mutable) {
                 error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't mutate const variable: '%s'", node->lhs->string);
+            }
+            if (variable->type != VALUE_ANY && variable->type != rhs->type) {
+                error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Unexpected variable type: '%s' needed '%s'",
+                      value_type_to_string(rhs->type), value_type_to_string(variable->type));
             }
             variable->value = rhs;
         }
