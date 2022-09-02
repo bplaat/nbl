@@ -2,12 +2,14 @@
 
 Value *env_type(List *values) {
     Value *value = list_get(values, 0);
-    return value_new_string(strdup(value_type_to_string(value->type)));
+    return value_new_string(value_type_to_string(value->type));
 }
 
 Value *env_print(List *values) {
     for (size_t i = 0; i < values->size; i++) {
-        printf("%s", value_to_string(list_get(values, i)));
+        char *string = value_to_string(list_get(values, i));
+        printf("%s", string);
+        free(string);
         if (i != values->size - 1) printf(" ");
     }
     return value_new_null();
@@ -46,28 +48,28 @@ Value *env_string_length(List *values) {
 }
 
 Map *std_env(void) {
-    Map *env = map_new(16);
+    Map *env = map_new();
 
-    List *type_args = list_new(4);
+    List *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
     map_set(env, "type", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
-    map_set(env, "print", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(4), VALUE_NULL, env_println)));
+    map_set(env, "print", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(), VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(), VALUE_NULL, env_println)));
 
-    List *exit_args = list_new(4);
+    List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
     map_set(env, "exit", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
 
-    List *array_length_args = list_new(4);
+    List *array_length_args = list_new();
     list_add(array_length_args, argument_new("array", VALUE_ARRAY, NULL));
     map_set(env, "array_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
 
-    List *array_push_args = list_new(4);
+    List *array_push_args = list_new();
     list_add(array_push_args, argument_new("array", VALUE_ARRAY, NULL));
     map_set(env, "array_push", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
 
-    List *string_length_args = list_new(4);
+    List *string_length_args = list_new();
     list_add(string_length_args, argument_new("string", VALUE_STRING, NULL));
     map_set(env, "string_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
@@ -95,6 +97,11 @@ int main(int argc, char **argv) {
     // Reading and parsing code
     char *text = file_read(argv[1]);
     List *tokens = lexer(text);
+    // for (size_t i = 0; i < tokens->size; i++) {
+    //     Token *token = list_get(tokens, i);
+    //     printf("%s ", token_type_to_string(token->type));
+    // }
+
     Node *node = parser(text, tokens);
 
     // Start running code
@@ -103,10 +110,17 @@ int main(int argc, char **argv) {
     interpreter.env = std_env();
     Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                   .block = &(BlockScope){.env = map_new_child(8, interpreter.env)}};
+                   .block = &(BlockScope){.env = map_new_from_parent(interpreter.env)}};
     interpreter_node(&interpreter, &scope, node);
-    if (scope.function->returnValue != NULL && scope.function->returnValue->type == VALUE_INT) {
-        exit(scope.function->returnValue->integer);
+
+    map_free(scope.block->env, (MapFreeFunc *)variable_free);
+    map_free(interpreter.env, (MapFreeFunc *)variable_free);
+
+    if (scope.function->returnValue != NULL) {
+        value_free(scope.function->returnValue);
+        if (scope.function->returnValue->type == VALUE_INT) {
+            exit(scope.function->returnValue->integer);
+        }
     }
 
     // Cleanup

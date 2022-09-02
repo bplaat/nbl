@@ -40,11 +40,19 @@ void error(char *text, size_t line, size_t position, char *fmt, ...) {
 }
 
 // List
-List *list_new(size_t capacity) {
+List *list_new(void) { return list_new_with_capacity(8); }
+
+List *list_new_with_capacity(size_t capacity) {
     List *list = malloc(sizeof(List));
+    list->refs = 1;
     list->items = malloc(sizeof(void *) * capacity);
     list->capacity = capacity;
     list->size = 0;
+    return list;
+}
+
+List *list_ref(List *list) {
+    list->refs++;
     return list;
 }
 
@@ -78,16 +86,25 @@ void list_add(List *list, void *item) {
 }
 
 void list_free(List *list, ListFreeFunc *freeFunction) {
-    for (size_t i = 0; i < list->size; i++) {
-        freeFunction(list_get(list, i));
+    list->refs--;
+    if (list->refs > 0) return;
+
+    if (freeFunction != NULL) {
+        for (size_t i = 0; i < list->size; i++) {
+            freeFunction(list_get(list, i));
+        }
     }
     free(list->items);
     free(list);
 }
 
 // Map
-Map *map_new(size_t capacity) {
+Map *map_new(void) { return map_new_with_capacity(8); }
+
+Map *map_new_with_capacity(size_t capacity) {
     Map *map = malloc(sizeof(Map));
+    map->refs = 1;
+    map->parent = NULL;
     map->keys = malloc(sizeof(char *) * capacity);
     map->items = malloc(sizeof(void *) * capacity);
     map->capacity = capacity;
@@ -95,9 +112,14 @@ Map *map_new(size_t capacity) {
     return map;
 }
 
-Map *map_new_child(size_t capacity, Map *parent) {
-    Map *map = map_new(capacity);
+Map *map_new_from_parent(Map *parent) {
+    Map *map = map_new_with_capacity(8);
     map->parent = parent;
+    return map;
+}
+
+Map *map_ref(Map *map) {
+    map->refs++;
     return map;
 }
 
@@ -142,7 +164,7 @@ void map_set(Map *map, char *key, void *item) {
             map->keys = realloc(map->keys, sizeof(char *) * map->capacity);
             map->items = realloc(map->items, sizeof(void *) * map->capacity);
         }
-        map->keys[map->size] = key;
+        map->keys[map->size] = strdup(key);
         map->items[map->size] = item;
         map->size++;
     }
@@ -155,16 +177,21 @@ void map_set_without_parent(Map *map, char *key, void *item) {
             map->keys = realloc(map->keys, sizeof(char *) * map->capacity);
             map->items = realloc(map->items, sizeof(void *) * map->capacity);
         }
-        map->keys[map->size] = key;
+        map->keys[map->size] = strdup(key);
         map->items[map->size] = item;
         map->size++;
     }
 }
 
 void map_free(Map *map, MapFreeFunc *freeFunction) {
+    map->refs--;
+    if (map->refs > 0) return;
+
     for (size_t i = 0; i < map->size; i++) {
         free(map->keys[i]);
-        freeFunction(map->items[i]);
+        if (freeFunction != NULL) {
+            freeFunction(map->items[i]);
+        }
     }
     free(map->keys);
     free(map->items);
@@ -342,7 +369,7 @@ List *lexer(char *text) {
                           {"break", TOKEN_BREAK},
                           {"return", TOKEN_RETURN}};
 
-    List *tokens = list_new(1024);
+    List *tokens = list_new_with_capacity(1024);
     char *c = text;
     int32_t line = 0;
     char *lineStart = c;
@@ -360,7 +387,7 @@ List *lexer(char *text) {
         }
         if (*c == '/' && *(c + 1) == '*') {
             c += 2;
-            while (*c != '*' && *(c + 1) != '/') {
+            while (*c != '*' || *(c + 1) != '/') {
                 if (*c == '\n' || *c == '\r') {
                     if (*c == '\r') c++;
                     c++;
@@ -448,20 +475,21 @@ List *lexer(char *text) {
             char *ptr = c;
             while (isalnum(*c) || *c == '_' || *c == '$') c++;
             size_t size = c - ptr;
-            char *string = malloc(size + 1);
-            memcpy(string, ptr, size);
-            string[size] = '\0';
 
             bool found = false;
             for (size_t i = 0; i < sizeof(keywords) / sizeof(Keyword); i++) {
                 Keyword *keyword = &keywords[i];
-                if (!strcmp(string, keyword->keyword)) {
+                size_t keywordSize = strlen(keyword->keyword);
+                if (!memcmp(ptr, keyword->keyword, keywordSize) && size == keywordSize) {
                     list_add(tokens, token_new(keyword->type, line, position));
                     found = true;
                     break;
                 }
             }
             if (!found) {
+                char *string = malloc(size + 1);
+                memcpy(string, ptr, size);
+                string[size] = '\0';
                 list_add(tokens, token_new_string(TOKEN_KEYWORD, line, position, string));
             }
             continue;
@@ -713,7 +741,7 @@ List *lexer(char *text) {
 // Value
 Argument *argument_new(char *name, ValueType type, Node *defaultNode) {
     Argument *argument = malloc(sizeof(Argument));
-    argument->name = name;
+    argument->name = strdup(name);
     argument->type = type;
     argument->defaultNode = defaultNode;
     return argument;
@@ -756,7 +784,7 @@ Value *value_new_float(double floating) {
 
 Value *value_new_string(char *string) {
     Value *value = value_new(VALUE_STRING);
-    value->string = string;
+    value->string = strdup(string);
     return value;
 }
 
@@ -776,7 +804,7 @@ Value *value_new_function(List *args, ValueType returnType, Node *functionNode) 
     Value *value = value_new(VALUE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
-    value->functionNode = node_ref(functionNode);
+    value->functionNode = functionNode;
     return value;
 }
 
@@ -830,10 +858,16 @@ Value *value_ref(Value *value) {
     return value;
 }
 
-void value_free(Value *value) {
-    value->refs--;
-    if (value->refs > 0) return;
+Value *value_copy(Value *value) {
+    if (value->type == VALUE_NULL) return value_new_null();
+    if (value->type == VALUE_BOOLEAN) return value_new_boolean(value->boolean);
+    if (value->type == VALUE_INT) return value_new_int(value->integer);
+    if (value->type == VALUE_FLOAT) return value_new_float(value->floating);
+    if (value->type == VALUE_STRING) return value_new_string(value->string);
+    return NULL;
+}
 
+void value_clear(Value *value) {
     if (value->type == VALUE_STRING) {
         free(value->string);
     }
@@ -849,6 +883,12 @@ void value_free(Value *value) {
     if (value->type == VALUE_FUNCTION) {
         node_free(value->functionNode);
     }
+}
+
+void value_free(Value *value) {
+    value->refs--;
+    if (value->refs > 0) return;
+    value_clear(value);
     free(value);
 }
 
@@ -871,7 +911,7 @@ Node *node_new_value(Token *token, Value *value) {
 
 Node *node_new_string(NodeType type, Token *token, char *string) {
     Node *node = node_new(type, token);
-    node->string = string;
+    node->string = strdup(string);
     return node;
 }
 
@@ -897,7 +937,7 @@ Node *node_new_operation(NodeType type, Token *token, Node *lhs, Node *rhs) {
 
 Node *node_new_multiple(NodeType type, Token *token) {
     Node *node = node_new(type, token);
-    node->nodes = list_new(8);
+    node->nodes = list_new();
     return node;
 }
 
@@ -910,7 +950,9 @@ void node_free(Node *node) {
     node->refs--;
     if (node->refs > 0) return;
 
-    token_free(node->token);
+    if (node->token != NULL) {
+        token_free(node->token);
+    }
     if (node->type == NODE_VALUE) {
         value_free(node->value);
     }
@@ -920,7 +962,7 @@ void node_free(Node *node) {
     if (node->type == NODE_RETURN || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
         node_free(node->unary);
     }
-    if (node->type >= NODE_CONST_ASSIGN && node->type <= NODE_LOGICAL_OR) {
+    if (node->type >= NODE_GET && node->type <= NODE_LOGICAL_OR) {
         node_free(node->lhs);
         node_free(node->rhs);
     }
@@ -1074,10 +1116,6 @@ Node *parser_statement(Parser *parser) {
 
         node->thenBlock = parser_block(parser);
         list_add(blockNode->nodes, node);
-
-        if (blockNode->nodes->size == 1) {
-            return list_get(blockNode->nodes, 0);
-        }
         return blockNode;
     }
 
@@ -1105,10 +1143,10 @@ Node *parser_statement(Parser *parser) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
         Token *nameToken = current();
-        char *name = strdup(current()->string);
+        char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
 
-        List *arguments = list_new(4);
+        List *arguments = list_new();
         parser_eat(parser, TOKEN_LPAREN);
         while (current()->type != TOKEN_RPAREN) {
             list_add(arguments, parser_argument(parser));
@@ -1131,19 +1169,16 @@ Node *parser_statement(Parser *parser) {
             }
         }
 
-        Node *variable = node_new_string(NODE_VARIABLE, nameToken, name);
+        Value *functionValue;
         if (current()->type == TOKEN_FAT_ARROW) {
             Token *token = current();
             parser_eat(parser, TOKEN_FAT_ARROW);
-            Node *returnNode = node_new_unary(NODE_RETURN, token, parser_logical(parser));
-            Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, variable,
-                                            node_new_value(functionToken, value_new_function(arguments, returnType, returnNode)));
-            node->declarationType = VALUE_FUNCTION;
-            return node;
+            functionValue = value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_logical(parser)));
+        } else {
+            functionValue = value_new_function(arguments, returnType, parser_block(parser));
         }
-
-        Value *functionValue = value_new_function(arguments, returnType, parser_block(parser));
-        Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, variable, node_new_value(functionToken, functionValue));
+        Node *node =
+            node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), node_new_value(functionToken, functionValue));
         node->declarationType = VALUE_FUNCTION;
         return node;
     }
@@ -1155,7 +1190,7 @@ Node *parser_statement(Parser *parser) {
 
 Node *parser_declarations(Parser *parser) {
     if (current()->type == TOKEN_CONST || current()->type == TOKEN_LET) {
-        Node *blockNode = node_new_multiple(NODE_NODES, current());
+        List *nodes = list_new();
         NodeType assignType;
         if (current()->type == TOKEN_CONST) {
             assignType = NODE_CONST_ASSIGN;
@@ -1167,7 +1202,7 @@ Node *parser_declarations(Parser *parser) {
         }
 
         for (;;) {
-            Node *variable = node_new_string(NODE_VARIABLE, current(), strdup(current()->string));
+            Node *variable = node_new_string(NODE_VARIABLE, current(), current()->string);
             parser_eat(parser, TOKEN_KEYWORD);
 
             ValueType declarationType = VALUE_ANY;
@@ -1191,7 +1226,7 @@ Node *parser_declarations(Parser *parser) {
                 node = node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null()));
             }
             node->declarationType = declarationType;
-            list_add(blockNode->nodes, node);
+            list_add(nodes, node);
 
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
@@ -1199,33 +1234,45 @@ Node *parser_declarations(Parser *parser) {
                 break;
             }
         }
-        if (blockNode->nodes->size == 0) {
+        if (nodes->size == 0) {
+            list_free(nodes, NULL);
             return NULL;
-        } else if (blockNode->nodes->size == 1) {
-            return list_get(blockNode->nodes, 0);
         }
-        return blockNode;
+        if (nodes->size == 1) {
+            Node *firstNode = list_get(nodes, 0);
+            list_free(nodes, NULL);
+            return firstNode;
+        }
+        Node *nodesNode = node_new(NODE_NODES, current());
+        nodesNode->nodes = nodes;
+        return nodesNode;
     }
     return parser_assigns(parser);
 }
 
 Node *parser_assigns(Parser *parser) {
-    Node *blockNode = node_new_multiple(NODE_NODES, current());
+    List *nodes = list_new();
     for (;;) {
         Node *node = parser_assign(parser);
-        list_add(blockNode->nodes, node);
+        list_add(nodes, node);
         if (current()->type == TOKEN_COMMA) {
             parser_eat(parser, TOKEN_COMMA);
         } else {
             break;
         }
     }
-    if (blockNode->nodes->size == 0) {
+    if (nodes->size == 0) {
+        list_free(nodes, NULL);
         return NULL;
-    } else if (blockNode->nodes->size == 1) {
-        return list_get(blockNode->nodes, 0);
     }
-    return blockNode;
+    if (nodes->size == 1) {
+        Node *firstNode = list_get(nodes, 0);
+        list_free(nodes, NULL);
+        return firstNode;
+    }
+    Node *nodesNode = node_new(NODE_NODES, current());
+    nodesNode->nodes = nodes;
+    return nodesNode;
 }
 
 Node *parser_assign(Parser *parser) {
@@ -1501,7 +1548,7 @@ Node *parser_primary(Parser *parser) {
         return node;
     }
     if (current()->type == TOKEN_STRING) {
-        Node *node = node_new_value(current(), value_new_string(strdup(current()->string)));
+        Node *node = node_new_value(current(), value_new_string(current()->string));
         parser_eat(parser, TOKEN_STRING);
         return node;
     }
@@ -1521,7 +1568,7 @@ Node *parser_primary(Parser *parser) {
     }
     if (current()->type == TOKEN_LCURLY) {
         Node *node = node_new_multiple(NODE_OBJECT, current());
-        node->keys = list_new(node->nodes->capacity);
+        node->keys = list_new_with_capacity(node->nodes->capacity);
         parser_eat(parser, TOKEN_LCURLY);
         while (current()->type != TOKEN_RCURLY) {
             list_add(node->keys, strdup(current()->string));
@@ -1540,7 +1587,7 @@ Node *parser_primary(Parser *parser) {
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
-        List *arguments = list_new(4);
+        List *arguments = list_new();
         parser_eat(parser, TOKEN_LPAREN);
         while (current()->type != TOKEN_RPAREN) {
             list_add(arguments, parser_argument(parser));
@@ -1577,7 +1624,7 @@ Node *parser_primary(Parser *parser) {
 
 Node *parser_identifier(Parser *parser) {
     if (current()->type == TOKEN_KEYWORD) {
-        Node *node = node_new_string(NODE_VARIABLE, current(), strdup(current()->string));
+        Node *node = node_new_string(NODE_VARIABLE, current(), current()->string);
         parser_eat(parser, TOKEN_KEYWORD);
         return parser_identifier_suffix(parser, node);
     }
@@ -1597,7 +1644,7 @@ Node *parser_identifier_suffix(Parser *parser, Node *node) {
         }
         if (current()->type == TOKEN_POINT) {
             parser_eat(parser, TOKEN_POINT);
-            Node *indexOrKey = node_new_value(current(), value_new_string(strdup(current()->string)));
+            Node *indexOrKey = node_new_value(current(), value_new_string(current()->string));
             parser_eat(parser, TOKEN_KEYWORD);
             node = node_new_operation(NODE_GET, token, node, indexOrKey);
         }
@@ -1621,7 +1668,7 @@ Node *parser_identifier_suffix(Parser *parser, Node *node) {
 }
 
 Argument *parser_argument(Parser *parser) {
-    char *name = strdup(current()->string);
+    char *name = current()->string;
     parser_eat(parser, TOKEN_KEYWORD);
     ValueType type = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
@@ -1663,17 +1710,19 @@ void variable_free(Variable *variable) {
     free(variable);
 }
 
+#define interpreter_statement_in_loop(interpreter, scope, node)        \
+    {                                                                  \
+        Value *nodeValue = interpreter_node(interpreter, scope, node); \
+        if (nodeValue != NULL) value_free(nodeValue);                  \
+        if ((scope)->function->returnValue != NULL) return NULL;       \
+    }
+
 #define interpreter_statement(interpreter, scope, node)      \
-    interpreter_node(interpreter, scope, node);              \
-    if ((scope)->function->returnValue != NULL) return NULL; \
+    interpreter_statement_in_loop(interpreter, scope, node); \
     if ((scope)->loop->inLoop) {                             \
         if ((scope)->loop->isContinuing) return NULL;        \
         if ((scope)->loop->isBreaking) return NULL;          \
     }
-
-#define interpreter_statement_in_loop(interpreter, scope, node) \
-    interpreter_node(interpreter, scope, node);                 \
-    if ((scope)->function->returnValue != NULL) return NULL;
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_PROGRAM) {
@@ -1691,24 +1740,25 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_BLOCK) {
-        Scope newScope = {.function = scope->function, .loop = scope->loop, .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
+        Scope newScope = {.function = scope->function, .loop = scope->loop, .block = &(BlockScope){.env = map_new_from_parent(scope->block->env)}};
         for (size_t i = 0; i < node->nodes->size; i++) {
             Node *child = list_get(node->nodes, i);
             interpreter_statement(interpreter, &newScope, child);
         }
+        map_free(newScope.block->env, (MapFreeFunc *)variable_free);
         return NULL;
     }
     if (node->type == NODE_IF) {
         Value *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOLEAN) {
-            error(interpreter->text, node->token->line, node->token->position, "Type error");
+            error(interpreter->text, node->token->line, node->token->position, "If condition type is not a boolean");
         }
-
         if (condition->boolean) {
             interpreter_statement(interpreter, scope, node->thenBlock);
         } else if (node->elseBlock != NULL) {
             interpreter_statement(interpreter, scope, node->elseBlock);
         }
+        value_free(condition);
         return NULL;
     }
     if (node->type == NODE_WHILE) {
@@ -1716,11 +1766,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOLEAN) {
-                error(interpreter->text, node->token->line, node->token->position, "Type error");
+                error(interpreter->text, node->token->line, node->token->position, "While condition type is not a boolean");
             }
             if (!condition->boolean) {
+                value_free(condition);
                 break;
             }
+            value_free(condition);
             interpreter_statement_in_loop(interpreter, &newScope, node->thenBlock);
             if (newScope.loop->isContinuing) {
                 newScope.loop->isContinuing = false;
@@ -1743,11 +1795,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOLEAN) {
-                error(interpreter->text, node->token->line, node->token->position, "Type error");
+                error(interpreter->text, node->token->line, node->token->position, "While condition type is not a boolean");
             }
             if (!condition->boolean) {
+                value_free(condition);
                 break;
             }
+            value_free(condition);
         }
         return NULL;
     }
@@ -1756,11 +1810,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOLEAN) {
-                error(interpreter->text, node->token->line, node->token->position, "Type error");
+                error(interpreter->text, node->token->line, node->token->position, "For condition type is not a boolean");
             }
             if (!condition->boolean) {
+                value_free(condition);
                 break;
             }
+            value_free(condition);
             interpreter_statement_in_loop(interpreter, &newScope, node->thenBlock);
             if (newScope.loop->isContinuing) {
                 newScope.loop->isContinuing = false;
@@ -1768,7 +1824,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             if (newScope.loop->isBreaking) {
                 break;
             }
-            interpreter_node(interpreter, &newScope, node->incrementBlock);
+            interpreter_statement(interpreter, &newScope, node->incrementBlock);
         }
         return NULL;
     }
@@ -1784,23 +1840,25 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (iterator->type == VALUE_STRING) size = strlen(iterator->string);
         if (iterator->type == VALUE_ARRAY) size = iterator->array->size;
         if (iterator->type == VALUE_OBJECT) size = iterator->object->size;
+        Scope newIteratorScope = {
+            .function = newScope.function, .loop = newScope.loop, .block = &(BlockScope){.env = map_new_from_parent(newScope.block->env)}};
         for (size_t i = 0; i < size; i++) {
-            Scope newIteratorScope = {
-                .function = newScope.function, .loop = newScope.loop, .block = &(BlockScope){.env = map_new_child(8, newScope.block->env)}};
             Value *iteratorValue;
             if (iterator->type == VALUE_STRING) {
                 char character[] = {iterator->string[i], '\0'};
-                iteratorValue = value_new_string(strdup(character));
+                iteratorValue = value_new_string(character);
             }
             if (iterator->type == VALUE_ARRAY) {
-                iteratorValue = list_get(iterator->array, i);
+                iteratorValue = value_ref(list_get(iterator->array, i));
             }
             if (iterator->type == VALUE_OBJECT) {
-                iteratorValue = value_new_string(strdup(iterator->object->keys[i]));
+                iteratorValue = value_new_string(iterator->object->keys[i]);
             }
             map_set(newIteratorScope.block->env, node->variable->lhs->string,
-                    variable_new(node->variable->type == NODE_LET_ASSIGN, node->variable->declarationType, iteratorValue));
+                    variable_new(node->variable->type == NODE_LET_ASSIGN, node->variable->declarationType, value_ref(iteratorValue)));
             interpreter_statement_in_loop(interpreter, &newIteratorScope, node->thenBlock);
+            value_free(iteratorValue);
+
             if (newScope.loop->isContinuing) {
                 newScope.loop->isContinuing = false;
             }
@@ -1808,6 +1866,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 break;
             }
         }
+        map_free(newIteratorScope.block->env, (MapFreeFunc *)variable_free);
         return NULL;
     }
     if (node->type == NODE_CONTINUE) {
@@ -1830,17 +1889,17 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
 
     if (node->type == NODE_VALUE) {
-        return node->value;
+        return value_ref(node->value);
     }
     if (node->type == NODE_ARRAY) {
-        Value *arrayValue = value_new_array(list_new(align(node->nodes->size, 8)));
+        Value *arrayValue = value_new_array(list_new_with_capacity(align(node->nodes->size, 8)));
         for (size_t i = 0; i < node->nodes->size; i++) {
             list_add(arrayValue->array, interpreter_node(interpreter, scope, list_get(node->nodes, i)));
         }
         return arrayValue;
     }
     if (node->type == NODE_OBJECT) {
-        Value *objectValue = value_new_object(map_new(align(node->nodes->size, 8)));
+        Value *objectValue = value_new_object(map_new_with_capacity(align(node->nodes->size, 8)));
         for (size_t i = 0; i < node->nodes->size; i++) {
             map_set(objectValue->object, list_get(node->keys, i), interpreter_node(interpreter, scope, list_get(node->nodes, i)));
         }
@@ -1852,7 +1911,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             error(interpreter->text, node->token->line, node->token->position, "Variable is not a function");
         }
 
-        List *values = list_new(align(node->nodes->size, 8));
+        List *values = list_new_with_capacity(align(node->nodes->size, 8));
         for (size_t i = 0; i < MAX(functionValue->arguments->size, node->nodes->size); i++) {
             Argument *argument = list_get(functionValue->arguments, i);
             if (list_get(node->nodes, i) == NULL && argument != NULL) {
@@ -1878,39 +1937,51 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             list_add(values, nodeValue);
         }
 
+        Value *returnValue = NULL;
         if (functionValue->type == VALUE_FUNCTION) {
             Scope newScope = {.function = &(FunctionScope){.returnValue = NULL},
                               .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                              .block = &(BlockScope){.env = map_new_child(8, scope->block->env)}};
+                              .block = &(BlockScope){.env = map_new_from_parent(scope->block->env)}};
             for (size_t i = 0; i < functionValue->arguments->size; i++) {
                 Argument *argument = list_get(functionValue->arguments, i);
                 map_set_without_parent(newScope.block->env, argument->name, variable_new(true, argument->type, list_get(values, i)));
             }
-            map_set_without_parent(newScope.block->env, "arguments", variable_new(false, VALUE_ARRAY, value_new_array(values)));
+            map_set_without_parent(newScope.block->env, "arguments", variable_new(false, VALUE_ARRAY, value_new_array(list_ref(values))));
             interpreter_node(interpreter, &newScope, functionValue->functionNode);
+
+            map_free(newScope.block->env, (MapFreeFunc *)variable_free);
 
             if (functionValue->returnType != VALUE_ANY && newScope.function->returnValue->type != functionValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
                       value_type_to_string(newScope.function->returnValue->type), value_type_to_string(functionValue->returnType));
             }
-            return newScope.function->returnValue != NULL ? newScope.function->returnValue : value_new_null();
+            returnValue = newScope.function->returnValue != NULL ? newScope.function->returnValue : value_new_null();
         }
+
         if (functionValue->type == VALUE_NATIVE_FUNCTION) {
-            Value *returnValue = functionValue->nativeFunc(values);
+            returnValue = functionValue->nativeFunc(values);
             if (functionValue->returnType != VALUE_ANY && returnValue->type != functionValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
                       value_type_to_string(returnValue->type), value_type_to_string(functionValue->returnType));
             }
-            return returnValue;
         }
+
+        list_free(values, (ListFreeFunc *)value_free);
+        value_free(functionValue);
+        return returnValue;
     }
 
     if (node->type == NODE_VARIABLE) {
         Variable *variable = map_get(scope->block->env, node->string);
-        if (variable != NULL) {
-            return variable->value;
+        if (variable == NULL) {
+            error(interpreter->text, node->token->line, node->token->position, "Can't find variable: '%s'", node->string);
         }
-        error(interpreter->text, node->token->line, node->token->position, "Can't find variable: '%s'", node->string);
+        if (variable->value->type == VALUE_NULL || variable->value->type == VALUE_BOOLEAN || variable->value->type == VALUE_INT ||
+            variable->value->type == VALUE_FLOAT || variable->value->type == VALUE_STRING) {
+            return value_copy(variable->value);
+        } else {
+            return value_ref(variable->value);
+        }
     }
     if (node->type == NODE_GET) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
@@ -1926,7 +1997,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
                 char character[] = {containerValue->string[indexOrKey->integer], '\0'};
-                return value_new_string(strdup(character));
+                return value_new_string(character);
             }
             return value_new_null();
         }
@@ -1942,7 +2013,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
             }
             Value *value = map_get(containerValue->object, indexOrKey->string);
-            if (value != NULL) return value;
+            if (value != NULL) return value_ref(value);
             error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");
         }
     }
@@ -1951,49 +2022,111 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *unary = interpreter_node(interpreter, scope, node->unary);
         if (node->type == NODE_NEG) {
             if (unary->type == VALUE_INT) {
-                return value_new_int(-unary->integer);
+                unary->integer = -unary->integer;
+                return unary;
             }
             if (unary->type == VALUE_FLOAT) {
-                return value_new_float(-unary->floating);
+                unary->floating = -unary->floating;
+                return unary;
             }
         }
         if (node->type == NODE_NOT) {
             if (unary->type == VALUE_INT) {
-                return value_new_int(~unary->integer);
+                unary->integer = ~unary->integer;
+                return unary;
             }
         }
         if (node->type == NODE_LOGICAL_NOT) {
             if (unary->type == VALUE_BOOLEAN) {
-                return value_new_boolean(!unary->boolean);
+                unary->boolean = !unary->boolean;
+                return unary;
             }
         }
         if (node->type == NODE_CAST) {
             if (node->castType == VALUE_BOOLEAN) {
-                if (unary->type == VALUE_NULL) return value_new_boolean(false);
-                if (unary->type == VALUE_BOOLEAN) return value_new_boolean(unary->boolean);
-                if (unary->type == VALUE_INT) return value_new_boolean(unary->integer != 0);
-                if (unary->type == VALUE_FLOAT) return value_new_boolean(unary->floating != 0.0);
-                if (unary->type == VALUE_STRING) return value_new_boolean(!(!strcmp(unary->string, "") || !strcmp(unary->string, "0")));
+                if (unary->type == VALUE_NULL) {
+                    unary->type = VALUE_BOOLEAN;
+                    unary->boolean = false;
+                    return unary;
+                }
+                if (unary->type == VALUE_BOOLEAN) return unary;
+                if (unary->type == VALUE_INT) {
+                    unary->type = VALUE_BOOLEAN;
+                    unary->boolean = unary->integer != 0;
+                    return unary;
+                }
+                if (unary->type == VALUE_FLOAT) {
+                    unary->type = VALUE_BOOLEAN;
+                    unary->boolean = unary->floating != 0.0;
+                    return unary;
+                }
+                if (unary->type == VALUE_STRING) {
+                    bool result = !(!strcmp(unary->string, "") || !strcmp(unary->string, "0"));
+                    value_clear(unary);
+                    unary->type = VALUE_BOOLEAN;
+                    unary->boolean = result;
+                    return unary;
+                }
             }
 
             if (node->castType == VALUE_INT) {
-                if (unary->type == VALUE_NULL) return value_new_int(0);
-                if (unary->type == VALUE_BOOLEAN) return value_new_int(unary->boolean ? 1 : 0);
-                if (unary->type == VALUE_INT) return value_new_int(unary->integer);
-                if (unary->type == VALUE_FLOAT) return value_new_int(unary->floating);
-                if (unary->type == VALUE_STRING) return value_new_int(string_to_int(unary->string));
+                if (unary->type == VALUE_NULL) {
+                    unary->type = VALUE_INT;
+                    unary->integer = 0;
+                    return unary;
+                }
+                if (unary->type == VALUE_BOOLEAN) {
+                    unary->type = VALUE_INT;
+                    unary->integer = unary->boolean;
+                    return unary;
+                }
+                if (unary->type == VALUE_INT) return unary;
+                if (unary->type == VALUE_FLOAT) {
+                    unary->type = VALUE_INT;
+                    unary->integer = unary->floating;
+                    return unary;
+                }
+                if (unary->type == VALUE_STRING) {
+                    int64_t result = string_to_int(unary->string);
+                    value_clear(unary);
+                    unary->type = VALUE_INT;
+                    unary->integer = result;
+                    return unary;
+                }
             }
 
             if (node->castType == VALUE_FLOAT) {
-                if (unary->type == VALUE_NULL) return value_new_float(0.0);
-                if (unary->type == VALUE_BOOLEAN) return value_new_float(unary->boolean ? 1.0 : 0.0);
-                if (unary->type == VALUE_INT) return value_new_float(unary->integer);
-                if (unary->type == VALUE_FLOAT) return value_new_float(unary->floating);
-                if (unary->type == VALUE_STRING) return value_new_float(string_to_float(unary->string));
+                if (unary->type == VALUE_NULL) {
+                    unary->type = VALUE_FLOAT;
+                    unary->floating = 0;
+                    return unary;
+                }
+                if (unary->type == VALUE_BOOLEAN) {
+                    unary->type = VALUE_FLOAT;
+                    unary->floating = unary->boolean;
+                    return unary;
+                }
+                if (unary->type == VALUE_INT) {
+                    unary->type = VALUE_FLOAT;
+                    unary->floating = unary->integer;
+                    return unary;
+                }
+                if (unary->type == VALUE_FLOAT) return unary;
+                if (unary->type == VALUE_STRING) {
+                    int64_t result = string_to_float(unary->string);
+                    value_clear(unary);
+                    unary->type = VALUE_FLOAT;
+                    unary->floating = result;
+                    return unary;
+                }
             }
 
             if (node->castType == VALUE_STRING) {
-                return value_new_string(value_to_string(unary));
+                char *string = value_to_string(unary);
+                value_clear(unary);
+                unary->type = VALUE_STRING;
+                unary->string = string;
+                return unary;
             }
         }
 
@@ -2003,7 +2136,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_CONST_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
-            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(false, node->declarationType, rhs));
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(false, node->declarationType, value_ref(rhs)));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare const variable: '%s'", node->lhs->string);
@@ -2011,7 +2144,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get_without_parent(scope->block->env, node->lhs->string) == NULL) {
-            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(true, node->declarationType, rhs));
+            map_set_without_parent(scope->block->env, node->lhs->string, variable_new(true, node->declarationType, value_ref(rhs)));
             return rhs;
         }
         error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare variable: '%s'", node->lhs->string);
@@ -2030,13 +2163,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 if (indexOrKey->type != VALUE_INT) {
                     error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
                 }
-                list_set(containerValue->array, indexOrKey->integer, rhs);
+                list_set(containerValue->array, indexOrKey->integer, value_ref(rhs));
             }
             if (containerValue->type == VALUE_OBJECT) {
                 if (indexOrKey->type != VALUE_STRING) {
                     error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
                 }
-                map_set(containerValue->object, indexOrKey->string, rhs);
+                map_set(containerValue->object, indexOrKey->string, value_ref(rhs));
             }
         } else {
             Variable *variable = map_get(scope->block->env, node->lhs->string);
@@ -2050,7 +2183,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Unexpected variable type: '%s' needed '%s'",
                       value_type_to_string(rhs->type), value_type_to_string(variable->type));
             }
-            variable->value = rhs;
+            variable->value = value_ref(rhs);
         }
         return rhs;
     }
@@ -2060,130 +2193,429 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
 
         if (node->type == NODE_ADD) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(lhs->integer + rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->floating + rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(lhs->floating + rhs->integer);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->integer + rhs->floating);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer += rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating += rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating += rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = lhs->integer + rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
 
             if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
                 char *string = malloc(strlen(lhs->string) + strlen(rhs->string) + 1);
                 stpcpy(string, lhs->string);
                 strcat(string, rhs->string);
-                return value_new_string(string);
+                value_clear(lhs);
+                lhs->string = string;
+                value_free(rhs);
+                return lhs;
             }
         }
 
         if (node->type == NODE_SUB) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(lhs->integer - rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->floating - rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->integer - rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(lhs->floating - rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer -= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating -= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating -= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = lhs->integer - rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_MUL) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(lhs->integer * rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->floating * rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->integer * rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(lhs->floating * rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer *= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating *= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating *= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = lhs->integer * rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_EXP) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(pow(lhs->integer, rhs->integer));
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(pow(lhs->floating, rhs->floating));
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(pow(lhs->integer, rhs->floating));
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(pow(lhs->floating, rhs->integer));
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer = pow(lhs->integer, rhs->integer);
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = pow(lhs->floating, rhs->floating);
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = pow(lhs->floating, rhs->integer);
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = pow(lhs->integer, rhs->floating);
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_DIV) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(lhs->integer / rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->floating / rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(lhs->integer / rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(lhs->floating / rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer /= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating /= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating /= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = lhs->integer / rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_MOD) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_int(lhs->integer % rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_float(fmod(lhs->floating, rhs->floating));
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_float(fmod(lhs->integer, rhs->floating));
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_float(fmod(lhs->floating, rhs->integer));
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->integer %= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = fmod(lhs->floating, rhs->floating);
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = fmod(lhs->floating, rhs->integer);
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_FLOAT;
+                lhs->floating = fmod(lhs->integer, rhs->floating);
+                value_free(rhs);
+                return lhs;
+            }
         }
 
         if (node->type == NODE_AND) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                return value_new_int(lhs->integer & rhs->integer);
+                lhs->integer &= rhs->integer;
+                value_free(rhs);
+                return lhs;
             }
         }
         if (node->type == NODE_XOR) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                return value_new_int(lhs->integer ^ rhs->integer);
+                lhs->integer ^= rhs->integer;
+                value_free(rhs);
+                return lhs;
             }
         }
         if (node->type == NODE_OR) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                return value_new_int(lhs->integer | rhs->integer);
+                lhs->integer |= rhs->integer;
+                value_free(rhs);
+                return lhs;
             }
         }
         if (node->type == NODE_SHL) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                return value_new_int(lhs->integer << rhs->integer);
+                lhs->integer <<= rhs->integer;
+                value_free(rhs);
+                return lhs;
             }
         }
         if (node->type == NODE_SHR) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                return value_new_int(lhs->integer >> rhs->integer);
+                lhs->integer >>= rhs->integer;
+                value_free(rhs);
+                return lhs;
             }
         }
 
         if (node->type == NODE_EQ) {
-            if (lhs->type == VALUE_NULL) return value_new_boolean(rhs->type == VALUE_NULL);
-            if (rhs->type == VALUE_NULL) return value_new_boolean(lhs->type == VALUE_NULL);
-            if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) return value_new_boolean(lhs->boolean == rhs->boolean);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer == rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating == rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer == rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating == rhs->integer);
-            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) return value_new_boolean(!strcmp(lhs->string, rhs->string));
+            if (lhs->type == VALUE_NULL) {
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = rhs->type == VALUE_NULL;
+                value_free(rhs);
+                return lhs;
+            }
+            if (rhs->type == VALUE_NULL) {
+                bool result = lhs->type == VALUE_NULL;
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = result;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) {
+                lhs->boolean = lhs->boolean == rhs->boolean;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer == rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating == rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer == rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating == rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
+                bool result = !strcmp(lhs->string, rhs->string);
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = result;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_NEQ) {
-            if (lhs->type == VALUE_NULL) return value_new_boolean(rhs->type != VALUE_NULL);
-            if (rhs->type == VALUE_NULL) return value_new_boolean(lhs->type != VALUE_NULL);
-            if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) return value_new_boolean(lhs->boolean != rhs->boolean);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer != rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating != rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer != rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating != rhs->integer);
-            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) return value_new_boolean(strcmp(lhs->string, rhs->string));
+            if (lhs->type == VALUE_NULL) {
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = rhs->type != VALUE_NULL;
+                value_free(rhs);
+                return lhs;
+            }
+            if (rhs->type == VALUE_NULL) {
+                bool result = lhs->type != VALUE_NULL;
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = result;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) {
+                lhs->boolean = lhs->boolean != rhs->boolean;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer != rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating != rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer != rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating != rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
+                bool result = strcmp(lhs->string, rhs->string);
+                value_clear(lhs);
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = result;
+                value_free(rhs);
+                return lhs;
+            }
         }
 
         if (node->type == NODE_LT) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer < rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating < rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer < rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating < rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer < rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating < rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating < rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer < rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_LTEQ) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer <= rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating <= rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer <= rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating <= rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer <= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating <= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating <= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer <= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_GT) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer > rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating > rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer > rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating > rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer > rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating > rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating > rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer > rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
         if (node->type == NODE_GTEQ) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) return value_new_boolean(lhs->integer >= rhs->integer);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->floating >= rhs->floating);
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) return value_new_boolean(lhs->integer >= rhs->floating);
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) return value_new_boolean(lhs->floating >= rhs->integer);
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer >= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating >= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->floating >= rhs->integer;
+                value_free(rhs);
+                return lhs;
+            }
+            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
+                lhs->type = VALUE_BOOLEAN;
+                lhs->boolean = lhs->integer >= rhs->floating;
+                value_free(rhs);
+                return lhs;
+            }
         }
 
         if (node->type == NODE_LOGICAL_AND) {
             if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) {
-                return value_new_boolean(lhs->boolean && rhs->boolean);
+                lhs->boolean = lhs->boolean && rhs->boolean;
+                value_free(rhs);
+                return lhs;
             }
         }
         if (node->type == NODE_LOGICAL_OR) {
             if (lhs->type == VALUE_BOOLEAN && rhs->type == VALUE_BOOLEAN) {
-                return value_new_boolean(lhs->boolean || rhs->boolean);
+                lhs->boolean = lhs->boolean || rhs->boolean;
+                value_free(rhs);
+                return lhs;
             }
         }
 

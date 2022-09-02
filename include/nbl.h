@@ -23,12 +23,17 @@ void error(char *text, size_t line, size_t position, char *fmt, ...);
 
 // List header
 typedef struct List {
+    int32_t refs;
     void **items;
     size_t capacity;
     size_t size;
 } List;
 
-List *list_new(size_t capacity);
+List *list_new(void);
+
+List *list_new_with_capacity(size_t capacity);
+
+List *list_ref(List *list);
 
 void *list_get(List *list, size_t index);
 
@@ -44,6 +49,7 @@ void list_free(List *list, ListFreeFunc *freeFunc);
 typedef struct Map Map;
 
 struct Map {
+    int32_t refs;
     Map *parent;
     char **keys;
     void **items;
@@ -51,9 +57,13 @@ struct Map {
     size_t size;
 };
 
-Map *map_new(size_t capacity);
+Map *map_new(void);
 
-Map *map_new_child(size_t capacity, Map *parent);
+Map *map_new_with_capacity(size_t capacity);
+
+Map *map_new_from_parent(Map *parent);
+
+Map *map_ref(Map *map);
 
 void *map_get(Map *map, char *key);
 
@@ -187,7 +197,7 @@ typedef struct Keyword {
 List *lexer(char *text);
 
 // Value
-typedef struct Node Node; // Forward define
+typedef struct Node Node;  // Forward define
 
 typedef enum ValueType {
     VALUE_ANY,
@@ -263,6 +273,10 @@ char *value_to_string(Value *value);
 
 Value *value_ref(Value *value);
 
+Value *value_copy(Value *value);
+
+void value_clear(Value *value);
+
 void value_free(Value *value);
 
 // Parser
@@ -285,17 +299,16 @@ typedef enum NodeType {
     NODE_CALL,
 
     NODE_VARIABLE,
-    NODE_GET,
 
     NODE_NEG,
     NODE_NOT,
     NODE_LOGICAL_NOT,
     NODE_CAST,
 
+    NODE_GET,
     NODE_CONST_ASSIGN,
     NODE_LET_ASSIGN,
     NODE_ASSIGN,
-
     NODE_ADD,
     NODE_SUB,
     NODE_MUL,
