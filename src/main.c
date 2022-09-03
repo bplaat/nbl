@@ -52,26 +52,26 @@ Map *std_env(void) {
 
     List *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
-    map_set(env, "type", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(type_args, VALUE_ANY, env_type)));
+    map_set(env, "type", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
-    map_set(env, "print", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(), VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(list_new(), VALUE_NULL, env_println)));
+    map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_new(), VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_new(), VALUE_NULL, env_println)));
 
     List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
-    map_set(env, "exit", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
+    map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
 
     List *array_length_args = list_new();
     list_add(array_length_args, argument_new("array", VALUE_ARRAY, NULL));
-    map_set(env, "array_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
+    map_set(env, "array_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
 
     List *array_push_args = list_new();
     list_add(array_push_args, argument_new("array", VALUE_ARRAY, NULL));
-    map_set(env, "array_push", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
+    map_set(env, "array_push", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
 
     List *string_length_args = list_new();
     list_add(string_length_args, argument_new("string", VALUE_STRING, NULL));
-    map_set(env, "string_length", variable_new(false, VALUE_NATIVE_FUNCTION, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
+    map_set(env, "string_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
     return env;
 }
@@ -97,33 +97,21 @@ int main(int argc, char **argv) {
     // Reading and parsing code
     char *text = file_read(argv[1]);
     List *tokens = lexer(text);
-    // for (size_t i = 0; i < tokens->size; i++) {
-    //     Token *token = list_get(tokens, i);
+    // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
-    // }
-
+    // });
     Node *node = parser(text, tokens);
 
     // Start running code
-    Interpreter interpreter;
-    interpreter.text = text;
-    interpreter.env = std_env();
-    Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
-                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                   .block = &(BlockScope){.env = map_new_from_parent(interpreter.env)}};
-    interpreter_node(&interpreter, &scope, node);
-
-    map_free(scope.block->env, (MapFreeFunc *)variable_free);
-    map_free(interpreter.env, (MapFreeFunc *)variable_free);
-
-    if (scope.function->returnValue != NULL) {
-        value_free(scope.function->returnValue);
-        if (scope.function->returnValue->type == VALUE_INT) {
-            exit(scope.function->returnValue->integer);
-        }
+    Map *env = std_env();
+    Value *returnValue = interpreter(text, env, node);
+    if (returnValue->type == VALUE_INT) {
+        exit(returnValue->integer);
     }
+    value_free(returnValue);
 
     // Cleanup
+    map_free(env, (MapFreeFunc *)variable_free);
     node_free(node);
     list_free(tokens, (ListFreeFunc *)token_free);
     free(text);

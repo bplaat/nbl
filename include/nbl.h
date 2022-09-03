@@ -29,6 +29,12 @@ typedef struct List {
     size_t size;
 } List;
 
+#define list_foreach(list, item, block)       \
+    for (size_t i = 0; i < list->size; i++) { \
+        item = list_get(list, i);             \
+        block                                 \
+    }
+
 List *list_new(void);
 
 List *list_new_with_capacity(size_t capacity);
@@ -46,36 +52,34 @@ typedef void ListFreeFunc(void *item);
 void list_free(List *list, ListFreeFunc *freeFunc);
 
 // Map header
-typedef struct Map Map;
-
-struct Map {
+typedef struct Map {
     int32_t refs;
-    Map *parent;
     char **keys;
-    void **items;
+    void **values;
     size_t capacity;
     size_t size;
-};
+} Map;
+
+#define map_foreach(map, key, value, block)  \
+    for (size_t i = 0; i < map->size; i++) { \
+        key = map->keys[i];                  \
+        value = map->values[i];              \
+        block                                \
+    }
 
 Map *map_new(void);
 
 Map *map_new_with_capacity(size_t capacity);
 
-Map *map_new_from_parent(Map *parent);
-
 Map *map_ref(Map *map);
 
 void *map_get(Map *map, char *key);
 
-void *map_get_without_parent(Map *map, char *key);
-
 void map_set(Map *map, char *key, void *item);
-
-void map_set_without_parent(Map *map, char *key, void *item);
 
 typedef void MapFreeFunc(void *item);
 
-void map_free(Map *map, MapFreeFunc *freeFunction);
+void map_free(Map *map, MapFreeFunc *freeFunc);
 
 // Lexer header
 typedef enum TokenType {
@@ -98,29 +102,29 @@ typedef enum TokenType {
     TOKEN_STRING,
 
     TOKEN_ASSIGN,
-    TOKEN_ASSIGN_ADD,
-    TOKEN_ASSIGN_SUB,
-    TOKEN_ASSIGN_MUL,
-    TOKEN_ASSIGN_EXP,
-    TOKEN_ASSIGN_DIV,
-    TOKEN_ASSIGN_MOD,
-    TOKEN_ASSIGN_AND,
-    TOKEN_ASSIGN_XOR,
-    TOKEN_ASSIGN_OR,
-    TOKEN_ASSIGN_SHL,
-    TOKEN_ASSIGN_SHR,
     TOKEN_ADD,
+    TOKEN_ASSIGN_ADD,
     TOKEN_SUB,
+    TOKEN_ASSIGN_SUB,
     TOKEN_MUL,
+    TOKEN_ASSIGN_MUL,
     TOKEN_EXP,
+    TOKEN_ASSIGN_EXP,
     TOKEN_DIV,
+    TOKEN_ASSIGN_DIV,
     TOKEN_MOD,
+    TOKEN_ASSIGN_MOD,
     TOKEN_AND,
+    TOKEN_ASSIGN_AND,
     TOKEN_XOR,
+    TOKEN_ASSIGN_XOR,
     TOKEN_OR,
+    TOKEN_ASSIGN_OR,
     TOKEN_NOT,
     TOKEN_SHL,
+    TOKEN_ASSIGN_SHL,
     TOKEN_SHR,
+    TOKEN_ASSIGN_SHR,
     TOKEN_EQ,
     TOKEN_NEQ,
     TOKEN_LT,
@@ -133,7 +137,7 @@ typedef enum TokenType {
 
     TOKEN_TYPE_ANY,
     TOKEN_NULL,
-    TOKEN_TYPE_BOOLEAN,
+    TOKEN_TYPE_BOOL,
     TOKEN_TRUE,
     TOKEN_FALSE,
     TOKEN_TYPE_INT,
@@ -202,7 +206,7 @@ typedef struct Node Node;  // Forward define
 typedef enum ValueType {
     VALUE_ANY,
     VALUE_NULL,
-    VALUE_BOOLEAN,
+    VALUE_BOOL,
     VALUE_INT,
     VALUE_FLOAT,
     VALUE_STRING,
@@ -249,7 +253,7 @@ Value *value_new(ValueType type);
 
 Value *value_new_null(void);
 
-Value *value_new_boolean(bool boolean);
+Value *value_new_bool(bool boolean);
 
 Value *value_new_int(int64_t integer);
 
@@ -298,13 +302,12 @@ typedef enum NodeType {
     NODE_OBJECT,
     NODE_CALL,
 
-    NODE_VARIABLE,
-
     NODE_NEG,
     NODE_NOT,
     NODE_LOGICAL_NOT,
     NODE_CAST,
 
+    NODE_VARIABLE,
     NODE_GET,
     NODE_CONST_ASSIGN,
     NODE_LET_ASSIGN,
@@ -415,12 +418,12 @@ Argument *parser_argument(Parser *parser);
 
 // Interpreter
 typedef struct Variable {
-    bool mutable;
     ValueType type;
+    bool mutable;
     Value *value;
 } Variable;
 
-Variable *variable_new(bool mutable, ValueType type, Value *value);
+Variable *variable_new(ValueType type, bool mutable, Value *value);
 
 void variable_free(Variable *variable);
 
@@ -439,15 +442,22 @@ typedef struct LoopScope {
     bool isBreaking;
 } LoopScope;
 
-typedef struct BlockScope {
+typedef struct BlockScope BlockScope;
+
+struct BlockScope {
+    BlockScope *parentBlock;
     Map *env;
-} BlockScope;
+};
 
 typedef struct Scope {
     FunctionScope *function;
     LoopScope *loop;
     BlockScope *block;
 } Scope;
+
+Value *interpreter(char *text, Map *env, Node *node);
+
+Variable *block_scope_get(BlockScope *block, char *key);
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
 

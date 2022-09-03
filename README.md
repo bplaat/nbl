@@ -4,9 +4,9 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
 
 ## Things todo:
+- Simple repl
 - Expand stdlib
 - Tenary operator
-- Free stuff: no mem leaks
 - Classes?
 - Syntax hightlighting vscode?
 
