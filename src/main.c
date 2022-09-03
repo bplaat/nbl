@@ -88,21 +88,60 @@ char *file_read(char *path) {
     return buffer;
 }
 
+void repl(void) {
+    Map *env = std_env();
+    size_t commandSize = 1024;
+    char *command = malloc(commandSize);
+    for (;;) {
+        // Read
+        printf("> ");
+        getline(&command, &commandSize, stdin);
+        if (!strcmp(command, ".exit")) {
+            break;
+        }
+        size_t realCommandSize = strlen(command);
+        command[realCommandSize] = ';';
+        command[realCommandSize + 1] = '\0';
+
+        // Parse
+        List *tokens = lexer(command);
+        Parser parser = {.text = command, .tokens = tokens, .position = 0};
+        Node *node = parser_statement(&parser);
+
+        // Run
+        Value *returnValue = interpreter(command, env, node);
+        if (returnValue != NULL) {
+            char *string = value_to_string(returnValue);
+            printf("%s\n", string);
+            free(string);
+            value_free(returnValue);
+        }
+
+        // Cleanup
+        node_free(node);
+        list_free(tokens, (ListFreeFunc *)token_free);
+    }
+    free(command);
+    map_free(env, (MapFreeFunc *)variable_free);
+}
+
 int main(int argc, char **argv) {
     if (argc == 1) {
         printf("New Bastiaan Language Interpreter\n");
+        repl();
         return EXIT_SUCCESS;
     }
 
-    // Reading and parsing code
+    // Read and parse
     char *text = file_read(argv[1]);
     List *tokens = lexer(text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
+    // printf("\n");
     Node *node = parser(text, tokens);
 
-    // Start running code
+    // Run
     Map *env = std_env();
     Value *returnValue = interpreter(text, env, node);
     if (returnValue->type == VALUE_INT) {
