@@ -1,5 +1,94 @@
 #include "nbl.h"
+#include <time.h>
 
+// Utils
+int64_t random_seed;
+
+double random_random(void) {
+    double x = sin(random_seed++ * 10000);
+    return x - floor(x);
+}
+
+// Math
+Value *env_math_abs(List *values) {
+    Value *x = list_get(values, 0);
+    if (x->type == VALUE_INT) {
+        return value_new_int(x->integer < 0 ? -x->integer : x->integer);
+    }
+    if (x->type == VALUE_FLOAT) {
+        return value_new_float(x->floating < 0 ? -x->floating : x->floating);
+    }
+    return value_new_null();
+}
+
+Value *env_math_sin(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(sin(x->floating));
+}
+Value *env_math_cos(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(cos(x->floating));
+}
+Value *env_math_tan(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(tan(x->floating));
+}
+Value *env_math_asin(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(asin(x->floating));
+}
+Value *env_math_acos(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(acos(x->floating));
+}
+Value *env_math_atan(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(atan(x->floating));
+}
+Value *env_math_atan2(List *values) {
+    Value *y = list_get(values, 0);
+    Value *x = list_get(values, 1);
+    return value_new_float(atan2(y->floating, x->floating));
+}
+Value *env_math_pow(List *values) {
+    Value *x = list_get(values, 0);
+    Value *y = list_get(values, 1);
+    return value_new_float(pow(x->floating, y->floating));
+}
+Value *env_math_sqrt(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(sqrt(x->floating));
+}
+Value *env_math_floor(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(floor(x->floating));
+}
+Value *env_math_ceil(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(ceil(x->floating));
+}
+Value *env_math_round(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(round(x->floating));
+}
+Value *env_math_exp(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(exp(x->floating));
+}
+Value *env_math_log(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(log(x->floating));
+}
+Value *env_math_log10(List *values) {
+    Value *x = list_get(values, 0);
+    return value_new_float(log10(x->floating));
+}
+Value *env_math_random(List *values) {
+    (void)values;
+    return value_new_float(random_random());
+}
+
+// Root
 Value *env_type(List *values) {
     Value *value = list_get(values, 0);
     return value_new_string(value_type_to_string(value->type));
@@ -19,6 +108,11 @@ Value *env_println(List *values) {
     Value *value = env_print(values);
     printf("\n");
     return value;
+}
+
+Value *env_time(List *values) {
+    (void)values;
+    return value_new_int(time(NULL));
 }
 
 Value *env_exit(List *values) {
@@ -50,24 +144,60 @@ Value *env_string_length(List *values) {
 Map *std_env(void) {
     Map *env = map_new();
 
+    List *empty_args = list_new();
+
+    // Math
+    Map *math = map_new();
+    map_set(env, "Math", variable_new(VALUE_OBJECT, false, value_new_object(math)));
+    map_set(math, "E", value_new_float(M_E));
+    map_set(math, "PI", value_new_float(M_PI));
+
+    List *math_float_args = list_new();
+    list_add(math_float_args, argument_new("x", VALUE_FLOAT, NULL));
+    List *math_float_float_args = list_new();
+    list_add(math_float_float_args, argument_new("x", VALUE_FLOAT, NULL));
+    list_add(math_float_float_args, argument_new("y", VALUE_FLOAT, NULL));
+    List *math_float_float_reverse_args = list_new();
+    list_add(math_float_float_reverse_args, argument_new("y", VALUE_FLOAT, NULL));
+    list_add(math_float_float_reverse_args, argument_new("x", VALUE_FLOAT, NULL));
+    map_set(math, "abs", value_new_native_function(math_float_args, VALUE_ANY, env_math_abs));
+    map_set(math, "sin", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_sin));
+    map_set(math, "cos", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_cos));
+    map_set(math, "tan", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_tan));
+    map_set(math, "asin", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_asin));
+    map_set(math, "acos", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_acos));
+    map_set(math, "atan", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_atan));
+    map_set(math, "atan2", value_new_native_function(math_float_float_reverse_args, VALUE_FLOAT, env_math_atan2));
+    map_set(math, "pow", value_new_native_function(math_float_float_args, VALUE_FLOAT, env_math_pow));
+    map_set(math, "sqrt", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_sqrt));
+    map_set(math, "floor", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_floor));
+    map_set(math, "ceil", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_ceil));
+    map_set(math, "round", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_round));
+    // max, min
+    map_set(math, "exp", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_exp));
+    map_set(math, "log", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log));
+    map_set(math, "log10", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log10));
+    random_seed = time(NULL);
+    map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
+
+    // Root
     List *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
     map_set(env, "type", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
-    map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_new(), VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_new(), VALUE_NULL, env_println)));
+    map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_NULL, env_println)));
+
+    map_set(env, "time", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_INT, env_time)));
 
     List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
     map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
 
-    List *array_length_args = list_new();
-    list_add(array_length_args, argument_new("array", VALUE_ARRAY, NULL));
-    map_set(env, "array_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_length_args, VALUE_INT, env_array_length)));
-
-    List *array_push_args = list_new();
-    list_add(array_push_args, argument_new("array", VALUE_ARRAY, NULL));
-    map_set(env, "array_push", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_push_args, VALUE_INT, env_array_push)));
+    List *array_args = list_new();
+    list_add(array_args, argument_new("array", VALUE_ARRAY, NULL));
+    map_set(env, "array_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_args, VALUE_INT, env_array_length)));
+    map_set(env, "array_push", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(array_args), VALUE_INT, env_array_push)));
 
     List *string_length_args = list_new();
     list_add(string_length_args, argument_new("string", VALUE_STRING, NULL));

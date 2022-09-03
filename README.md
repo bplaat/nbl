@@ -1,17 +1,17 @@
 # NBL - New Bastiaan Language
-This is a prototype interpreter for the NBL (New Bastiaan Language) programming language written in C11 C. It only uses the standard C library so it is very protable.
+This is a prototype interpreter for the NBL (New Bastiaan Language) programming language written in C11. It only uses the standard C library so it is very protable.
 
-It is a mix of **JavaScript**, **PHP** and **Lua**. But not all the language features are implemented in the interpreter yet.
+It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite funny to program small programs in. The whole interpreter is around 3000 lines of code so not very big and it can easily be understood by one person. The interpreter is quite inefficient because it don't uses bytecodes it just traverses the AST to calculate all the values.
 
 ## Things todo:
-- Expand stdlib
 - Tenary operator
+- Make stdlib better?
 - Classes?
 - Syntax hightlighting vscode?
 
 ## Types:
 - `null`
-- `boolean`
+- `bool`
 - `int`
 - `float`
 - `string`
@@ -108,13 +108,16 @@ for (const name in names) {
 
 ## Functions
 ```
-fn double(number) {
-    return number * 2;
+fn hello() {
+    println('Hello World!');
 }
 
 const add = fn (a: int, b: int): int {
     return a + b;
 };
 
+fn double(number) => number * 2;
+
+hello();
 println(add(double(4), 4)); // -> 12
 ```
