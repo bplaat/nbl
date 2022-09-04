@@ -200,6 +200,7 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_RCURLY) return "}";
     if (type == TOKEN_LBRACKET) return "[";
     if (type == TOKEN_RBRACKET) return "]";
+    if (type == TOKEN_QUESTION) return "?";
     if (type == TOKEN_SEMICOLON) return ";";
     if (type == TOKEN_COLON) return ":";
     if (type == TOKEN_COMMA) return ",";
@@ -474,6 +475,11 @@ List *lexer(char *text) {
         }
         if (*c == ']') {
             list_add(tokens, token_new(TOKEN_RBRACKET, line, position));
+            c++;
+            continue;
+        }
+        if (*c == '?') {
+            list_add(tokens, token_new(TOKEN_QUESTION, line, position));
             c++;
             continue;
         }
@@ -1058,7 +1064,7 @@ Node *parser_statement(Parser *parser) {
             }
             node->variable = declarations;
             parser_eat(parser, TOKEN_IN);
-            node->iterator = parser_logical(parser);
+            node->iterator = parser_tenary(parser);
             parser_eat(parser, TOKEN_RPAREN);
             node->thenBlock = parser_block(parser);
             return node;
@@ -1070,7 +1076,7 @@ Node *parser_statement(Parser *parser) {
         Node *node = node_new(NODE_FOR, token);
         parser_eat(parser, TOKEN_SEMICOLON);
         if (current()->type != TOKEN_SEMICOLON) {
-            node->condition = parser_logical(parser);
+            node->condition = parser_tenary(parser);
         } else {
             node->condition = NULL;
         }
@@ -1103,7 +1109,7 @@ Node *parser_statement(Parser *parser) {
     if (current()->type == TOKEN_RETURN) {
         Token *token = current();
         parser_eat(parser, TOKEN_RETURN);
-        Node *node = node_new_unary(NODE_RETURN, token, parser_logical(parser));
+        Node *node = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
         parser_eat(parser, TOKEN_SEMICOLON);
         return node;
     }
@@ -1142,7 +1148,7 @@ Node *parser_statement(Parser *parser) {
         if (current()->type == TOKEN_FAT_ARROW) {
             Token *token = current();
             parser_eat(parser, TOKEN_FAT_ARROW);
-            functionValue = value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_logical(parser)));
+            functionValue = value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_tenary(parser)));
         } else {
             functionValue = value_new_function(arguments, returnType, parser_block(parser));
         }
@@ -1187,7 +1193,7 @@ Node *parser_declarations(Parser *parser) {
             }
 
             Node *node;
-            if (current()->type == TOKEN_ASSIGN) {
+            if (current()->type == TOKEN_ASSIGN || assignType == NODE_CONST_ASSIGN) {
                 Token *token = current();
                 parser_eat(parser, TOKEN_ASSIGN);
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));
@@ -1245,7 +1251,7 @@ Node *parser_assigns(Parser *parser) {
 }
 
 Node *parser_assign(Parser *parser) {
-    Node *lhs = parser_logical(parser);  // TODO
+    Node *lhs = parser_tenary(parser);  // TODO
     if (current()->type == TOKEN_ASSIGN) {
         Token *token = current();
         parser_eat(parser, TOKEN_ASSIGN);
@@ -1302,6 +1308,20 @@ Node *parser_assign(Parser *parser) {
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, node_ref(lhs), parser_assign(parser)));
     }
     return lhs;
+}
+
+Node *parser_tenary(Parser *parser) {
+    Node *node = parser_logical(parser);
+    if (current()->type == TOKEN_QUESTION) {
+        Node *tenaryNode = node_new(NODE_TENARY, current());
+        parser_eat(parser, TOKEN_QUESTION);
+        tenaryNode->condition = node;
+        tenaryNode->thenBlock = parser_tenary(parser);
+        parser_eat(parser, TOKEN_COLON);
+        tenaryNode->elseBlock = parser_tenary(parser);
+        return tenaryNode;
+    }
+    return node;
 }
 
 Node *parser_logical(Parser *parser) {
@@ -1487,7 +1507,7 @@ Node *parser_unary(Parser *parser) {
 Node *parser_primary(Parser *parser) {
     if (current()->type == TOKEN_LPAREN) {
         parser_eat(parser, TOKEN_LPAREN);
-        Node *node = parser_logical(parser);
+        Node *node = parser_tenary(parser);
         parser_eat(parser, TOKEN_RPAREN);
         return node;
     }
@@ -1543,7 +1563,7 @@ Node *parser_primary(Parser *parser) {
             list_add(node->keys, strdup(current()->string));
             parser_eat(parser, TOKEN_KEYWORD);
             parser_eat(parser, TOKEN_ASSIGN);
-            list_add(node->nodes, parser_logical(parser));
+            list_add(node->nodes, parser_tenary(parser));
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1582,7 +1602,7 @@ Node *parser_primary(Parser *parser) {
         if (current()->type == TOKEN_FAT_ARROW) {
             Token *token = current();
             parser_eat(parser, TOKEN_FAT_ARROW);
-            Node *returnNode = node_new_unary(NODE_RETURN, token, parser_logical(parser));
+            Node *returnNode = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
             return node_new_value(functionToken, value_new_function(arguments, returnType, returnNode));
         }
         return node_new_value(functionToken, value_new_function(arguments, returnType, parser_block(parser)));
@@ -1651,7 +1671,7 @@ Argument *parser_argument(Parser *parser) {
     Node *defaultNode = NULL;
     if (current()->type == TOKEN_ASSIGN) {
         parser_eat(parser, TOKEN_ASSIGN);
-        defaultNode = parser_logical(parser);
+        defaultNode = parser_tenary(parser);
     }
     return argument_new(name, type, defaultNode);
 }
@@ -1746,6 +1766,18 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         value_free(condition);
         return NULL;
+    }
+    if (node->type == NODE_TENARY) {
+        Value *condition = interpreter_node(interpreter, scope, node->condition);
+        if (condition->type != VALUE_BOOL) {
+            error(interpreter->text, node->token->line, node->token->position, "Tenary condition type is not a bool");
+        }
+        if (condition->boolean) {
+            value_free(condition);
+            return interpreter_node(interpreter, scope, node->thenBlock);
+        }
+        value_free(condition);
+        return interpreter_node(interpreter, scope, node->elseBlock);
     }
     if (node->type == NODE_WHILE) {
         Scope loopScope = {

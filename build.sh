@@ -3,13 +3,18 @@ if [ "$1" = "format" ]; then
     exit
 fi
 
+if [ "$1" = "repl" ] || [ "$2" = "repl" ]; then
+    command="./nbl"
+else
+    command="./nbl test.nbl"
+fi
 if [ "$1" = "debug" ]; then
-    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -lm -o nbl && lldb -- ./nbl test.nbl
+    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -lm -o nbl && lldb -- $command
 elif [ "$1" = "leaks" ]; then
     gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -o nbl &&
     export MallocStackLogging=1
-    leaks -atExit -- ./nbl test.nbl > dump
+    leaks -atExit -- $command > dump
     unset MallocStackLogging
 else
-    gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -o nbl && ./nbl test.nbl
+    gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -o nbl && $command
 fi

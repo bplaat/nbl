@@ -90,6 +90,7 @@ typedef enum TokenType {
     TOKEN_RCURLY,
     TOKEN_LBRACKET,
     TOKEN_RBRACKET,
+    TOKEN_QUESTION,
     TOKEN_SEMICOLON,
     TOKEN_COLON,
     TOKEN_COMMA,
@@ -289,6 +290,7 @@ typedef enum NodeType {
     NODE_NODES,
     NODE_BLOCK,
     NODE_IF,
+    NODE_TENARY,
     NODE_WHILE,
     NODE_DOWHILE,
     NODE_FOR,
@@ -403,6 +405,7 @@ Node *parser_statement(Parser *parser);
 Node *parser_declarations(Parser *parser);
 Node *parser_assigns(Parser *parser);
 Node *parser_assign(Parser *parser);
+Node *parser_tenary(Parser *parser);
 Node *parser_logical(Parser *parser);
 Node *parser_bitwise(Parser *parser);
 Node *parser_equality(Parser *parser);

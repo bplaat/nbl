@@ -226,7 +226,7 @@ void repl(void) {
         // Read
         printf("> ");
         getline(&command, &commandSize, stdin);
-        if (!strcmp(command, ".exit")) {
+        if (!strcmp(command, ".exit\n")) {
             break;
         }
         size_t realCommandSize = strlen(command);
@@ -237,6 +237,9 @@ void repl(void) {
         List *tokens = lexer(command);
         Parser parser = {.text = command, .tokens = tokens, .position = 0};
         Node *node = parser_statement(&parser);
+        if (node == NULL) {
+            continue;
+        }
 
         // Run
         Value *returnValue = interpreter(command, env, node);

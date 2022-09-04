@@ -4,10 +4,10 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite funny to program small programs in. The whole interpreter is around 3000 lines of code so not very big and it can easily be understood by one person. The interpreter is quite inefficient because it don't uses bytecodes it just traverses the AST to calculate all the values.
 
 ## Things todo:
-- Tenary operator
 - Make stdlib better?
 - Classes?
 - Syntax hightlighting vscode?
+- Byte code interpreter?
 
 ## Types:
 - `null`
