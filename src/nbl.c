@@ -5,7 +5,7 @@
 size_t align(size_t size, size_t alignment) { return (size + alignment - 1) / alignment * alignment; }
 
 void error(char *text, size_t line, size_t position, char *fmt, ...) {
-    fprintf(stderr, "text:%lu:%lu ERROR: ", line + 1, position + 1);
+    fprintf(stderr, "text:%llu:%llu ERROR: ", line + 1, position + 1);
     va_list args;
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
@@ -22,7 +22,7 @@ void error(char *text, size_t line, size_t position, char *fmt, ...) {
     while (*c != '\n' && *c != '\r') c++;
     size_t lineLength = c - lineStart;
 
-    fprintf(stderr, "\n%4lu | ", line + 1);
+    fprintf(stderr, "\n%4llu | ", line + 1);
     fwrite(lineStart, 1, lineLength, stderr);
     fprintf(stderr, "\n     | ");
     for (size_t i = 0; i < position; i++) fprintf(stderr, " ");
@@ -2291,7 +2291,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
             if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
                 char *string = malloc(strlen(lhs->string) + strlen(rhs->string) + 1);
-                stpcpy(string, lhs->string);
+                strcpy(string, lhs->string);
                 strcat(string, rhs->string);
                 value_clear(lhs);
                 lhs->string = string;

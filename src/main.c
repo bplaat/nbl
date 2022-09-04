@@ -2,6 +2,32 @@
 
 #include "nbl.h"
 
+// Fix missing math constants
+#ifndef M_E
+    #define M_E 2.718281828459045
+#endif
+#ifndef M_LN2
+    #define M_LN2 0.6931471805599453
+#endif
+#ifndef M_LN10
+    #define M_LN10 2.302585092994046
+#endif
+#ifndef M_LOG2E
+    #define M_LOG2E 1.4426950408889634
+#endif
+#ifndef M_LOG10E
+    #define M_LOG10E 0.4342944819032518
+#endif
+#ifndef M_PI
+    #define M_PI 3.141592653589793
+#endif
+#ifndef M_SQRT1_2
+    #define M_SQRT1_2 0.7071067811865476
+#endif
+#ifndef M_SQRT2
+    #define M_SQRT2 1.4142135623730951
+#endif
+
 // Utils
 int64_t random_seed;
 
@@ -288,12 +314,11 @@ char *file_read(char *path) {
 
 void repl(void) {
     Map *env = std_env();
-    size_t commandSize = 1024;
-    char *command = malloc(commandSize);
+    char *command = malloc(1024);
     for (;;) {
         // Read
         printf("> ");
-        getline(&command, &commandSize, stdin);
+        fgets(command, 1024, stdin);
         if (!strcmp(command, ".exit\n")) {
             break;
         }
