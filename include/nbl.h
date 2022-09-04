@@ -3,6 +3,7 @@
 #define NBL_H
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>

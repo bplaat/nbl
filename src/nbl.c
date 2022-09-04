@@ -5,7 +5,7 @@
 size_t align(size_t size, size_t alignment) { return (size + alignment - 1) / alignment * alignment; }
 
 void error(char *text, size_t line, size_t position, char *fmt, ...) {
-    fprintf(stderr, "text:%llu:%llu ERROR: ", line + 1, position + 1);
+    fprintf(stderr, "text:%zu:%zu ERROR: ", line + 1, position + 1);
     va_list args;
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
@@ -22,7 +22,7 @@ void error(char *text, size_t line, size_t position, char *fmt, ...) {
     while (*c != '\n' && *c != '\r') c++;
     size_t lineLength = c - lineStart;
 
-    fprintf(stderr, "\n%4llu | ", line + 1);
+    fprintf(stderr, "\n%4zu | ", line + 1);
     fwrite(lineStart, 1, lineLength, stderr);
     fprintf(stderr, "\n     | ");
     for (size_t i = 0; i < position; i++) fprintf(stderr, " ");
@@ -794,7 +794,7 @@ char *value_to_string(Value *value) {
     }
     if (value->type == VALUE_INT) {
         char buffer[255];
-        sprintf(buffer, "%lld", value->integer);
+        sprintf(buffer, "%" PRIi64, value->integer);
         return strdup(buffer);
     }
     if (value->type == VALUE_FLOAT) {

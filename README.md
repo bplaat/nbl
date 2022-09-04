@@ -3,10 +3,13 @@ This is a prototype interpreter for the NBL (New Bastiaan Language) programming 
 
 It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite funny to program small programs in. The whole interpreter is around 3000 lines of code so not very big and it can easily be understood by one person. The interpreter is quite inefficient because it don't uses bytecodes it just traverses the AST to calculate all the values.
 
+There is also a basic syntax highlighting extension for Visual Studio Code available. To install it you need to copy the `editors/vscode` folder into your `~/.vscode/extensions` folder.
+
 ## Things todo:
+- Basic classes like PHP
+- Class inheritence and abstract classes
 - Make stdlib better?
-- Classes?
-- Byte code interpreter?
+- Byte code interpreter instead of ast traversing?
 - Make vscode syntax highlighting better?
 
 ## Types:
