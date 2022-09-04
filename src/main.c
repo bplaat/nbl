@@ -37,7 +37,8 @@ double random_random(void) {
 }
 
 // Math
-Value *env_math_abs(List *values) {
+Value *env_math_abs(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     if (x->type == VALUE_INT) {
         return value_new_int(x->integer < 0 ? -x->integer : x->integer);
@@ -47,57 +48,70 @@ Value *env_math_abs(List *values) {
     }
     return value_new_null();
 }
-Value *env_math_sin(List *values) {
+Value *env_math_sin(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sin(x->floating));
 }
-Value *env_math_cos(List *values) {
+Value *env_math_cos(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(cos(x->floating));
 }
-Value *env_math_tan(List *values) {
+Value *env_math_tan(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(tan(x->floating));
 }
-Value *env_math_asin(List *values) {
+Value *env_math_asin(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(asin(x->floating));
 }
-Value *env_math_acos(List *values) {
+Value *env_math_acos(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(acos(x->floating));
 }
-Value *env_math_atan(List *values) {
+Value *env_math_atan(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(atan(x->floating));
 }
-Value *env_math_atan2(List *values) {
+Value *env_math_atan2(Value *this, List *values) {
+    (void)this;
     Value *y = list_get(values, 0);
     Value *x = list_get(values, 1);
     return value_new_float(atan2(y->floating, x->floating));
 }
-Value *env_math_pow(List *values) {
+Value *env_math_pow(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     Value *y = list_get(values, 1);
     return value_new_float(pow(x->floating, y->floating));
 }
-Value *env_math_sqrt(List *values) {
+Value *env_math_sqrt(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sqrt(x->floating));
 }
-Value *env_math_floor(List *values) {
+Value *env_math_floor(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(floor(x->floating));
 }
-Value *env_math_ceil(List *values) {
+Value *env_math_ceil(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(ceil(x->floating));
 }
-Value *env_math_round(List *values) {
+Value *env_math_round(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(round(x->floating));
 }
-Value *env_math_min(List *values) {
+Value *env_math_min(Value *this, List *values) {
+    (void)this;
     Value *first = list_get(values, 0);
     int64_t minInteger;
     double minFloating;
@@ -130,7 +144,8 @@ Value *env_math_min(List *values) {
     });
     return onlyInteger ? value_new_int(minInteger) : value_new_float(minFloating);
 }
-Value *env_math_max(List *values) {
+Value *env_math_max(Value *this, List *values) {
+    (void)this;
     Value *first = list_get(values, 0);
     int64_t maxInteger;
     double maxFloating;
@@ -163,26 +178,74 @@ Value *env_math_max(List *values) {
     });
     return onlyInteger ? value_new_int(maxInteger) : value_new_float(maxFloating);
 }
-Value *env_math_exp(List *values) {
+Value *env_math_exp(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(exp(x->floating));
 }
-Value *env_math_log(List *values) {
+Value *env_math_log(Value *this, List *values) {
+    (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(log(x->floating));
 }
-Value *env_math_random(List *values) {
+Value *env_math_random(Value *this, List *values) {
+    (void)this;
     (void)values;
     return value_new_float(random_random());
 }
 
+// String
+Value *env_string_length(Value *this, List *values) {
+    (void)values;
+    return value_new_int(strlen(this->string));
+}
+
+// Array
+Value *env_array_length(Value *this, List *values) {
+    (void)values;
+    return value_new_int(this->array->size);
+}
+
+Value *env_array_push(Value *this, List *values) {
+    list_foreach(values, Value *value, {
+        list_add(this->array, value_ref(value));
+    });
+    return value_new_int(this->array->size);
+}
+
+// Object
+Value *env_object_length(Value *this, List *values) {
+    (void)values;
+    return value_new_int(this->object->size);
+}
+
+Value *env_object_keys(Value *this, List *values) {
+    (void)values;
+    List *items = list_new_with_capacity(this->object->capacity);
+    for (size_t i = 0; i < this->object->size; i++) {
+        list_add(items, value_new_string(this->object->keys[i]));
+    }
+    return value_new_array(items);
+}
+
+Value *env_object_values(Value *this, List *values) {
+    (void)values;
+    List *items = list_new_with_capacity(this->object->capacity);
+    for (size_t i = 0; i < this->object->size; i++) {
+        list_add(items, value_retrieve(this->object->values[i]));
+    }
+    return value_new_array(items);
+}
+
 // Root
-Value *env_type(List *values) {
+Value *env_type(Value *this, List *values) {
+    (void)this;
     Value *value = list_get(values, 0);
     return value_new_string(value_type_to_string(value->type));
 }
 
-Value *env_print(List *values) {
+Value *env_print(Value *this, List *values) {
+    (void)this;
     for (size_t i = 0; i < values->size; i++) {
         char *string = value_to_string(list_get(values, i));
         printf("%s", string);
@@ -192,41 +255,25 @@ Value *env_print(List *values) {
     return value_new_null();
 }
 
-Value *env_println(List *values) {
-    Value *value = env_print(values);
+Value *env_println(Value *this, List *values) {
+    Value *value = env_print(this, values);
     printf("\n");
     return value;
 }
 
-Value *env_time(List *values) {
+Value *env_time(Value *this, List *values) {
+    (void)this;
     (void)values;
     return value_new_int(time(NULL));
 }
 
-Value *env_exit(List *values) {
+Value *env_exit(Value *this, List *values) {
+    (void)this;
     Value *exitCode = list_get(values, 0);
     if (exitCode->type == VALUE_INT) {
         exit(exitCode->integer);
     }
     return value_new_null();
-}
-
-Value *env_array_length(List *values) {
-    Value *arrayValue = list_get(values, 0);
-    return value_new_int(arrayValue->array->size);
-}
-
-Value *env_array_push(List *values) {
-    Value *arrayValue = list_get(values, 0);
-    for (size_t i = 1; i < values->size; i++) {
-        list_add(arrayValue->array, list_get(values, i));
-    }
-    return value_new_int(arrayValue->array->size);
-}
-
-Value *env_string_length(List *values) {
-    Value *stringValue = list_get(values, 0);
-    return value_new_int(strlen(stringValue->string));
 }
 
 Map *std_env(void) {
@@ -274,6 +321,24 @@ Map *std_env(void) {
     random_seed = time(NULL);
     map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
 
+    // String
+    Map *string = map_new();
+    map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string)));
+    map_set(string, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_string_length));
+
+    // Array
+    Map *array = map_new();
+    map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array)));
+    map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
+    map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
+
+    // Object
+    Map *object = map_new();
+    map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object)));
+    map_set(object, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_object_length));
+    map_set(object, "keys", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_keys));
+    map_set(object, "values", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_values));
+
     // Root
     List *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
@@ -287,15 +352,6 @@ Map *std_env(void) {
     List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
     map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
-
-    List *array_args = list_new();
-    list_add(array_args, argument_new("array", VALUE_ARRAY, NULL));
-    map_set(env, "array_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(array_args, VALUE_INT, env_array_length)));
-    map_set(env, "array_push", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(array_args), VALUE_INT, env_array_push)));
-
-    List *string_length_args = list_new();
-    list_add(string_length_args, argument_new("string", VALUE_STRING, NULL));
-    map_set(env, "string_length", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(string_length_args, VALUE_INT, env_string_length)));
 
     return env;
 }

@@ -800,7 +800,7 @@ Value *value_new_function(List *args, ValueType returnType, Node *functionNode) 
     return value;
 }
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(List *values)) {
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Value *this, List *values)) {
     Value *value = value_new(VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
@@ -2002,7 +2002,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 iteratorValue = value_new_string(character);
             }
             if (iterator->type == VALUE_ARRAY) {
-                iteratorValue = value_ref(list_get(iterator->array, i));
+                iteratorValue = value_retrieve(list_get(iterator->array, i));
             }
             if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
@@ -2069,7 +2069,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *thisValue = NULL;
         if (node->function->type == NODE_GET) {
             Value *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
-            if (containerValue->type == VALUE_INSTANCE) {
+            if (containerValue->type == VALUE_STRING || containerValue->type == VALUE_ARRAY || containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_INSTANCE) {
                 thisValue = value_ref(containerValue);
             }
             value_free(containerValue);
@@ -2143,7 +2143,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         if (callValue->type == VALUE_NATIVE_FUNCTION) {
-            returnValue = callValue->nativeFunc(values);
+            returnValue = callValue->nativeFunc(thisValue, values);
             if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
                       value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
@@ -2311,37 +2311,58 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         Value *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
-        Value *returnValue;
+        Value *returnValue = NULL;
         if (containerValue->type == VALUE_STRING) {
-            if (indexOrKey->type != VALUE_INT) {
-                error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "String index is not an int");
+            if (indexOrKey->type == VALUE_STRING) {
+                Value *stringClass = ((Variable *)map_get(interpreter->env, "String"))->value;
+                Value *stringClassItem = map_get(stringClass->object, indexOrKey->string);
+                if (stringClassItem != NULL) returnValue = value_retrieve(stringClassItem);
             }
-            if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
-                char character[] = {containerValue->string[indexOrKey->integer], '\0'};
-                returnValue = value_new_string(character);
-            } else {
-                returnValue = value_new_null();
+            if (returnValue == NULL) {
+                if (indexOrKey->type != VALUE_INT) {
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "String index is not an int");
+                }
+                if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
+                    char character[] = {containerValue->string[indexOrKey->integer], '\0'};
+                    returnValue = value_new_string(character);
+                } else {
+                    returnValue = value_new_null();
+                }
             }
         }
         if (containerValue->type == VALUE_ARRAY) {
-            if (indexOrKey->type != VALUE_INT) {
-                error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
+            if (indexOrKey->type == VALUE_STRING) {
+                Value *arrayClass = ((Variable *)map_get(interpreter->env, "Array"))->value;
+                Value *arrayClassItem = map_get(arrayClass->object, indexOrKey->string);
+                if (arrayClassItem != NULL) returnValue = value_retrieve(arrayClassItem);
             }
-            Value *value = list_get(containerValue->array, indexOrKey->integer);
-            returnValue = value != NULL ? value_retrieve(value) : value_new_null();
+            if (returnValue == NULL) {
+                if (indexOrKey->type != VALUE_INT) {
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
+                }
+                Value *value = list_get(containerValue->array, indexOrKey->integer);
+                returnValue = value != NULL ? value_retrieve(value) : value_new_null();
+            }
         }
         if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
-            if (indexOrKey->type != VALUE_STRING) {
-                error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
+            if (containerValue->type == VALUE_OBJECT) {
+                Value *objectClass = ((Variable *)map_get(interpreter->env, "Object"))->value;
+                Value *objectClassItem = map_get(objectClass->object, indexOrKey->string);
+                if (objectClassItem != NULL) returnValue = value_retrieve(objectClassItem);
             }
-            Value *value = map_get(containerValue->object, indexOrKey->string);
-            if (containerValue->type == VALUE_INSTANCE && value == NULL) {
-                value = map_get(containerValue->parentClass->object, indexOrKey->string);
+            if (returnValue == NULL) {
+                if (indexOrKey->type != VALUE_STRING) {
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
+                }
+                Value *value = map_get(containerValue->object, indexOrKey->string);
+                if (containerValue->type == VALUE_INSTANCE && value == NULL) {
+                    value = map_get(containerValue->parentClass->object, indexOrKey->string);
+                }
+                if (value == NULL) {
+                    error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");
+                }
+                returnValue = value_retrieve(value);
             }
-            if (value == NULL) {
-                error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");
-            }
-            returnValue = value_retrieve(value);
         }
 
         value_free(indexOrKey);

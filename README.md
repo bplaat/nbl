@@ -6,9 +6,7 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite f
 There is also a basic syntax highlighting extension for Visual Studio Code available. To install it you need to copy the `editors/vscode` folder into your `~/.vscode/extensions` folder.
 
 ## Things todo:
-- Class inheritence and abstract classes
 - Make primitives semi classes so you can do const a = []; a.push(43);
-- Make stdlib better?
 - Byte code interpreter instead of ast traversing?
 - Make vscode syntax highlighting better?
 
@@ -46,8 +44,8 @@ y = 3; // Error: can't mutate a const variable
 ## Arrays
 ```
 const names = [ 'Bastiaan', 'Jan', 'Dirk' ];
-println(array_length(names)); // -> 3
-println(names[1]); // -> 'Jan'
+println(names.length());
+println(names[1]);
 ```
 
 ## Objects
@@ -126,7 +124,7 @@ const add = fn (a: int, b: int): int {
 fn double(number) => number * 2;
 
 hello();
-println(add(double(4), 4)); // -> 12
+println(add(double(4), 4));
 ```
 
 ## Classes
@@ -142,7 +140,7 @@ class Person {
     fn greet() {
         println('Name = ' + this.name + ', Age = ' + (string)this['age']);
     }
-};
+}
 
 const bastiaan: instance = Person('Bastiaan', 20);
 bastiaan.greet();

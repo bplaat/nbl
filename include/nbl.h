@@ -256,7 +256,7 @@ struct Value {
             ValueType returnType;
             union {
                 Node *functionNode;
-                Value *(*nativeFunc)(List *values);
+                Value *(*nativeFunc)(Value *this, List *values);
             };
         };
     };
@@ -284,7 +284,7 @@ Value *value_new_instance(Map *object, Value *parentClass);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(List *values));
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Value *this, List *values));
 
 char *value_type_to_string(ValueType type);
 
