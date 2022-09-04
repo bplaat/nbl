@@ -1687,7 +1687,12 @@ Value *interpreter(char *text, Map *env, Node *node) {
     Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                    .block = &(BlockScope){.parentBlock = NULL, .env = env}};
-    return interpreter_node(&interpreter, &scope, node);
+    interpreter_node(&interpreter, &scope, node);
+    if (scope.function->returnValue != NULL) {
+        return scope.function->returnValue;
+    } else {
+        return value_new_null();
+    }
 }
 
 Variable *block_scope_get(BlockScope *block, char *key) {
@@ -1724,7 +1729,7 @@ Variable *block_scope_get(BlockScope *block, char *key) {
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_PROGRAM) {
         list_foreach(node->nodes, Node * child, { interpreter_statement(interpreter, scope, child, {}); });
-        return value_new_null();
+        return NULL;
     }
     if (node->type == NODE_NODES) {
         list_foreach(node->nodes, Node * child, { interpreter_statement(interpreter, scope, child, {}); });

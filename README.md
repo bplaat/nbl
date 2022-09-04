@@ -50,12 +50,14 @@ println(names[1]); // -> 'Jan'
 
 ## Objects
 ```
-const person = {
-    name = 'Bastiaan',
-    age = 17
-};
+fn Person(name, age) {
+    return { name, age };
+}
 
-println('Name = ' + person.name + ', Age = ' + (string)person['age'])
+fn greet(person) => println('Name = ' + person.name + ', Age = ' + (string)person['age']);
+
+const bastiaan = Person('Bastiaan', 20);
+greet(bastiaan);
 ```
 
 ## Conditions
