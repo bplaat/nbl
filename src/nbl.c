@@ -2,8 +2,6 @@
 #include "nbl.h"
 
 // Utils
-size_t align(size_t size, size_t alignment) { return (size + alignment - 1) / alignment * alignment; }
-
 void error(char *text, size_t line, size_t position, char *fmt, ...) {
     fprintf(stderr, "text:%zu:%zu ERROR: ", line + 1, position + 1);
     va_list args;
@@ -55,15 +53,15 @@ void *list_get(List *list, size_t index) {
 }
 
 void list_set(List *list, size_t index, void *item) {
-    if (index >= list->capacity) {
-        while (index >= list->capacity) list->capacity *= 2;
+    if (index > list->capacity) {
+        while (index > list->capacity) list->capacity *= 2;
         list->items = realloc(list->items, sizeof(void *) * list->capacity);
     }
     if (index > list->size) {
-        for (size_t i = list->size; i < index; i++) {
+        for (size_t i = list->size; i < index - 1; i++) {
             list->items[i] = NULL;
         }
-        list->size = index;
+        list->size = index + 1;
     }
     list->items[index] = item;
 }
@@ -95,7 +93,9 @@ void list_free(List *list, ListFreeFunc *freeFunc) {
 
     if (freeFunc != NULL) {
         for (size_t i = 0; i < list->size; i++) {
-            freeFunc(list->items[i]);
+            if (list->items[i] != NULL) {
+                freeFunc(list->items[i]);
+            }
         }
     }
     free(list->items);
@@ -848,7 +848,8 @@ char *value_to_string(Value *value) {
         list_add(sb, strdup("["));
         if (value->array->size > 0) list_add(sb, strdup(" "));
         for (size_t i = 0; i < value->array->size; i++) {
-            list_add(sb, value_to_string(list_get(value->array, i)));
+            Value *item = list_get(value->array, i);
+            list_add(sb, item != NULL ? value_to_string(item) : strdup("null"));
             if (i != value->array->size - 1) list_add(sb, strdup(", "));
         }
         if (value->array->size > 0) list_add(sb, strdup(" "));
@@ -879,12 +880,17 @@ char *value_to_string(Value *value) {
         for (size_t i = 0; i < value->arguments->size; i++) {
             Argument *argument = list_get(value->arguments, i);
             list_add(sb, argument->name);
-            list_add(sb, ": ");
-            list_add(sb, value_type_to_string(argument->type));
+            if (argument->type != VALUE_ANY) {
+                list_add(sb, ": ");
+                list_add(sb, value_type_to_string(argument->type));
+            }
             if (i != value->arguments->size - 1) list_add(sb, ", ");
         }
-        list_add(sb, "): ");
-        list_add(sb, value_type_to_string(value->returnType));
+        list_add(sb, ")");
+        if (value->returnType != VALUE_ANY) {
+            list_add(sb, ": ");
+            list_add(sb, value_type_to_string(value->returnType));
+        }
         char *string = list_to_string(sb);
         list_free(sb, NULL);
         return string;
@@ -1264,8 +1270,7 @@ Node *parser_declarations(Parser *parser) {
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));
             } else {
                 if (declarationType != VALUE_ANY) {
-                    error(parser->text, assignToken->line, assignToken->position, "No assign value given",
-                        token_type_to_string(current()->type));
+                    error(parser->text, assignToken->line, assignToken->position, "No assign value given", token_type_to_string(current()->type));
                 }
                 node = node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null()));
             }
@@ -1611,9 +1616,10 @@ Node *parser_primary(Parser *parser) {
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_KEYWORD) {
+        Token *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-        return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, current(), name));
+        return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, nameToken, name));
     }
     if (current()->type == TOKEN_LBRACKET) {
         Node *node = node_new(NODE_ARRAY, current());
@@ -2007,7 +2013,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 iteratorValue = value_new_string(character);
             }
             if (iterator->type == VALUE_ARRAY) {
-                iteratorValue = value_retrieve(list_get(iterator->array, i));
+                Value *value = list_get(iterator->array, i);
+                iteratorValue = value != NULL ? value_retrieve(value) : value_new_null();
             }
             if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
@@ -2056,28 +2063,31 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return value_retrieve(node->value);
     }
     if (node->type == NODE_ARRAY) {
-        Value *arrayValue = value_new_array(list_new_with_capacity(node->array->size));
+        Value *arrayValue = value_new_array(list_new_with_capacity(node->array->capacity));
         list_foreach(node->array, Node * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
         return arrayValue;
     }
     if (node->type == NODE_OBJECT) {
-        Value *objectValue = value_new_object(map_new_with_capacity(node->object->size));
+        Value *objectValue = value_new_object(map_new_with_capacity(node->object->capacity));
         map_foreach(node->object, char *key, Node *value, { map_set(objectValue->object, key, interpreter_node(interpreter, scope, value)); });
         return objectValue;
     }
     if (node->type == NODE_CLASS) {
-        Value *classValue = value_new_class(map_new_with_capacity(node->object->size));
+        Value *classValue = value_new_class(map_new_with_capacity(node->object->capacity));
         map_foreach(node->object, char *key, Node *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
         return classValue;
     }
+
     if (node->type == NODE_CALL) {
         Value *thisValue = NULL;
         if (node->function->type == NODE_GET) {
             Value *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
-            if (containerValue->type == VALUE_STRING || containerValue->type == VALUE_ARRAY || containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_INSTANCE) {
-                thisValue = value_ref(containerValue);
+            if (containerValue->type == VALUE_STRING || containerValue->type == VALUE_ARRAY || containerValue->type == VALUE_OBJECT ||
+                containerValue->type == VALUE_INSTANCE) {
+                thisValue = containerValue;
+            } else {
+                value_free(containerValue);
             }
-            value_free(containerValue);
         }
         Value *callValue = interpreter_node(interpreter, scope, node->function);
         if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
@@ -2091,7 +2101,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         } else {
             arguments = callValue->arguments;
         }
-        List *values = list_new_with_capacity(align(node->nodes->size, 8));
+        List *values = list_new_with_capacity(node->nodes->capacity);
         for (size_t i = 0; i < MAX(arguments != NULL ? arguments->size : 0, node->nodes->size); i++) {
             Argument *argument = NULL;
             if (arguments != NULL) {
@@ -2162,8 +2172,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             if (constructorFunction != NULL) {
                 if (constructorFunction->type == VALUE_FUNCTION) {
                     Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
-                                        .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                                        .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+                                           .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                                           .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
                     map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(instance)));
                     map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(values))));
                     for (size_t i = 0; i < constructorFunction->arguments->size; i++) {
@@ -2173,7 +2183,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     interpreter_node(interpreter, &functionScope, constructorFunction->functionNode);
                     if (constructorFunction->returnType != VALUE_ANY && functionScope.function->returnValue->type != constructorFunction->returnType) {
                         error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                            value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(constructorFunction->returnType));
+                              value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(constructorFunction->returnType));
                     }
                     map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
 
@@ -2184,11 +2194,14 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 }
 
                 if (constructorFunction->type == VALUE_NATIVE_FUNCTION) {
-                    returnValue = constructorFunction->nativeFunc(thisValue, values);
-                    value_free(instance);
+                    Value *newReturnValue = constructorFunction->nativeFunc(instance, values);
+                    if (newReturnValue != NULL) {
+                        returnValue = newReturnValue;
+                        value_free(instance);
+                    }
                     if (constructorFunction->returnType != VALUE_ANY && returnValue->type != constructorFunction->returnType) {
                         error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                            value_type_to_string(returnValue->type), value_type_to_string(constructorFunction->returnType));
+                              value_type_to_string(returnValue->type), value_type_to_string(constructorFunction->returnType));
                     }
                 }
             }

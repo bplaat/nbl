@@ -16,8 +16,6 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-size_t align(size_t size, size_t alignment);
-
 char *format(char *fmt, ...);
 
 void error(char *text, size_t line, size_t position, char *fmt, ...);

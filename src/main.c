@@ -222,9 +222,7 @@ Value *env_array_length(Value *this, List *values) {
     return value_new_int(this->array->size);
 }
 Value *env_array_push(Value *this, List *values) {
-    list_foreach(values, Value *value, {
-        list_add(this->array, value_ref(value));
-    });
+    list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
 
@@ -449,6 +447,12 @@ int main(int argc, char **argv) {
 
     // Run
     Map *env = std_env();
+    List *arguments = list_new();
+    for (int i = 2; i < argc; i++) {
+        list_add(arguments, value_new_string(argv[i]));
+    }
+    map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
+
     Value *returnValue = interpreter(text, env, node);
     if (returnValue->type == VALUE_INT) {
         exit(returnValue->integer);
