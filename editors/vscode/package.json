@@ -1,0 +1,25 @@
+{
+  "name": "new-bastiaan-language",
+  "displayName": "New Bastiaan Language",
+  "description": "Syntax highlighting for the NBL programming language",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.71.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "nbl",
+      "aliases": ["NBL", "nbl"],
+      "extensions": [".nbl"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "nbl",
+      "scopeName": "source.nbl",
+      "path": "./syntaxes/nbl.tmLanguage.json"
+    }]
+  }
+}

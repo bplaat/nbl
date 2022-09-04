@@ -1,0 +1,111 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "NBL",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#constants"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.nbl",
+					"match": "\\b(any|bool|int|float|string|array|object|function|fn|const|let|if|else|while|do|for|in|continue|break|return)\\b"
+				}
+			]
+		},
+
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.block.nbl",
+					"begin": "/\\*",
+					"captures": {
+						"0": {
+							"name": "punctuation.definition.comment.nbl"
+						}
+					},
+					"end": "\\*/"
+				},
+				{
+					"name": "comment.line.double-slash.nbl",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.nbl"
+						}
+					},
+					"match": "(//).*$\\n?"
+				},
+				{
+					"name": "comment.line.hash.nbl",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.nbl"
+						}
+					},
+					"match": "(#).*$\\n?"
+				}
+			]
+		},
+
+		"constants": {
+			"patterns": [
+				{
+					"name": "constant.language.nbl",
+					"match": "\\b(null|true|false)\\b"
+				}
+			]
+		},
+
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.nbl",
+					"match": "\\d+(.\\d+)?"
+				}
+			]
+		},
+
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.single.nbl",
+					"begin": "'",
+					"end": "'",
+					"patterns": [
+						{
+							"name": "constant.character.escape.nbl",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.double.nbl",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.nbl",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		}
+	},
+	"scopeName": "source.nbl"
+}
