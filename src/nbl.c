@@ -1059,7 +1059,7 @@ Node *parser_statement(Parser *parser) {
 
         if (current()->type == TOKEN_IN) {
             Node *node = node_new(NODE_FORIN, token);
-            if (declarations->type == NODE_NODES) {
+            if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
                 error(parser->text, declarations->token->line, declarations->token->position, "You can only declare one variable in a for in loop");
             }
             node->variable = declarations;
@@ -1193,7 +1193,7 @@ Node *parser_declarations(Parser *parser) {
             }
 
             Node *node;
-            if (current()->type == TOKEN_ASSIGN || assignType == NODE_CONST_ASSIGN) {
+            if (current()->type == TOKEN_ASSIGN || (assignType == NODE_CONST_ASSIGN && current()->type != TOKEN_IN)) {
                 Token *token = current();
                 parser_eat(parser, TOKEN_ASSIGN);
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));

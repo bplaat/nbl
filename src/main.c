@@ -20,7 +20,6 @@ Value *env_math_abs(List *values) {
     }
     return value_new_null();
 }
-
 Value *env_math_sin(List *values) {
     Value *x = list_get(values, 0);
     return value_new_float(sin(x->floating));
@@ -71,6 +70,72 @@ Value *env_math_round(List *values) {
     Value *x = list_get(values, 0);
     return value_new_float(round(x->floating));
 }
+Value *env_math_min(List *values) {
+    Value *first = list_get(values, 0);
+    int64_t minInteger;
+    double minFloating;
+    if (first->type == VALUE_INT) {
+        minInteger = first->integer;
+        minFloating = first->integer;
+    }
+    if (first->type == VALUE_FLOAT) {
+        minInteger = first->floating;
+        minFloating = first->floating;
+    }
+
+    bool onlyInteger = true;
+    list_foreach(values, Value *value, {
+        if (value->type != VALUE_INT) onlyInteger = false;
+        if (onlyInteger) {
+            if (value->type == VALUE_INT) {
+                minInteger = MIN(minInteger, value->integer);
+            }
+            if (value->type == VALUE_FLOAT) {
+                minInteger = MIN(minInteger, value->floating);
+            }
+        }
+        if (value->type == VALUE_INT) {
+            minFloating = MIN(minFloating, value->integer);
+        }
+        if (value->type == VALUE_FLOAT) {
+            minFloating = MIN(minFloating, value->floating);
+        }
+    });
+    return onlyInteger ? value_new_int(minInteger) : value_new_float(minFloating);
+}
+Value *env_math_max(List *values) {
+    Value *first = list_get(values, 0);
+    int64_t maxInteger;
+    double maxFloating;
+    if (first->type == VALUE_INT) {
+        maxInteger = first->integer;
+        maxFloating = first->integer;
+    }
+    if (first->type == VALUE_FLOAT) {
+        maxInteger = first->floating;
+        maxFloating = first->floating;
+    }
+
+    bool onlyInteger = true;
+    list_foreach(values, Value *value, {
+        if (value->type != VALUE_INT) onlyInteger = false;
+        if (onlyInteger) {
+            if (value->type == VALUE_INT) {
+                maxInteger = MAX(maxInteger, value->integer);
+            }
+            if (value->type == VALUE_FLOAT) {
+                maxInteger = MAX(maxInteger, value->floating);
+            }
+        }
+        if (value->type == VALUE_INT) {
+            maxFloating = MAX(maxFloating, value->integer);
+        }
+        if (value->type == VALUE_FLOAT) {
+            maxFloating = MAX(maxFloating, value->floating);
+        }
+    });
+    return onlyInteger ? value_new_int(maxInteger) : value_new_float(maxFloating);
+}
 Value *env_math_exp(List *values) {
     Value *x = list_get(values, 0);
     return value_new_float(exp(x->floating));
@@ -78,10 +143,6 @@ Value *env_math_exp(List *values) {
 Value *env_math_log(List *values) {
     Value *x = list_get(values, 0);
     return value_new_float(log(x->floating));
-}
-Value *env_math_log10(List *values) {
-    Value *x = list_get(values, 0);
-    return value_new_float(log10(x->floating));
 }
 Value *env_math_random(List *values) {
     (void)values;
@@ -150,7 +211,13 @@ Map *std_env(void) {
     Map *math = map_new();
     map_set(env, "Math", variable_new(VALUE_OBJECT, false, value_new_object(math)));
     map_set(math, "E", value_new_float(M_E));
+    map_set(math, "LN2", value_new_float(M_LN2));
+    map_set(math, "LN10", value_new_float(M_LN10));
+    map_set(math, "LOG2E", value_new_float(M_LOG2E));
+    map_set(math, "LOG10E", value_new_float(M_LOG10E));
     map_set(math, "PI", value_new_float(M_PI));
+    map_set(math, "SQRT1_2", value_new_float(M_SQRT1_2));
+    map_set(math, "SQRT2", value_new_float(M_SQRT2));
 
     List *math_float_args = list_new();
     list_add(math_float_args, argument_new("x", VALUE_FLOAT, NULL));
@@ -173,10 +240,10 @@ Map *std_env(void) {
     map_set(math, "floor", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_floor));
     map_set(math, "ceil", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_ceil));
     map_set(math, "round", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_round));
-    // max, min
+    map_set(math, "min", value_new_native_function(list_ref(empty_args), VALUE_ANY, env_math_min));
+    map_set(math, "max", value_new_native_function(list_ref(empty_args), VALUE_ANY, env_math_max));
     map_set(math, "exp", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_exp));
     map_set(math, "log", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log));
-    map_set(math, "log10", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log10));
     random_seed = time(NULL);
     map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
 
