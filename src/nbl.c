@@ -76,6 +76,19 @@ void list_add(List *list, void *item) {
     list->items[list->size++] = item;
 }
 
+char *list_to_string(List *list) {
+    size_t size = 0;
+    for (size_t i = 0; i < list->size; i++) {
+        size += strlen(list_get(list, i));
+    }
+    char *string = malloc(size + 1);
+    string[0] = '\0';
+    for (size_t i = 0; i < list->size; i++) {
+        strcat(string, list_get(list, i));
+    }
+    return string;
+}
+
 void list_free(List *list, ListFreeFunc *freeFunc) {
     list->refs--;
     if (list->refs > 0) return;
@@ -184,7 +197,8 @@ Token *token_ref(Token *token) {
 
 bool token_type_is_type(TokenType type) {
     return type == TOKEN_TYPE_ANY || type == TOKEN_NULL || type == TOKEN_TYPE_BOOL || type == TOKEN_TYPE_INT || type == TOKEN_TYPE_FLOAT ||
-           type == TOKEN_TYPE_STRING || type == TOKEN_TYPE_ARRAY || type == TOKEN_TYPE_OBJECT || type == TOKEN_TYPE_FUNCTION;
+           type == TOKEN_TYPE_STRING || type == TOKEN_TYPE_ARRAY || type == TOKEN_TYPE_OBJECT || type == TOKEN_TYPE_FUNCTION || type == TOKEN_CLASS ||
+           type == TOKEN_TYPE_INSTANCE;
 }
 
 char *token_type_to_string(TokenType type) {
@@ -251,6 +265,10 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_TYPE_STRING) return "string";
     if (type == TOKEN_TYPE_ARRAY) return "array";
     if (type == TOKEN_TYPE_OBJECT) return "object";
+    if (type == TOKEN_CLASS) return "class";
+    if (type == TOKEN_EXTENDS) return "extends";
+    if (type == TOKEN_ABSTRACT) return "abstract";
+    if (type == TOKEN_TYPE_INSTANCE) return "instance";
     if (type == TOKEN_TYPE_FUNCTION) return "function";
     if (type == TOKEN_FUNCTION) return "fn";
 
@@ -306,6 +324,10 @@ List *lexer(char *text) {
                           {"string", TOKEN_TYPE_STRING},
                           {"array", TOKEN_TYPE_ARRAY},
                           {"object", TOKEN_TYPE_OBJECT},
+                          {"class", TOKEN_CLASS},
+                          {"extends", TOKEN_EXTENDS},
+                          {"abstract", TOKEN_ABSTRACT},
+                          {"instance", TOKEN_TYPE_INSTANCE},
                           {"function", TOKEN_TYPE_FUNCTION},
                           {"fn", TOKEN_FUNCTION},
 
@@ -757,6 +779,19 @@ Value *value_new_object(Map *object) {
     return value;
 }
 
+Value *value_new_class(Map *object) {
+    Value *value = value_new(VALUE_CLASS);
+    value->object = object;
+    return value;
+}
+
+Value *value_new_instance(Map *object, Value *parentClass) {
+    Value *value = value_new(VALUE_INSTANCE);
+    value->object = object;
+    value->parentClass = parentClass;
+    return value;
+}
+
 Value *value_new_function(List *args, ValueType returnType, Node *functionNode) {
     Value *value = value_new(VALUE_FUNCTION);
     value->arguments = args;
@@ -774,6 +809,7 @@ Value *value_new_native_function(List *args, ValueType returnType, Value *(*nati
 }
 
 char *value_type_to_string(ValueType type) {
+    if (type == VALUE_ANY) return "any";
     if (type == VALUE_NULL) return "null";
     if (type == VALUE_BOOL) return "bool";
     if (type == VALUE_INT) return "int";
@@ -781,6 +817,8 @@ char *value_type_to_string(ValueType type) {
     if (type == VALUE_STRING) return "string";
     if (type == VALUE_ARRAY) return "array";
     if (type == VALUE_OBJECT) return "object";
+    if (type == VALUE_CLASS) return "class";
+    if (type == VALUE_INSTANCE) return "instance";
     if (type == VALUE_FUNCTION || type == VALUE_NATIVE_FUNCTION) return "function";
     return NULL;
 }
@@ -806,13 +844,50 @@ char *value_to_string(Value *value) {
         return strdup(value->string);
     }
     if (value->type == VALUE_ARRAY) {
-        return strdup("array");
+        List *sb = list_new();
+        list_add(sb, strdup("["));
+        if (value->array->size > 0) list_add(sb, strdup(" "));
+        for (size_t i = 0; i < value->array->size; i++) {
+            list_add(sb, value_to_string(list_get(value->array, i)));
+            if (i != value->array->size - 1) list_add(sb, strdup(", "));
+        }
+        if (value->array->size > 0) list_add(sb, strdup(" "));
+        list_add(sb, strdup("]"));
+        char *string = list_to_string(sb);
+        list_free(sb, free);
+        return string;
     }
-    if (value->type == VALUE_OBJECT) {
-        return strdup("object");
+    if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
+        List *sb = list_new();
+        list_add(sb, strdup("{"));
+        if (value->object->size > 0) list_add(sb, strdup(" "));
+        for (size_t i = 0; i < value->object->size; i++) {
+            list_add(sb, strdup(value->object->keys[i]));
+            list_add(sb, strdup(" = "));
+            list_add(sb, value_to_string(value->object->values[i]));
+            if (i != value->object->size - 1) list_add(sb, strdup(", "));
+        }
+        if (value->object->size > 0) list_add(sb, strdup(" "));
+        list_add(sb, strdup("}"));
+        char *string = list_to_string(sb);
+        list_free(sb, free);
+        return string;
     }
     if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
-        return strdup("function");
+        List *sb = list_new();
+        list_add(sb, "fn (");
+        for (size_t i = 0; i < value->arguments->size; i++) {
+            Argument *argument = list_get(value->arguments, i);
+            list_add(sb, argument->name);
+            list_add(sb, ": ");
+            list_add(sb, value_type_to_string(argument->type));
+            if (i != value->arguments->size - 1) list_add(sb, ", ");
+        }
+        list_add(sb, "): ");
+        list_add(sb, value_type_to_string(value->returnType));
+        char *string = list_to_string(sb);
+        list_free(sb, NULL);
+        return string;
     }
     return NULL;
 }
@@ -826,6 +901,8 @@ ValueType token_type_to_value_type(TokenType type) {
     if (type == TOKEN_TYPE_STRING) return VALUE_STRING;
     if (type == TOKEN_TYPE_ARRAY) return VALUE_ARRAY;
     if (type == TOKEN_TYPE_OBJECT) return VALUE_OBJECT;
+    if (type == TOKEN_CLASS) return VALUE_CLASS;
+    if (type == TOKEN_TYPE_INSTANCE) return VALUE_INSTANCE;
     if (type == TOKEN_TYPE_FUNCTION) return VALUE_FUNCTION;
     return 0;
 }
@@ -835,13 +912,13 @@ Value *value_ref(Value *value) {
     return value;
 }
 
-Value *value_copy(Value *value) {
+Value *value_retrieve(Value *value) {
     if (value->type == VALUE_NULL) return value_new_null();
     if (value->type == VALUE_BOOL) return value_new_bool(value->boolean);
     if (value->type == VALUE_INT) return value_new_int(value->integer);
     if (value->type == VALUE_FLOAT) return value_new_float(value->floating);
     if (value->type == VALUE_STRING) return value_new_string(value->string);
-    return NULL;
+    return value_ref(value);
 }
 
 void value_clear(Value *value) {
@@ -851,8 +928,9 @@ void value_clear(Value *value) {
     if (value->type == VALUE_ARRAY) {
         list_free(value->array, (ListFreeFunc *)value_free);
     }
-    if (value->type == VALUE_OBJECT) {
+    if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
         map_free(value->object, (MapFreeFunc *)value_free);
+        if (value->type == VALUE_INSTANCE) value_free(value->parentClass);
     }
     if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
         list_free(value->arguments, (ListFreeFunc *)argument_free);
@@ -936,6 +1014,12 @@ void node_free(Node *node) {
     if (node->type == NODE_VARIABLE) {
         free(node->string);
     }
+    if (node->type == NODE_ARRAY) {
+        list_free(node->array, (ListFreeFunc *)node_free);
+    }
+    if (node->type == NODE_OBJECT || node->type == NODE_CLASS) {
+        map_free(node->object, (MapFreeFunc *)node_free);
+    }
     if (node->type == NODE_RETURN || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
         node_free(node->unary);
     }
@@ -948,9 +1032,8 @@ void node_free(Node *node) {
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
     }
-    if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || (node->type >= NODE_ARRAY && node->type <= NODE_CALL)) {
+    if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || node->type == NODE_CALL) {
         if (node->type == NODE_CALL) node_free(node->function);
-        if (node->type == NODE_OBJECT) list_free(node->keys, free);
         list_free(node->nodes, (ListFreeFunc *)node_free);
     }
     free(node);
@@ -1120,10 +1203,21 @@ Node *parser_statement(Parser *parser) {
         Token *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-
         Node *valueNode = node_new_value(functionToken, parser_function(parser));
         Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), valueNode);
         node->declarationType = VALUE_FUNCTION;
+        return node;
+    }
+    if (current()->type == TOKEN_CLASS) {
+        Token *classToken = current();
+        Node *classNode = node_new(NODE_CLASS, current());
+        parser_eat(parser, TOKEN_CLASS);
+        Token *nameToken = current();
+        char *name = current()->string;
+        parser_eat(parser, TOKEN_KEYWORD);
+        classNode->object = parser_class(parser);
+        Node *node = node_new_operation(NODE_CONST_ASSIGN, classToken, node_new_string(NODE_VARIABLE, nameToken, name), classNode);
+        node->declarationType = VALUE_CLASS;
         return node;
     }
 
@@ -1517,10 +1611,11 @@ Node *parser_primary(Parser *parser) {
         return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, current(), name));
     }
     if (current()->type == TOKEN_LBRACKET) {
-        Node *node = node_new_multiple(NODE_ARRAY, current());
+        Node *node = node_new(NODE_ARRAY, current());
+        node->array = list_new();
         parser_eat(parser, TOKEN_LBRACKET);
         while (current()->type != TOKEN_RBRACKET) {
-            list_add(node->nodes, parser_assign(parser));
+            list_add(node->array, parser_assign(parser));
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1531,8 +1626,8 @@ Node *parser_primary(Parser *parser) {
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_LCURLY) {
-        Node *node = node_new_multiple(NODE_OBJECT, current());
-        node->keys = list_new_with_capacity(node->nodes->capacity);
+        Node *node = node_new(NODE_OBJECT, current());
+        node->object = map_new();
         parser_eat(parser, TOKEN_LCURLY);
         while (current()->type != TOKEN_RCURLY) {
             if (current()->type == TOKEN_FUNCTION) {
@@ -1540,19 +1635,18 @@ Node *parser_primary(Parser *parser) {
                 parser_eat(parser, TOKEN_FUNCTION);
                 char *keyName = current()->string;
                 parser_eat(parser, TOKEN_KEYWORD);
-                list_add(node->keys, strdup(keyName));
-                list_add(node->nodes, node_new_value(functionToken, parser_function(parser)));
+                map_set(node->object, keyName, node_new_value(functionToken, parser_function(parser)));
+                continue;
+            }
+
+            Token *keyToken = current();
+            char *keyName = current()->string;
+            parser_eat(parser, TOKEN_KEYWORD);
+            if (current()->type == TOKEN_ASSIGN) {
+                parser_eat(parser, TOKEN_ASSIGN);
+                map_set(node->object, keyName, parser_tenary(parser));
             } else {
-                Token *keyToken = current();
-                char *keyName = current()->string;
-                parser_eat(parser, TOKEN_KEYWORD);
-                list_add(node->keys, strdup(keyName));
-                if (current()->type == TOKEN_ASSIGN) {
-                    parser_eat(parser, TOKEN_ASSIGN);
-                    list_add(node->nodes, parser_tenary(parser));
-                } else {
-                    list_add(node->nodes, node_new_string(NODE_VARIABLE, keyToken, keyName));
-                }
+                map_set(node->object, keyName, node_new_string(NODE_VARIABLE, keyToken, keyName));
             }
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
@@ -1567,6 +1661,12 @@ Node *parser_primary(Parser *parser) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
         return parser_primary_suffix(parser, node_new_value(functionToken, parser_function(parser)));
+    }
+    if (current()->type == TOKEN_CLASS) {
+        Node *node = node_new(NODE_CLASS, current());
+        parser_eat(parser, TOKEN_CLASS);
+        node->object = parser_class(parser);
+        return node;
     }
 
     error(parser->text, current()->line, current()->position, "Unexpected token: '%s'", token_type_to_string(current()->type));
@@ -1584,9 +1684,10 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
         }
         if (current()->type == TOKEN_POINT) {
             parser_eat(parser, TOKEN_POINT);
-            Node *indexOrKey = node_new_value(current(), value_new_string(current()->string));
+            Token *keyToken = current();
+            char *key = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
-            node = node_new_operation(NODE_GET, token, node, indexOrKey);
+            node = node_new_operation(NODE_GET, token, node, node_new_value(keyToken, value_new_string(key)));
         }
     }
     if (current()->type == TOKEN_LPAREN) {
@@ -1639,6 +1740,34 @@ Value *parser_function(Parser *parser) {
     return value_new_function(arguments, returnType, parser_block(parser));
 }
 
+Map *parser_class(Parser *parser) {
+    Map *object = map_new();
+    parser_eat(parser, TOKEN_LCURLY);
+    while (current()->type != TOKEN_RCURLY) {
+        if (current()->type == TOKEN_FUNCTION) {
+            Token *functionToken = current();
+            parser_eat(parser, TOKEN_FUNCTION);
+            char *keyName = current()->string;
+            parser_eat(parser, TOKEN_KEYWORD);
+            map_set(object, keyName, node_new_value(functionToken, parser_function(parser)));
+            continue;
+        }
+
+        char *keyName = current()->string;
+        parser_eat(parser, TOKEN_KEYWORD);
+        parser_eat(parser, TOKEN_ASSIGN);
+        map_set(object, keyName, parser_tenary(parser));
+
+        if (current()->type == TOKEN_COMMA) {
+            parser_eat(parser, TOKEN_COMMA);
+        } else {
+            break;
+        }
+    }
+    parser_eat(parser, TOKEN_RCURLY);
+    return object;
+}
+
 Argument *parser_argument(Parser *parser) {
     char *name = current()->string;
     parser_eat(parser, TOKEN_KEYWORD);
@@ -1687,7 +1816,10 @@ Value *interpreter(char *text, Map *env, Node *node) {
     Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                    .block = &(BlockScope){.parentBlock = NULL, .env = env}};
-    interpreter_node(&interpreter, &scope, node);
+    Value *returnValue = interpreter_node(&interpreter, &scope, node);
+    if (returnValue != NULL) {
+        return returnValue;
+    }
     if (scope.function->returnValue != NULL) {
         return scope.function->returnValue;
     } else {
@@ -1843,8 +1975,9 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_FORIN) {
         Value *iterator = interpreter_node(interpreter, scope, node->iterator);
-        if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array or object it is: %s",
+        if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT && iterator->type != VALUE_CLASS &&
+            iterator->type != VALUE_INSTANCE) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array, object, class or instance it is: %s",
                   value_type_to_string(iterator->type));
         }
 
@@ -1858,7 +1991,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (iterator->type == VALUE_ARRAY) {
             size = iterator->array->size;
         }
-        if (iterator->type == VALUE_OBJECT) {
+        if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
             size = iterator->object->size;
         }
 
@@ -1871,7 +2004,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             if (iterator->type == VALUE_ARRAY) {
                 iteratorValue = value_ref(list_get(iterator->array, i));
             }
-            if (iterator->type == VALUE_OBJECT) {
+            if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
             }
             Variable *previousVariable = map_get(loopScope.block->env, node->variable->lhs->string);
@@ -1915,42 +2048,63 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
 
     if (node->type == NODE_VALUE) {
-        return value_ref(node->value);
+        return value_retrieve(node->value);
     }
     if (node->type == NODE_ARRAY) {
-        Value *arrayValue = value_new_array(list_new_with_capacity(align(node->nodes->size, 8)));
-        list_foreach(node->nodes, Node * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
+        Value *arrayValue = value_new_array(list_new_with_capacity(node->array->size));
+        list_foreach(node->array, Node * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
         return arrayValue;
     }
     if (node->type == NODE_OBJECT) {
-        Value *objectValue = value_new_object(map_new_with_capacity(align(node->nodes->size, 8)));
-        for (size_t i = 0; i < node->nodes->size; i++) {
-            map_set(objectValue->object, list_get(node->keys, i), interpreter_node(interpreter, scope, list_get(node->nodes, i)));
-        }
+        Value *objectValue = value_new_object(map_new_with_capacity(node->object->size));
+        map_foreach(node->object, char *key, Node *value, { map_set(objectValue->object, key, interpreter_node(interpreter, scope, value)); });
         return objectValue;
     }
+    if (node->type == NODE_CLASS) {
+        Value *classValue = value_new_class(map_new_with_capacity(node->object->size));
+        map_foreach(node->object, char *key, Node *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
+        return classValue;
+    }
     if (node->type == NODE_CALL) {
-        Value *functionValue = interpreter_node(interpreter, scope, node->function);
-        if (functionValue->type != VALUE_FUNCTION && functionValue->type != VALUE_NATIVE_FUNCTION) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a function");
+        Value *thisValue = NULL;
+        if (node->function->type == NODE_GET) {
+            Value *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
+            if (containerValue->type == VALUE_INSTANCE) {
+                thisValue = value_ref(containerValue);
+            }
+            value_free(containerValue);
+        }
+        Value *callValue = interpreter_node(interpreter, scope, node->function);
+        if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a function or a class");
         }
 
+        List *arguments = NULL;
+        if (callValue->type == VALUE_CLASS) {
+            Value *constructorFunction = map_get(callValue->object, "constructor");
+            if (constructorFunction != NULL) arguments = constructorFunction->arguments;
+        } else {
+            arguments = callValue->arguments;
+        }
         List *values = list_new_with_capacity(align(node->nodes->size, 8));
-        for (size_t i = 0; i < MAX(functionValue->arguments->size, node->nodes->size); i++) {
-            Argument *argument = list_get(functionValue->arguments, i);
-            if (list_get(node->nodes, i) == NULL && argument != NULL) {
-                if (argument->defaultNode != NULL) {
-                    Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
-                    if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
-                        error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position,
-                              "Unexpected function default argument type: '%s' needed '%s'", value_type_to_string(defaultValue->type),
-                              value_type_to_string(argument->type));
+        for (size_t i = 0; i < MAX(arguments != NULL ? arguments->size : 0, node->nodes->size); i++) {
+            Argument *argument = NULL;
+            if (arguments != NULL) {
+                argument = list_get(arguments, i);
+                if (list_get(node->nodes, i) == NULL && argument != NULL) {
+                    if (argument->defaultNode != NULL) {
+                        Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
+                        if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
+                            error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position,
+                                  "Unexpected function default argument type: '%s' needed '%s'", value_type_to_string(defaultValue->type),
+                                  value_type_to_string(argument->type));
+                        }
+                        list_add(values, defaultValue);
+                        continue;
                     }
-                    list_add(values, defaultValue);
-                    continue;
-                }
 
-                error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
+                    error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
+                }
             }
 
             Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
@@ -1962,23 +2116,25 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         Value *returnValue = NULL;
-        if (functionValue->type == VALUE_FUNCTION) {
+        if (callValue->type == VALUE_FUNCTION) {
             Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
                                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                                    .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
-            for (size_t i = 0; i < functionValue->arguments->size; i++) {
-                Argument *argument = list_get(functionValue->arguments, i);
-                map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(values, i))));
+            if (thisValue != NULL) {
+                map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(thisValue)));
             }
             map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(values))));
-            interpreter_node(interpreter, &functionScope, functionValue->functionNode);
-
+            for (size_t i = 0; i < callValue->arguments->size; i++) {
+                Argument *argument = list_get(callValue->arguments, i);
+                map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(values, i))));
+            }
+            interpreter_node(interpreter, &functionScope, callValue->functionNode);
+            if (callValue->returnType != VALUE_ANY && functionScope.function->returnValue->type != callValue->returnType) {
+                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                      value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(callValue->returnType));
+            }
             map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
 
-            if (functionValue->returnType != VALUE_ANY && functionScope.function->returnValue->type != functionValue->returnType) {
-                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                      value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(functionValue->returnType));
-            }
             if (functionScope.function->returnValue != NULL) {
                 returnValue = functionScope.function->returnValue;
             } else {
@@ -1986,16 +2142,41 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
 
-        if (functionValue->type == VALUE_NATIVE_FUNCTION) {
-            returnValue = functionValue->nativeFunc(values);
-            if (functionValue->returnType != VALUE_ANY && returnValue->type != functionValue->returnType) {
+        if (callValue->type == VALUE_NATIVE_FUNCTION) {
+            returnValue = callValue->nativeFunc(values);
+            if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                      value_type_to_string(returnValue->type), value_type_to_string(functionValue->returnType));
+                      value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
             }
         }
 
+        if (callValue->type == VALUE_CLASS) {
+            Value *instance = value_new_instance(map_new(), value_ref(callValue));
+
+            Value *constructorFunction = map_get(callValue->object, "constructor");
+            if (constructorFunction != NULL) {
+                Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
+                                       .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                                       .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+                map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(instance)));
+                map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(values))));
+                for (size_t i = 0; i < constructorFunction->arguments->size; i++) {
+                    Argument *argument = list_get(constructorFunction->arguments, i);
+                    map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(values, i))));
+                }
+                interpreter_node(interpreter, &functionScope, constructorFunction->functionNode);
+                if (constructorFunction->returnType != VALUE_ANY && functionScope.function->returnValue->type != constructorFunction->returnType) {
+                    error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                          value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(constructorFunction->returnType));
+                }
+                map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
+            }
+            returnValue = instance;
+        }
+
         list_free(values, (ListFreeFunc *)value_free);
-        value_free(functionValue);
+        value_free(callValue);
+        if (thisValue != NULL) value_free(thisValue);
         return returnValue;
     }
 
@@ -2119,17 +2300,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (variable == NULL) {
             error(interpreter->text, node->token->line, node->token->position, "Can't find variable: '%s'", node->string);
         }
-        if (variable->value->type == VALUE_NULL || variable->value->type == VALUE_BOOL || variable->value->type == VALUE_INT ||
-            variable->value->type == VALUE_FLOAT || variable->value->type == VALUE_STRING) {
-            return value_copy(variable->value);
-        } else {
-            return value_ref(variable->value);
-        }
+        return value_retrieve(variable->value);
     }
     if (node->type == NODE_GET) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
-        if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array or object it is: %s",
+        if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT &&
+            containerValue->type != VALUE_CLASS && containerValue->type != VALUE_INSTANCE) {
+            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array, object, class or instance it is: %s",
                   value_type_to_string(containerValue->type));
         }
 
@@ -2151,31 +2328,20 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
             }
             Value *value = list_get(containerValue->array, indexOrKey->integer);
-            if (value != NULL) {
-                if (value->type == VALUE_NULL || value->type == VALUE_BOOL || value->type == VALUE_INT || value->type == VALUE_FLOAT ||
-                    value->type == VALUE_STRING) {
-                    returnValue = value_copy(value);
-                } else {
-                    returnValue = value_ref(value);
-                }
-            } else {
-                returnValue = value_new_null();
-            }
+            returnValue = value != NULL ? value_retrieve(value) : value_new_null();
         }
-        if (containerValue->type == VALUE_OBJECT) {
+        if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
             if (indexOrKey->type != VALUE_STRING) {
                 error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
             }
             Value *value = map_get(containerValue->object, indexOrKey->string);
+            if (containerValue->type == VALUE_INSTANCE && value == NULL) {
+                value = map_get(containerValue->parentClass->object, indexOrKey->string);
+            }
             if (value == NULL) {
                 error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");
             }
-            if (value->type == VALUE_NULL || value->type == VALUE_BOOL || value->type == VALUE_INT || value->type == VALUE_FLOAT ||
-                value->type == VALUE_STRING) {
-                returnValue = value_copy(value);
-            } else {
-                returnValue = value_ref(value);
-            }
+            returnValue = value_retrieve(value);
         }
 
         value_free(indexOrKey);
@@ -2191,7 +2357,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
                   value_type_to_string(node->declarationType));
         }
-        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, false, value_ref(rhs)));
+        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, false, value_retrieve(rhs)));
         return rhs;
     }
     if (node->type == NODE_LET_ASSIGN) {
@@ -2203,15 +2369,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
                   value_type_to_string(node->declarationType));
         }
-        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, true, value_ref(rhs)));
+        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, true, value_retrieve(rhs)));
         return rhs;
     }
     if (node->type == NODE_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (node->lhs->type == NODE_GET) {
             Value *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
-            if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT) {
-                error(interpreter->text, node->token->line, node->token->position, "Variable is not an array or object it is: %s",
+            if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT && containerValue->type != VALUE_CLASS &&
+                containerValue->type != VALUE_INSTANCE) {
+                error(interpreter->text, node->token->line, node->token->position, "Variable is not an array, object, class or instance it is: %s",
                       value_type_to_string(containerValue->type));
             }
 
@@ -2222,33 +2389,34 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 }
                 Value *previousValue = list_get(containerValue->array, indexOrKey->integer);
                 if (previousValue != NULL) value_free(previousValue);
-                list_set(containerValue->array, indexOrKey->integer, value_ref(rhs));
+                list_set(containerValue->array, indexOrKey->integer, value_retrieve(rhs));
             }
-            if (containerValue->type == VALUE_OBJECT) {
+            if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
                 if (indexOrKey->type != VALUE_STRING) {
                     error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
                 }
                 Value *previousValue = map_get(containerValue->object, indexOrKey->string);
                 if (previousValue != NULL) value_free(previousValue);
-                map_set(containerValue->object, indexOrKey->string, value_ref(rhs));
+                map_set(containerValue->object, indexOrKey->string, value_retrieve(rhs));
             }
             value_free(indexOrKey);
             value_free(containerValue);
-        } else {
-            Variable *variable = block_scope_get(scope->block, node->lhs->string);
-            if (variable == NULL) {
-                error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Variable: '%s' is not declared", node->lhs->string);
-            }
-            if (!variable->mutable) {
-                error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't mutate const variable: '%s'", node->lhs->string);
-            }
-            if (variable->type != VALUE_ANY && variable->type != rhs->type) {
-                error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Unexpected variable type: '%s' needed '%s'",
-                      value_type_to_string(rhs->type), value_type_to_string(variable->type));
-            }
-            value_free(variable->value);
-            variable->value = value_ref(rhs);
+            return rhs;
         }
+
+        Variable *variable = block_scope_get(scope->block, node->lhs->string);
+        if (variable == NULL) {
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Variable: '%s' is not declared", node->lhs->string);
+        }
+        if (!variable->mutable) {
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't mutate const variable: '%s'", node->lhs->string);
+        }
+        if (variable->type != VALUE_ANY && variable->type != rhs->type) {
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Unexpected variable type: '%s' needed '%s'",
+                  value_type_to_string(rhs->type), value_type_to_string(variable->type));
+        }
+        value_free(variable->value);
+        variable->value = value_retrieve(rhs);
         return rhs;
     }
 

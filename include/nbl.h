@@ -48,6 +48,8 @@ void list_set(List *list, size_t index, void *item);
 
 void list_add(List *list, void *item);
 
+char *list_to_string(List *list);
+
 typedef void ListFreeFunc(void *item);
 
 void list_free(List *list, ListFreeFunc *freeFunc);
@@ -147,6 +149,10 @@ typedef enum TokenType {
     TOKEN_TYPE_STRING,
     TOKEN_TYPE_ARRAY,
     TOKEN_TYPE_OBJECT,
+    TOKEN_CLASS,
+    TOKEN_EXTENDS,
+    TOKEN_ABSTRACT,
+    TOKEN_TYPE_INSTANCE,
     TOKEN_TYPE_FUNCTION,
     TOKEN_FUNCTION,
 
@@ -214,6 +220,8 @@ typedef enum ValueType {
     VALUE_STRING,
     VALUE_ARRAY,
     VALUE_OBJECT,
+    VALUE_CLASS,
+    VALUE_INSTANCE,
     VALUE_FUNCTION,
     VALUE_NATIVE_FUNCTION
 } ValueType;
@@ -239,7 +247,10 @@ struct Value {
         double floating;
         char *string;
         List *array;
-        Map *object;
+        struct {
+            Map *object;
+            Value *parentClass;
+        };
         struct {
             List *arguments;
             ValueType returnType;
@@ -265,7 +276,11 @@ Value *value_new_string(char *string);
 
 Value *value_new_array(List *array);
 
-Value *value_new_object(Map *map);
+Value *value_new_object(Map *object);
+
+Value *value_new_class(Map *object);
+
+Value *value_new_instance(Map *object, Value *parentClass);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
@@ -279,7 +294,7 @@ char *value_to_string(Value *value);
 
 Value *value_ref(Value *value);
 
-Value *value_copy(Value *value);
+Value *value_retrieve(Value *value);
 
 void value_clear(Value *value);
 
@@ -303,6 +318,7 @@ typedef enum NodeType {
     NODE_VALUE,
     NODE_ARRAY,
     NODE_OBJECT,
+    NODE_CLASS,
     NODE_CALL,
 
     NODE_NEG,
@@ -343,6 +359,8 @@ struct Node {
     union {
         Value *value;
         char *string;
+        List *array;
+        Map *object;
         struct {
             ValueType castType;
             Node *unary;
@@ -418,6 +436,7 @@ Node *parser_unary(Parser *parser);
 Node *parser_primary(Parser *parser);
 Node *parser_primary_suffix(Parser *parser, Node *node);
 Value *parser_function(Parser *parser);
+Map *parser_class(Parser *parser);
 Argument *parser_argument(Parser *parser);
 
 // Interpreter

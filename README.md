@@ -6,8 +6,8 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite f
 There is also a basic syntax highlighting extension for Visual Studio Code available. To install it you need to copy the `editors/vscode` folder into your `~/.vscode/extensions` folder.
 
 ## Things todo:
-- Basic classes like PHP
 - Class inheritence and abstract classes
+- Make primitives semi classes so you can do const a = []; a.push(43);
 - Make stdlib better?
 - Byte code interpreter instead of ast traversing?
 - Make vscode syntax highlighting better?
@@ -21,6 +21,8 @@ There is also a basic syntax highlighting extension for Visual Studio Code avail
 - `array`
 - `object`
 - `function`
+- `class`
+- `instance`
 
 ## Comments
 ```
@@ -125,4 +127,26 @@ fn double(number) => number * 2;
 
 hello();
 println(add(double(4), 4)); // -> 12
+```
+
+## Classes
+```
+class Person {
+    SOME_STATIC_VAR = 'A constant',
+
+    fn constructor(name, age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    fn greet() {
+        println('Name = ' + this.name + ', Age = ' + (string)this['age']);
+    }
+};
+
+const bastiaan: instance = Person('Bastiaan', 20);
+bastiaan.greet();
+println(type(Person), Person);
+println(type(bastiaan), bastiaan);
+println(Person.SOME_STATIC_VAR, bastiaan.SOME_STATIC_VAR);
 ```
