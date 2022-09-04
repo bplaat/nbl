@@ -1,5 +1,6 @@
-#include "nbl.h"
 #include <time.h>
+
+#include "nbl.h"
 
 // Utils
 int64_t random_seed;
@@ -84,7 +85,7 @@ Value *env_math_min(List *values) {
     }
 
     bool onlyInteger = true;
-    list_foreach(values, Value *value, {
+    list_foreach(values, Value * value, {
         if (value->type != VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
             if (value->type == VALUE_INT) {
@@ -117,7 +118,7 @@ Value *env_math_max(List *values) {
     }
 
     bool onlyInteger = true;
-    list_foreach(values, Value *value, {
+    list_foreach(values, Value * value, {
         if (value->type != VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
             if (value->type == VALUE_INT) {

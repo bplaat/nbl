@@ -1177,8 +1177,9 @@ Node *parser_declarations(Parser *parser) {
         }
 
         for (;;) {
-            Node *variable = node_new_string(NODE_VARIABLE, current(), current()->string);
+            char *name = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
+            Node *variable = node_new_string(NODE_VARIABLE, current(), name);
 
             ValueType declarationType = VALUE_ANY;
             if (current()->type == TOKEN_COLON) {
@@ -1509,37 +1510,42 @@ Node *parser_primary(Parser *parser) {
         parser_eat(parser, TOKEN_LPAREN);
         Node *node = parser_tenary(parser);
         parser_eat(parser, TOKEN_RPAREN);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_NULL) {
         Node *node = node_new_value(current(), value_new(VALUE_NULL));
         parser_eat(parser, TOKEN_NULL);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_TRUE) {
         Node *node = node_new_value(current(), value_new_bool(true));
         parser_eat(parser, TOKEN_TRUE);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FALSE) {
         Node *node = node_new_value(current(), value_new_bool(false));
         parser_eat(parser, TOKEN_FALSE);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_INT) {
         Node *node = node_new_value(current(), value_new_int(current()->integer));
         parser_eat(parser, TOKEN_INT);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FLOAT) {
         Node *node = node_new_value(current(), value_new_float(current()->floating));
         parser_eat(parser, TOKEN_FLOAT);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_STRING) {
         Node *node = node_new_value(current(), value_new_string(current()->string));
         parser_eat(parser, TOKEN_STRING);
-        return node;
+        return parser_primary_suffix(parser, node);
+    }
+    if (current()->type == TOKEN_KEYWORD) {
+        char *name = current()->string;
+        parser_eat(parser, TOKEN_KEYWORD);
+        return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, current(), name));
     }
     if (current()->type == TOKEN_LBRACKET) {
         Node *node = node_new_multiple(NODE_ARRAY, current());
@@ -1553,7 +1559,7 @@ Node *parser_primary(Parser *parser) {
             }
         }
         parser_eat(parser, TOKEN_RBRACKET);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_LCURLY) {
         Node *node = node_new_multiple(NODE_OBJECT, current());
@@ -1571,7 +1577,7 @@ Node *parser_primary(Parser *parser) {
             }
         }
         parser_eat(parser, TOKEN_RCURLY);
-        return node;
+        return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
@@ -1605,24 +1611,14 @@ Node *parser_primary(Parser *parser) {
             Node *returnNode = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
             return node_new_value(functionToken, value_new_function(arguments, returnType, returnNode));
         }
-        return node_new_value(functionToken, value_new_function(arguments, returnType, parser_block(parser)));
-    }
-
-    return parser_identifier(parser);
-}
-
-Node *parser_identifier(Parser *parser) {
-    if (current()->type == TOKEN_KEYWORD) {
-        Node *node = node_new_string(NODE_VARIABLE, current(), current()->string);
-        parser_eat(parser, TOKEN_KEYWORD);
-        return parser_identifier_suffix(parser, node);
+        return parser_primary_suffix(parser, node_new_value(functionToken, value_new_function(arguments, returnType, parser_block(parser))));
     }
 
     error(parser->text, current()->line, current()->position, "Unexpected token: '%s'", token_type_to_string(current()->type));
     return NULL;
 }
 
-Node *parser_identifier_suffix(Parser *parser, Node *node) {
+Node *parser_primary_suffix(Parser *parser, Node *node) {
     while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT) {
         Token *token = current();
         if (current()->type == TOKEN_LBRACKET) {
@@ -2199,6 +2195,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
             error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare const variable: '%s'", node->lhs->string);
         }
+        if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
+            error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+                  value_type_to_string(node->declarationType));
+        }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, false, value_ref(rhs)));
         return rhs;
     }
@@ -2206,6 +2206,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
             error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare let variable: '%s'", node->lhs->string);
+        }
+        if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
+            error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+                  value_type_to_string(node->declarationType));
         }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, true, value_ref(rhs)));
         return rhs;

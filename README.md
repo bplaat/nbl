@@ -6,8 +6,8 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite f
 ## Things todo:
 - Make stdlib better?
 - Classes?
-- Syntax hightlighting vscode?
 - Byte code interpreter?
+- Make vscode syntax highlighting better?
 
 ## Types:
 - `null`
