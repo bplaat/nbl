@@ -195,17 +195,32 @@ Value *env_math_random(Value *this, List *values) {
 }
 
 // String
+Value *env_string_constructor(Value *this, List *values) {
+    (void)this;
+    Value *first = list_get(values, 0);
+    char *string = value_to_string(first);
+    Value *value = value_new_string(string);
+    free(string);
+    return value;
+}
 Value *env_string_length(Value *this, List *values) {
     (void)values;
     return value_new_int(strlen(this->string));
 }
 
 // Array
+Value *env_array_constructor(Value *this, List *values) {
+    (void)this;
+    Value *first = list_get(values, 0);
+    if (first != NULL && first->type == VALUE_ARRAY) {
+        return value_ref(first);
+    }
+    return value_new_array(list_new());
+}
 Value *env_array_length(Value *this, List *values) {
     (void)values;
     return value_new_int(this->array->size);
 }
-
 Value *env_array_push(Value *this, List *values) {
     list_foreach(values, Value *value, {
         list_add(this->array, value_ref(value));
@@ -214,11 +229,18 @@ Value *env_array_push(Value *this, List *values) {
 }
 
 // Object
+Value *env_object_constructor(Value *this, List *values) {
+    (void)this;
+    Value *first = list_get(values, 0);
+    if (first != NULL && first->type == VALUE_OBJECT) {
+        return value_ref(first);
+    }
+    return value_new_object(map_new());
+}
 Value *env_object_length(Value *this, List *values) {
     (void)values;
     return value_new_int(this->object->size);
 }
-
 Value *env_object_keys(Value *this, List *values) {
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
@@ -227,7 +249,6 @@ Value *env_object_keys(Value *this, List *values) {
     }
     return value_new_array(items);
 }
-
 Value *env_object_values(Value *this, List *values) {
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
@@ -324,17 +345,20 @@ Map *std_env(void) {
     // String
     Map *string = map_new();
     map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string)));
+    map_set(string, "constructor", value_new_native_function(list_ref(empty_args), VALUE_STRING, env_string_constructor));
     map_set(string, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_string_length));
 
     // Array
     Map *array = map_new();
     map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array)));
+    map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
     map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
     map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
 
     // Object
     Map *object = map_new();
     map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object)));
+    map_set(object, "constructor", value_new_native_function(list_ref(empty_args), VALUE_OBJECT, env_object_constructor));
     map_set(object, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_object_length));
     map_set(object, "keys", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_keys));
     map_set(object, "values", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_values));
