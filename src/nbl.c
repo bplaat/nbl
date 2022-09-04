@@ -1121,39 +1121,8 @@ Node *parser_statement(Parser *parser) {
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
 
-        List *arguments = list_new();
-        parser_eat(parser, TOKEN_LPAREN);
-        while (current()->type != TOKEN_RPAREN) {
-            list_add(arguments, parser_argument(parser));
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
-            } else {
-                break;
-            }
-        }
-        parser_eat(parser, TOKEN_RPAREN);
-
-        ValueType returnType = VALUE_ANY;
-        if (current()->type == TOKEN_COLON) {
-            parser_eat(parser, TOKEN_COLON);
-            if (token_type_is_type(current()->type)) {
-                returnType = token_type_to_value_type(current()->type);
-                parser_eat(parser, current()->type);
-            } else {
-                error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
-            }
-        }
-
-        Value *functionValue;
-        if (current()->type == TOKEN_FAT_ARROW) {
-            Token *token = current();
-            parser_eat(parser, TOKEN_FAT_ARROW);
-            functionValue = value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_tenary(parser)));
-        } else {
-            functionValue = value_new_function(arguments, returnType, parser_block(parser));
-        }
-        Node *node =
-            node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), node_new_value(functionToken, functionValue));
+        Node *valueNode = node_new_value(functionToken, parser_function(parser));
+        Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), valueNode);
         node->declarationType = VALUE_FUNCTION;
         return node;
     }
@@ -1566,10 +1535,25 @@ Node *parser_primary(Parser *parser) {
         node->keys = list_new_with_capacity(node->nodes->capacity);
         parser_eat(parser, TOKEN_LCURLY);
         while (current()->type != TOKEN_RCURLY) {
-            list_add(node->keys, strdup(current()->string));
-            parser_eat(parser, TOKEN_KEYWORD);
-            parser_eat(parser, TOKEN_ASSIGN);
-            list_add(node->nodes, parser_tenary(parser));
+            if (current()->type == TOKEN_FUNCTION) {
+                Token *functionToken = current();
+                parser_eat(parser, TOKEN_FUNCTION);
+                char *keyName = current()->string;
+                parser_eat(parser, TOKEN_KEYWORD);
+                list_add(node->keys, strdup(keyName));
+                list_add(node->nodes, node_new_value(functionToken, parser_function(parser)));
+            } else {
+                Token *keyToken = current();
+                char *keyName = current()->string;
+                parser_eat(parser, TOKEN_KEYWORD);
+                list_add(node->keys, strdup(keyName));
+                if (current()->type == TOKEN_ASSIGN) {
+                    parser_eat(parser, TOKEN_ASSIGN);
+                    list_add(node->nodes, parser_tenary(parser));
+                } else {
+                    list_add(node->nodes, node_new_string(NODE_VARIABLE, keyToken, keyName));
+                }
+            }
             if (current()->type == TOKEN_COMMA) {
                 parser_eat(parser, TOKEN_COMMA);
             } else {
@@ -1582,36 +1566,7 @@ Node *parser_primary(Parser *parser) {
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
-        List *arguments = list_new();
-        parser_eat(parser, TOKEN_LPAREN);
-        while (current()->type != TOKEN_RPAREN) {
-            list_add(arguments, parser_argument(parser));
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
-            } else {
-                break;
-            }
-        }
-        parser_eat(parser, TOKEN_RPAREN);
-
-        ValueType returnType = VALUE_ANY;
-        if (current()->type == TOKEN_COLON) {
-            parser_eat(parser, TOKEN_COLON);
-            if (token_type_is_type(current()->type)) {
-                returnType = token_type_to_value_type(current()->type);
-                parser_eat(parser, current()->type);
-            } else {
-                error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
-            }
-        }
-
-        if (current()->type == TOKEN_FAT_ARROW) {
-            Token *token = current();
-            parser_eat(parser, TOKEN_FAT_ARROW);
-            Node *returnNode = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
-            return node_new_value(functionToken, value_new_function(arguments, returnType, returnNode));
-        }
-        return parser_primary_suffix(parser, node_new_value(functionToken, value_new_function(arguments, returnType, parser_block(parser))));
+        return parser_primary_suffix(parser, node_new_value(functionToken, parser_function(parser)));
     }
 
     error(parser->text, current()->line, current()->position, "Unexpected token: '%s'", token_type_to_string(current()->type));
@@ -1650,6 +1605,38 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
         return callNode;
     }
     return node;
+}
+
+Value *parser_function(Parser *parser) {
+    List *arguments = list_new();
+    parser_eat(parser, TOKEN_LPAREN);
+    while (current()->type != TOKEN_RPAREN) {
+        list_add(arguments, parser_argument(parser));
+        if (current()->type == TOKEN_COMMA) {
+            parser_eat(parser, TOKEN_COMMA);
+        } else {
+            break;
+        }
+    }
+    parser_eat(parser, TOKEN_RPAREN);
+
+    ValueType returnType = VALUE_ANY;
+    if (current()->type == TOKEN_COLON) {
+        parser_eat(parser, TOKEN_COLON);
+        if (token_type_is_type(current()->type)) {
+            returnType = token_type_to_value_type(current()->type);
+            parser_eat(parser, current()->type);
+        } else {
+            error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
+        }
+    }
+
+    if (current()->type == TOKEN_FAT_ARROW) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_FAT_ARROW);
+        return value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_tenary(parser)));
+    }
+    return value_new_function(arguments, returnType, parser_block(parser));
 }
 
 Argument *parser_argument(Parser *parser) {

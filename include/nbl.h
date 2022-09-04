@@ -417,6 +417,7 @@ Node *parser_mul(Parser *parser);
 Node *parser_unary(Parser *parser);
 Node *parser_primary(Parser *parser);
 Node *parser_primary_suffix(Parser *parser, Node *node);
+Value *parser_function(Parser *parser);
 Argument *parser_argument(Parser *parser);
 
 // Interpreter
