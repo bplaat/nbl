@@ -486,11 +486,11 @@ typedef struct Scope {
     BlockScope *block;
 } Scope;
 
+Variable *block_scope_get(BlockScope *block, char *key);
+
 Value *interpreter(char *text, Map *env, Node *node);
 
 Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments);
-
-Variable *block_scope_get(BlockScope *block, char *key);
 
 Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments);
 

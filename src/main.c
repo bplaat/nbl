@@ -1,5 +1,9 @@
-#include <time.h>
-
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 #include "nbl.h"
 
 // Fix missing math constants
@@ -46,6 +50,25 @@ char *file_read(char *path) {
     buffer[fileSize] = '\0';
     fclose(file);
     return buffer;
+}
+
+int64_t time_ms(void) {
+#ifdef _WIN32
+    SYSTEMTIME localTime;
+    GetLocalTime(&localTime);
+    FILETIME filetime;
+    SystemTimeToFileTime(&localTime, &fileTime);
+    LARGE_INTEGER date, adjust;
+    date.HighPart = ft.dwHighDateTime;
+    date.LowPart = ft.dwLowDateTime;
+    adjust.QuadPart = 11644473600000 * 10000;
+    date.QuadPart -= adjust.QuadPart;
+    return date.QuadPart / 10000;
+#else
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    return time.tv_sec * 1000 + time.tv_usec;
+#endif
 }
 
 // Standard library
@@ -338,6 +361,13 @@ Value *env_object_values(Value *this, List *values) {
     return value_new_array(items);
 }
 
+// Date
+Value *env_date_now(Value *this, List *values) {
+    (void)this;
+    (void)values;
+    return value_new_int(time_ms());
+}
+
 // Root
 Value *env_type(Value *this, List *values) {
     (void)this;
@@ -360,12 +390,6 @@ Value *env_println(Value *this, List *values) {
     Value *value = env_print(this, values);
     printf("\n");
     return value;
-}
-
-Value *env_time(Value *this, List *values) {
-    (void)this;
-    (void)values;
-    return value_new_int(time(NULL));
 }
 
 Value *env_exit(Value *this, List *values) {
@@ -419,7 +443,7 @@ Map *std_env(void) {
     map_set(math, "max", value_new_native_function(list_ref(empty_args), VALUE_ANY, env_math_max));
     map_set(math, "exp", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_exp));
     map_set(math, "log", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log));
-    random_seed = time(NULL);
+    random_seed = time_ms();
     map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
 
     // String
@@ -449,6 +473,11 @@ Map *std_env(void) {
     map_set(object, "keys", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_keys));
     map_set(object, "values", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_values));
 
+    // Date
+    Map *date = map_new();
+    map_set(env, "Date", variable_new(VALUE_CLASS, false, value_new_class(date, NULL, false)));
+    map_set(date, "now", value_new_native_function(list_ref(empty_args), VALUE_INT, env_date_now));
+
     // Root
     List *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
@@ -456,8 +485,6 @@ Map *std_env(void) {
 
     map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, VALUE_NULL, env_print)));
     map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_NULL, env_println)));
-
-    map_set(env, "time", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_INT, env_time)));
 
     List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));

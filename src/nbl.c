@@ -1836,15 +1836,6 @@ Argument *parser_argument(Parser *parser) {
     return argument_new(name, type, defaultNode);
 }
 
-// Standard library header
-Value *env_type(List *values);
-Value *env_print(List *values);
-Value *env_println(List *values);
-Value *env_exit(List *values);
-Value *env_array_length(List *values);
-Value *env_array_push(List *values);
-Value *env_string_length(List *values);
-
 // Interpreter
 Variable *variable_new(ValueType type, bool mutable, Value *value) {
     Variable *variable = malloc(sizeof(Variable));
@@ -1857,6 +1848,14 @@ Variable *variable_new(ValueType type, bool mutable, Value *value) {
 void variable_free(Variable *variable) {
     value_free(variable->value);
     free(variable);
+}
+
+Variable *block_scope_get(BlockScope *block, char *key) {
+    Variable *variable = map_get(block->env, key);
+    if (variable == NULL && block->parentBlock != NULL) {
+        return block_scope_get(block->parentBlock, key);
+    }
+    return variable;
 }
 
 Value *interpreter(char *text, Map *env, Node *node) {
@@ -1881,14 +1880,6 @@ Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                    .block = &(BlockScope){.parentBlock = NULL, .env = env}};
     return interpreter_function(&interpreter, &scope, NULL, function, this, arguments);
-}
-
-Variable *block_scope_get(BlockScope *block, char *key) {
-    Variable *variable = map_get(block->env, key);
-    if (variable == NULL && block->parentBlock != NULL) {
-        return block_scope_get(block->parentBlock, key);
-    }
-    return variable;
 }
 
 #define interpreter_statement_in_loop(interpreter, scope, node, cleanup) \
@@ -1920,7 +1911,8 @@ Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, 
                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
     if (this != NULL) {
         if (this->instanceClass->parentClass != NULL) {
-            map_set(functionScope.block->env, "super", variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
+            map_set(functionScope.block->env, "super",
+                    variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
         }
         map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
     }
@@ -2151,8 +2143,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return objectValue;
     }
     if (node->type == NODE_CLASS) {
-        Value *classValue =
-            value_new_class(map_new_with_capacity(node->object->capacity), node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
+        Value *classValue = value_new_class(map_new_with_capacity(node->object->capacity),
+                                            node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
         map_foreach(node->object, char *key, Node *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
         return classValue;
     }
