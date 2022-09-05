@@ -29,8 +29,8 @@ typedef struct List {
 } List;
 
 #define list_foreach(list, item, block)       \
-    for (size_t i = 0; i < list->size; i++) { \
-        item = list_get(list, i);             \
+    for (size_t index = 0; index < list->size; index++) { \
+        item = list_get(list, index);             \
         block                                 \
     }
 
@@ -62,9 +62,9 @@ typedef struct Map {
 } Map;
 
 #define map_foreach(map, key, value, block)  \
-    for (size_t i = 0; i < map->size; i++) { \
-        key = map->keys[i];                  \
-        value = map->values[i];              \
+    for (size_t index = 0; index < map->size; index++) { \
+        key = map->keys[index];                  \
+        value = map->values[index];              \
         block                                \
     }
 
@@ -478,7 +478,11 @@ typedef struct Scope {
 
 Value *interpreter(char *text, Map *env, Node *node);
 
+Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments);
+
 Variable *block_scope_get(BlockScope *block, char *key);
+
+Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments);
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
 

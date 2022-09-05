@@ -46,6 +46,8 @@ y = 3; // Error: can't mutate a const variable
 const names = [ 'Bastiaan', 'Jan', 'Dirk' ];
 println(names.length());
 println(names[1]);
+
+println([1,2,3,4,5].map(fn (x) => x * 2));
 ```
 
 ## Objects

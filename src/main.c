@@ -36,6 +36,22 @@ double random_random(void) {
     return x - floor(x);
 }
 
+char *file_read(char *path) {
+    FILE *file = fopen(path, "rb");
+    fseek(file, 0, SEEK_END);
+    size_t fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *buffer = malloc(fileSize + 1);
+    fileSize = fread(buffer, 1, fileSize, file);
+    buffer[fileSize] = '\0';
+    fclose(file);
+    return buffer;
+}
+
+// Standard library
+char *script_text;
+Map *script_env;
+
 // Math
 Value *env_math_abs(Value *this, List *values) {
     (void)this;
@@ -225,6 +241,60 @@ Value *env_array_push(Value *this, List *values) {
     list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
+Value *env_array_map(Value *this, List *values) {
+    Value *function = list_get(values, 0);
+    List *items = list_new();
+    list_foreach(this->array, Value * value, {
+        List *arguments = list_new();
+        list_add(arguments, value_retrieve(value));
+        list_add(arguments, value_new_int(index));
+        list_add(arguments, value_ref(this));
+        list_add(items, interpreter_call(script_text, script_env, function, NULL, arguments));
+        list_free(arguments, (ListFreeFunc *)value_free);
+    });
+    return value_new_array(items);
+}
+Value *env_array_filter(Value *this, List *values) {
+    Value *function = list_get(values, 0);
+    List *items = list_new();
+    list_foreach(this->array, Value * value, {
+        List *arguments = list_new();
+        list_add(arguments, value_retrieve(value));
+        list_add(arguments, value_new_int(index));
+        list_add(arguments, value_ref(this));
+        Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
+        if (returnValue->type != VALUE_BOOL) {
+            error(script_text, 0, 0, "Array filter condition type is not a bool");
+        }
+        if (returnValue->boolean) {
+            list_add(items, value);
+        }
+        value_free(returnValue);
+        list_free(arguments, (ListFreeFunc *)value_free);
+    });
+    return value_new_array(items);
+}
+Value *env_array_find(Value *this, List *values) {
+    Value *function = list_get(values, 0);
+    list_foreach(this->array, Value * value, {
+        List *arguments = list_new();
+        list_add(arguments, value_retrieve(value));
+        list_add(arguments, value_new_int(index));
+        list_add(arguments, value_ref(this));
+        Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
+        if (returnValue->type != VALUE_BOOL) {
+            error(script_text, 0, 0, "Array find condition type is not a bool");
+        }
+        if (returnValue->boolean) {
+            value_free(returnValue);
+            list_free(arguments, (ListFreeFunc *)value_free);
+            return value_retrieve(value);
+        }
+        value_free(returnValue);
+        list_free(arguments, (ListFreeFunc *)value_free);
+    });
+    return value_new_null();
+}
 
 // Object
 Value *env_object_constructor(Value *this, List *values) {
@@ -348,10 +418,15 @@ Map *std_env(void) {
 
     // Array
     Map *array = map_new();
+    List *array_function_args = list_new();
+    list_add(array_function_args, argument_new("function", VALUE_FUNCTION, NULL));
     map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array)));
     map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
     map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
     map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
+    map_set(array, "map", value_new_native_function(array_function_args, VALUE_ARRAY, env_array_map));
+    map_set(array, "filter", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_filter));
+    map_set(array, "find", value_new_native_function(list_ref(array_function_args), VALUE_ANY, env_array_find));
 
     // Object
     Map *object = map_new();
@@ -378,21 +453,10 @@ Map *std_env(void) {
     return env;
 }
 
-char *file_read(char *path) {
-    FILE *file = fopen(path, "rb");
-    fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *buffer = malloc(fileSize + 1);
-    fileSize = fread(buffer, 1, fileSize, file);
-    buffer[fileSize] = '\0';
-    fclose(file);
-    return buffer;
-}
-
 void repl(void) {
-    Map *env = std_env();
+    script_env = std_env();
     char *command = malloc(1024);
+    script_text = command;
     for (;;) {
         // Read
         printf("> ");
@@ -413,7 +477,7 @@ void repl(void) {
         }
 
         // Run
-        Value *returnValue = interpreter(command, env, node);
+        Value *returnValue = interpreter(command, script_env, node);
         if (returnValue != NULL) {
             char *string = value_to_string(returnValue);
             printf("%s\n", string);
@@ -426,7 +490,7 @@ void repl(void) {
         list_free(tokens, (ListFreeFunc *)token_free);
     }
     free(command);
-    map_free(env, (MapFreeFunc *)variable_free);
+    map_free(script_env, (MapFreeFunc *)variable_free);
 }
 
 int main(int argc, char **argv) {
@@ -437,32 +501,32 @@ int main(int argc, char **argv) {
     }
 
     // Read and parse
-    char *text = file_read(argv[1]);
-    List *tokens = lexer(text);
+    script_text = file_read(argv[1]);
+    List *tokens = lexer(script_text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
     // printf("\n");
-    Node *node = parser(text, tokens);
+    Node *node = parser(script_text, tokens);
 
     // Run
-    Map *env = std_env();
+    script_env = std_env();
     List *arguments = list_new();
     for (int i = 2; i < argc; i++) {
         list_add(arguments, value_new_string(argv[i]));
     }
-    map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
+    map_set(script_env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
 
-    Value *returnValue = interpreter(text, env, node);
+    Value *returnValue = interpreter(script_text, script_env, node);
     if (returnValue->type == VALUE_INT) {
         exit(returnValue->integer);
     }
     value_free(returnValue);
 
     // Cleanup
-    map_free(env, (MapFreeFunc *)variable_free);
+    map_free(script_env, (MapFreeFunc *)variable_free);
     node_free(node);
     list_free(tokens, (ListFreeFunc *)token_free);
-    free(text);
+    free(script_text);
     return EXIT_SUCCESS;
 }

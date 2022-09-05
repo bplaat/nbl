@@ -1838,6 +1838,14 @@ Value *interpreter(char *text, Map *env, Node *node) {
     }
 }
 
+Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments) {
+    Interpreter interpreter = {.text = text, .env = env};
+    Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
+                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                   .block = &(BlockScope){.parentBlock = NULL, .env = env}};
+    return interpreter_function(&interpreter, &scope, NULL, function, this, arguments);
+}
+
 Variable *block_scope_get(BlockScope *block, char *key) {
     Variable *variable = map_get(block->env, key);
     if (variable == NULL && block->parentBlock != NULL) {
@@ -1868,6 +1876,36 @@ Variable *block_scope_get(BlockScope *block, char *key) {
             return NULL;                                              \
         }                                                             \
     }
+
+Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments) {
+    Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
+                           .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                           .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+    if (this != NULL) {
+        map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
+    }
+    map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
+    for (size_t i = 0; i < function->arguments->size; i++) {
+        Argument *argument = list_get(function->arguments, i);
+        map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(arguments, i))));
+    }
+    interpreter_node(interpreter, &functionScope, function->functionNode);
+    if (function->returnType != VALUE_ANY && functionScope.function->returnValue->type != function->returnType) {
+        if (node == NULL){
+            fprintf(stderr, "Unexpected function return type: '%s' needed '%s'",
+                value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(function->returnType));
+            exit(1);
+        }
+        error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+              value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(function->returnType));
+    }
+    map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
+
+    if (functionScope.function->returnValue != NULL) {
+        return functionScope.function->returnValue;
+    }
+    return value_new_null();
+}
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_PROGRAM) {
@@ -2132,29 +2170,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         Value *returnValue = NULL;
         if (callValue->type == VALUE_FUNCTION) {
-            Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
-                                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                                   .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
-            if (thisValue != NULL) {
-                map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(thisValue)));
-            }
-            map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(values))));
-            for (size_t i = 0; i < callValue->arguments->size; i++) {
-                Argument *argument = list_get(callValue->arguments, i);
-                map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(values, i))));
-            }
-            interpreter_node(interpreter, &functionScope, callValue->functionNode);
-            if (callValue->returnType != VALUE_ANY && functionScope.function->returnValue->type != callValue->returnType) {
-                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                      value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(callValue->returnType));
-            }
-            map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
-
-            if (functionScope.function->returnValue != NULL) {
-                returnValue = functionScope.function->returnValue;
-            } else {
-                returnValue = value_new_null();
-            }
+            returnValue = interpreter_function(interpreter, scope, node, callValue, thisValue, values);
         }
 
         if (callValue->type == VALUE_NATIVE_FUNCTION) {
@@ -2167,28 +2183,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         if (callValue->type == VALUE_CLASS) {
             Value *instance = value_new_instance(map_new(), value_ref(callValue));
+            returnValue = instance;
 
             Value *constructorFunction = map_get(callValue->object, "constructor");
             if (constructorFunction != NULL) {
                 if (constructorFunction->type == VALUE_FUNCTION) {
-                    Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
-                                           .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                                           .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
-                    map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(instance)));
-                    map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(values))));
-                    for (size_t i = 0; i < constructorFunction->arguments->size; i++) {
-                        Argument *argument = list_get(constructorFunction->arguments, i);
-                        map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(values, i))));
-                    }
-                    interpreter_node(interpreter, &functionScope, constructorFunction->functionNode);
-                    if (constructorFunction->returnType != VALUE_ANY && functionScope.function->returnValue->type != constructorFunction->returnType) {
-                        error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
-                              value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(constructorFunction->returnType));
-                    }
-                    map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
-
-                    if (functionScope.function->returnValue != NULL) {
-                        returnValue = functionScope.function->returnValue;
+                    Value *newReturnValue = interpreter_function(interpreter, scope, node, constructorFunction, instance, values);
+                    if (newReturnValue->type == VALUE_NULL) {
+                        value_free(newReturnValue);
+                    } else {
+                        returnValue = newReturnValue;
                         value_free(instance);
                     }
                 }
@@ -2204,9 +2208,6 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                               value_type_to_string(returnValue->type), value_type_to_string(constructorFunction->returnType));
                     }
                 }
-            }
-            if (returnValue == NULL) {
-                returnValue = instance;
             }
         }
 
