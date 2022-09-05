@@ -1,0 +1,20 @@
+let sum = 0;
+let i = 0;
+while (i < 10) {
+    sum += i;
+    i += 1;
+}
+assert(sum == 45);
+
+sum = 0;
+for (let i = 0; i < 10; i += 1) {
+    sum += i;
+}
+assert(sum == 45);
+
+const cities = ['Gouda', 'Rotterdam', 'Amsterdam'];
+let str = '';
+for (const city in cities) {
+    str += city;
+}
+assert(str == 'GoudaRotterdamAmsterdam');

@@ -431,6 +431,15 @@ Value *env_exit(Value *this, List *values) {
     return value_new_null();
 }
 
+Value *env_assert(Value *this, List *values) {
+    (void)this;
+    Value *assertion = list_get(values, 0);
+    if (!assertion->boolean) {
+        error(script_text, ((Node *)this)->token->line, ((Node *)this)->token->position, "Assertion failed");
+    }
+    return value_new_null();
+}
+
 Map *std_env(void) {
     Map *env = map_new();
 
@@ -519,6 +528,10 @@ Map *std_env(void) {
     List *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
     map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
+
+    List *assertion_args = list_new();
+    list_add(assertion_args, argument_new("assertion", VALUE_ANY, NULL));
+    map_set(env, "assert", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(assertion_args, VALUE_NULL, env_assert)));
 
     return env;
 }

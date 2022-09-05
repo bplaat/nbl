@@ -1,0 +1,55 @@
+class Person {
+    SOME_STATIC_VAR = 'data',
+
+    fn constructor(name, age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    fn greet() {
+        return this.name + '-' + (string)this['age'];
+    }
+}
+
+const bastiaan: instance = Person('Bastiaan', 20);
+assert(bastiaan.greet() == 'Bastiaan-20');
+assert(type(Person) == 'class');
+assert(type(bastiaan) == 'instance');
+assert(Person.SOME_STATIC_VAR == 'data');
+assert(bastiaan.SOME_STATIC_VAR == 'data');
+
+const Animal = abstract class {
+    fn constructor(name: string) {
+        this.name = name;
+    }
+};
+
+const Dog = class extends Animal {
+    fn constructor(name: string, age: int = 5) {
+        super.constructor(name);
+        this.age = age;
+    }
+
+    fn jump() {
+        return 'jump-' + this.name + '-' + (this.age == 1 ? 'year' : 'years');
+    }
+};
+
+class Cat extends Animal {
+    fn jump() {
+        return 'jump-' + this.name;
+    }
+}
+
+let milo = Dog('Milo');
+assert(type(Dog) == 'class');
+assert(type(milo) == 'instance');
+assert(milo.jump() == 'jump-Milo-years');
+
+let woof = Dog('Woof', 1);
+assert(woof.jump() == 'jump-Woof-year');
+
+let cat = Cat('Minoes');
+assert(type(Cat) == 'class');
+assert(type(cat) == 'instance');
+assert(cat.jump() == 'jump-Minoes');

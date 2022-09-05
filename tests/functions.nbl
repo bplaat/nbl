@@ -1,0 +1,27 @@
+fn double(n: int): int => n * 2;
+assert(double(10) == 20);
+
+class User {
+    fn constructor(username) {
+        this.username = username;
+    }
+}
+const users = [
+    User('bplaat'),
+    User('jan')
+];
+assert(users.map(fn (user) => user.username)[0] == 'bplaat');
+
+fn sum() {
+    let sum: int = 0;
+    for (let i: int = 0; i < arguments.length(); i += 1) {
+        sum += (int)arguments[i];
+    }
+    return sum;
+}
+assert(sum(1, 2, '3', '4', '5') == 15);
+
+fn doubleCallback(callback: function): int {
+    return callback() * 2;
+}
+assert(doubleCallback(fn () => 10) == 20);

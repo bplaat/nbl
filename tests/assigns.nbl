@@ -1,0 +1,18 @@
+const x = 10;
+assert(x == 10);
+
+const str = 'Hello!';
+assert(str[1] == 'e');
+assert(str[100] == null);
+
+const numbers = [0, 2, 4, 8];
+assert(numbers[1] == 2);
+assert(numbers[10] == null);
+
+const person = {
+    name = 'Bastiaan',
+    age = 20
+};
+assert(person.name == 'Bastiaan');
+const age = 'age';
+assert(type(person[age]) == 'int');

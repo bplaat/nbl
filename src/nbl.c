@@ -17,7 +17,7 @@ void error(char *text, size_t line, size_t position, char *fmt, ...) {
         c++;
     }
     char *lineStart = c;
-    while (*c != '\n' && *c != '\r') c++;
+    while (*c != '\n' && *c != '\r' && *c != '\0') c++;
     size_t lineLength = c - lineStart;
 
     fprintf(stderr, "\n%4zu | ", line + 1);
@@ -1421,39 +1421,17 @@ Node *parser_tenary(Parser *parser) {
 }
 
 Node *parser_logical(Parser *parser) {
-    Node *node = parser_bitwise(parser);
+    Node *node = parser_equality(parser);
     while (current()->type == TOKEN_LOGICAL_AND || current()->type == TOKEN_LOGICAL_OR) {
         if (current()->type == TOKEN_LOGICAL_AND) {
             Token *token = current();
             parser_eat(parser, TOKEN_LOGICAL_AND);
-            node = node_new_operation(NODE_LOGICAL_AND, token, node, parser_bitwise(parser));
+            node = node_new_operation(NODE_LOGICAL_AND, token, node, parser_equality(parser));
         }
         if (current()->type == TOKEN_LOGICAL_OR) {
             Token *token = current();
             parser_eat(parser, TOKEN_LOGICAL_OR);
-            node = node_new_operation(NODE_LOGICAL_OR, token, node, parser_bitwise(parser));
-        }
-    }
-    return node;
-}
-
-Node *parser_bitwise(Parser *parser) {
-    Node *node = parser_equality(parser);
-    while (current()->type == TOKEN_AND || current()->type == TOKEN_XOR || current()->type == TOKEN_OR) {
-        if (current()->type == TOKEN_AND) {
-            Token *token = current();
-            parser_eat(parser, TOKEN_AND);
-            node = node_new_operation(NODE_AND, token, node, parser_equality(parser));
-        }
-        if (current()->type == TOKEN_XOR) {
-            Token *token = current();
-            parser_eat(parser, TOKEN_XOR);
-            node = node_new_operation(NODE_XOR, token, node, parser_equality(parser));
-        }
-        if (current()->type == TOKEN_OR) {
-            Token *token = current();
-            parser_eat(parser, TOKEN_OR);
-            node = node_new_operation(NODE_OR, token, node, parser_equality(parser));
+            node = node_new_operation(NODE_LOGICAL_OR, token, node, parser_equality(parser));
         }
     }
     return node;
@@ -1477,27 +1455,49 @@ Node *parser_equality(Parser *parser) {
 }
 
 Node *parser_relational(Parser *parser) {
-    Node *node = parser_shift(parser);
+    Node *node = parser_bitwise(parser);
     while (current()->type == TOKEN_LT || current()->type == TOKEN_LTEQ || current()->type == TOKEN_GT || current()->type == TOKEN_GTEQ) {
         if (current()->type == TOKEN_LT) {
             Token *token = current();
             parser_eat(parser, TOKEN_LT);
-            node = node_new_operation(NODE_LT, token, node, parser_shift(parser));
+            node = node_new_operation(NODE_LT, token, node, parser_bitwise(parser));
         }
         if (current()->type == TOKEN_LTEQ) {
             Token *token = current();
             parser_eat(parser, TOKEN_LTEQ);
-            node = node_new_operation(NODE_LTEQ, token, node, parser_shift(parser));
+            node = node_new_operation(NODE_LTEQ, token, node, parser_bitwise(parser));
         }
         if (current()->type == TOKEN_GT) {
             Token *token = current();
             parser_eat(parser, TOKEN_GT);
-            node = node_new_operation(NODE_GT, token, node, parser_shift(parser));
+            node = node_new_operation(NODE_GT, token, node, parser_bitwise(parser));
         }
         if (current()->type == TOKEN_GTEQ) {
             Token *token = current();
             parser_eat(parser, TOKEN_GTEQ);
-            node = node_new_operation(NODE_GTEQ, token, node, parser_shift(parser));
+            node = node_new_operation(NODE_GTEQ, token, node, parser_bitwise(parser));
+        }
+    }
+    return node;
+}
+
+Node *parser_bitwise(Parser *parser) {
+    Node *node = parser_shift(parser);
+    while (current()->type == TOKEN_AND || current()->type == TOKEN_XOR || current()->type == TOKEN_OR) {
+        if (current()->type == TOKEN_AND) {
+            Token *token = current();
+            parser_eat(parser, TOKEN_AND);
+            node = node_new_operation(NODE_AND, token, node, parser_shift(parser));
+        }
+        if (current()->type == TOKEN_XOR) {
+            Token *token = current();
+            parser_eat(parser, TOKEN_XOR);
+            node = node_new_operation(NODE_XOR, token, node, parser_shift(parser));
+        }
+        if (current()->type == TOKEN_OR) {
+            Token *token = current();
+            parser_eat(parser, TOKEN_OR);
+            node = node_new_operation(NODE_OR, token, node, parser_shift(parser));
         }
     }
     return node;
@@ -1711,7 +1711,7 @@ Node *parser_primary(Parser *parser) {
 }
 
 Node *parser_primary_suffix(Parser *parser, Node *node) {
-    while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT) {
+    while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT || current()->type == TOKEN_LPAREN) {
         Token *token = current();
         if (current()->type == TOKEN_LBRACKET) {
             parser_eat(parser, TOKEN_LBRACKET);
@@ -1726,21 +1726,21 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
             parser_eat(parser, TOKEN_KEYWORD);
             node = node_new_operation(NODE_GET, token, node, node_new_value(keyToken, value_new_string(key)));
         }
-    }
-    if (current()->type == TOKEN_LPAREN) {
-        Node *callNode = node_new_multiple(NODE_CALL, current());
-        callNode->function = node;
-        parser_eat(parser, TOKEN_LPAREN);
-        while (current()->type != TOKEN_RPAREN) {
-            list_add(callNode->nodes, parser_assign(parser));
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
-            } else {
-                break;
+        if (current()->type == TOKEN_LPAREN) {
+            Node *callNode = node_new_multiple(NODE_CALL, current());
+            callNode->function = node;
+            parser_eat(parser, TOKEN_LPAREN);
+            while (current()->type != TOKEN_RPAREN) {
+                list_add(callNode->nodes, parser_assign(parser));
+                if (current()->type == TOKEN_COMMA) {
+                    parser_eat(parser, TOKEN_COMMA);
+                } else {
+                    break;
+                }
             }
+            parser_eat(parser, TOKEN_RPAREN);
+            node = callNode;
         }
-        parser_eat(parser, TOKEN_RPAREN);
-        return callNode;
     }
     return node;
 }
@@ -2211,7 +2211,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         if (callValue->type == VALUE_NATIVE_FUNCTION) {
-            returnValue = callValue->nativeFunc(thisValue, values);
+            bool isAssert = node->function->type == NODE_VARIABLE && !strcmp(node->function->string, "assert");
+            returnValue = callValue->nativeFunc(isAssert ? (Value *)node : thisValue, values);
             if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
                 error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
                       value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
