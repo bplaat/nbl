@@ -787,10 +787,10 @@ Value *value_new_class(Map *object, Value *parentClass, bool abstract) {
     return value;
 }
 
-Value *value_new_instance(Map *object, Value *parentClass) {
+Value *value_new_instance(Map *object, Value *instanceClass) {
     Value *value = value_new(VALUE_INSTANCE);
     value->object = object;
-    value->parentClass = parentClass;
+    value->instanceClass = instanceClass;
     return value;
 }
 
@@ -1919,8 +1919,8 @@ Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, 
                            .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
     if (this != NULL) {
-        if (this->parentClass->parentClass != NULL) {
-            map_set(functionScope.block->env, "super", variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->parentClass->parentClass))));
+        if (this->instanceClass->parentClass != NULL) {
+            map_set(functionScope.block->env, "super", variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
         }
         map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
     }

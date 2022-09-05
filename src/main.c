@@ -241,6 +241,18 @@ Value *env_array_push(Value *this, List *values) {
     list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
+Value *env_array_foreach(Value *this, List *values) {
+    Value *function = list_get(values, 0);
+    list_foreach(this->array, Value * value, {
+        List *arguments = list_new();
+        list_add(arguments, value_retrieve(value));
+        list_add(arguments, value_new_int(index));
+        list_add(arguments, value_ref(this));
+        interpreter_call(script_text, script_env, function, NULL, arguments);
+        list_free(arguments, (ListFreeFunc *)value_free);
+    });
+    return value_new_null();
+}
 Value *env_array_map(Value *this, List *values) {
     Value *function = list_get(values, 0);
     List *items = list_new();
@@ -424,7 +436,8 @@ Map *std_env(void) {
     map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
     map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
     map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
-    map_set(array, "map", value_new_native_function(array_function_args, VALUE_ARRAY, env_array_map));
+    map_set(array, "forEach", value_new_native_function(array_function_args, VALUE_NULL, env_array_foreach));
+    map_set(array, "map", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_map));
     map_set(array, "filter", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_filter));
     map_set(array, "find", value_new_native_function(list_ref(array_function_args), VALUE_ANY, env_array_find));
 

@@ -247,7 +247,10 @@ struct Value {
         List *array;
         struct {
             Map *object;
-            Value *parentClass;
+            union {
+                Value *parentClass;
+                Value *instanceClass;
+            };
             bool abstract;
         };
         struct {
@@ -279,7 +282,7 @@ Value *value_new_object(Map *object);
 
 Value *value_new_class(Map *object, Value *parentClass, bool abstract);
 
-Value *value_new_instance(Map *object, Value *parentClass);
+Value *value_new_instance(Map *object, Value *instanceClass);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
