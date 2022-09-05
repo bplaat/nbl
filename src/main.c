@@ -436,7 +436,7 @@ Map *std_env(void) {
     map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
     map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
     map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
-    map_set(array, "forEach", value_new_native_function(array_function_args, VALUE_NULL, env_array_foreach));
+    map_set(array, "foreach", value_new_native_function(array_function_args, VALUE_NULL, env_array_foreach));
     map_set(array, "map", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_map));
     map_set(array, "filter", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_filter));
     map_set(array, "find", value_new_native_function(list_ref(array_function_args), VALUE_ANY, env_array_find));
