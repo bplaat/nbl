@@ -779,9 +779,11 @@ Value *value_new_object(Map *object) {
     return value;
 }
 
-Value *value_new_class(Map *object) {
+Value *value_new_class(Map *object, Value *parentClass, bool abstract) {
     Value *value = value_new(VALUE_CLASS);
     value->object = object;
+    value->parentClass = parentClass;
+    value->abstract = abstract;
     return value;
 }
 
@@ -913,6 +915,17 @@ ValueType token_type_to_value_type(TokenType type) {
     return 0;
 }
 
+Value *value_class_get(Value *instance, char *key) {
+    Value *value = map_get(instance->object, key);
+    if (value != NULL) {
+        return value;
+    }
+    if (instance->parentClass != NULL) {
+        return value_class_get(instance->parentClass, key);
+    }
+    return NULL;
+}
+
 Value *value_ref(Value *value) {
     value->refs++;
     return value;
@@ -936,7 +949,9 @@ void value_clear(Value *value) {
     }
     if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
         map_free(value->object, (MapFreeFunc *)value_free);
-        if (value->type == VALUE_INSTANCE) value_free(value->parentClass);
+        if ((value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) && value->parentClass != NULL) {
+            value_free(value->parentClass);
+        }
     }
     if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
         list_free(value->arguments, (ListFreeFunc *)argument_free);
@@ -1025,6 +1040,9 @@ void node_free(Node *node) {
     }
     if (node->type == NODE_OBJECT || node->type == NODE_CLASS) {
         map_free(node->object, (MapFreeFunc *)node_free);
+        if (node->type == NODE_CLASS && node->parentClass != NULL) {
+            node_free(node->parentClass);
+        }
     }
     if (node->type == NODE_RETURN || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
         node_free(node->unary);
@@ -1209,20 +1227,24 @@ Node *parser_statement(Parser *parser) {
         Token *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-        Node *valueNode = node_new_value(functionToken, parser_function(parser));
-        Node *node = node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), valueNode);
+        Node *node =
+            node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_function(parser, functionToken));
         node->declarationType = VALUE_FUNCTION;
         return node;
     }
-    if (current()->type == TOKEN_CLASS) {
+    if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
         Token *classToken = current();
-        Node *classNode = node_new(NODE_CLASS, current());
+        bool abstract = false;
+        if (current()->type == TOKEN_ABSTRACT) {
+            abstract = true;
+            parser_eat(parser, TOKEN_ABSTRACT);
+        }
         parser_eat(parser, TOKEN_CLASS);
         Token *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-        classNode->object = parser_class(parser);
-        Node *node = node_new_operation(NODE_CONST_ASSIGN, classToken, node_new_string(NODE_VARIABLE, nameToken, name), classNode);
+        Node *node =
+            node_new_operation(NODE_CONST_ASSIGN, classToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_class(parser, classToken, abstract));
         node->declarationType = VALUE_CLASS;
         return node;
     }
@@ -1646,7 +1668,7 @@ Node *parser_primary(Parser *parser) {
                 parser_eat(parser, TOKEN_FUNCTION);
                 char *keyName = current()->string;
                 parser_eat(parser, TOKEN_KEYWORD);
-                map_set(node->object, keyName, node_new_value(functionToken, parser_function(parser)));
+                map_set(node->object, keyName, parser_function(parser, functionToken));
                 continue;
             }
 
@@ -1671,13 +1693,17 @@ Node *parser_primary(Parser *parser) {
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
-        return parser_primary_suffix(parser, node_new_value(functionToken, parser_function(parser)));
+        return parser_primary_suffix(parser, parser_function(parser, functionToken));
     }
-    if (current()->type == TOKEN_CLASS) {
-        Node *node = node_new(NODE_CLASS, current());
+    if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
+        Token *classToken = current();
+        bool abstract = false;
+        if (current()->type == TOKEN_ABSTRACT) {
+            abstract = true;
+            parser_eat(parser, TOKEN_ABSTRACT);
+        }
         parser_eat(parser, TOKEN_CLASS);
-        node->object = parser_class(parser);
-        return node;
+        return parser_class(parser, classToken, abstract);
     }
 
     error(parser->text, current()->line, current()->position, "Unexpected token: '%s'", token_type_to_string(current()->type));
@@ -1719,7 +1745,7 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
     return node;
 }
 
-Value *parser_function(Parser *parser) {
+Node *parser_function(Parser *parser, Token *token) {
     List *arguments = list_new();
     parser_eat(parser, TOKEN_LPAREN);
     while (current()->type != TOKEN_RPAREN) {
@@ -1744,14 +1770,20 @@ Value *parser_function(Parser *parser) {
     }
 
     if (current()->type == TOKEN_FAT_ARROW) {
-        Token *token = current();
+        Token *fatArrowToken = current();
         parser_eat(parser, TOKEN_FAT_ARROW);
-        return value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, token, parser_tenary(parser)));
+        return node_new_value(token, value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, fatArrowToken, parser_tenary(parser))));
     }
-    return value_new_function(arguments, returnType, parser_block(parser));
+    return node_new_value(token, value_new_function(arguments, returnType, parser_block(parser)));
 }
 
-Map *parser_class(Parser *parser) {
+Node *parser_class(Parser *parser, Token *token, bool abstract) {
+    Node *parentClass = NULL;
+    if (current()->type == TOKEN_EXTENDS) {
+        parser_eat(parser, TOKEN_EXTENDS);
+        parentClass = parser_tenary(parser);
+    }
+
     Map *object = map_new();
     parser_eat(parser, TOKEN_LCURLY);
     while (current()->type != TOKEN_RCURLY) {
@@ -1760,7 +1792,7 @@ Map *parser_class(Parser *parser) {
             parser_eat(parser, TOKEN_FUNCTION);
             char *keyName = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
-            map_set(object, keyName, node_new_value(functionToken, parser_function(parser)));
+            map_set(object, keyName, parser_function(parser, functionToken));
             continue;
         }
 
@@ -1776,7 +1808,12 @@ Map *parser_class(Parser *parser) {
         }
     }
     parser_eat(parser, TOKEN_RCURLY);
-    return object;
+
+    Node *classNode = node_new(NODE_CLASS, token);
+    classNode->object = object;
+    classNode->parentClass = parentClass;
+    classNode->abstract = abstract;
+    return classNode;
 }
 
 Argument *parser_argument(Parser *parser) {
@@ -1882,6 +1919,9 @@ Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, 
                            .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
     if (this != NULL) {
+        if (this->parentClass->parentClass != NULL) {
+            map_set(functionScope.block->env, "super", variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->parentClass->parentClass))));
+        }
         map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
     }
     map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
@@ -1891,9 +1931,9 @@ Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, 
     }
     interpreter_node(interpreter, &functionScope, function->functionNode);
     if (function->returnType != VALUE_ANY && functionScope.function->returnValue->type != function->returnType) {
-        if (node == NULL){
-            fprintf(stderr, "Unexpected function return type: '%s' needed '%s'",
-                value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(function->returnType));
+        if (node == NULL) {
+            fprintf(stderr, "Unexpected function return type: '%s' needed '%s'", value_type_to_string(functionScope.function->returnValue->type),
+                    value_type_to_string(function->returnType));
             exit(1);
         }
         error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
@@ -2111,7 +2151,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return objectValue;
     }
     if (node->type == NODE_CLASS) {
-        Value *classValue = value_new_class(map_new_with_capacity(node->object->capacity));
+        Value *classValue =
+            value_new_class(map_new_with_capacity(node->object->capacity), node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
         map_foreach(node->object, char *key, Node *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
         return classValue;
     }
@@ -2134,7 +2175,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         List *arguments = NULL;
         if (callValue->type == VALUE_CLASS) {
-            Value *constructorFunction = map_get(callValue->object, "constructor");
+            if (callValue->abstract) {
+                error(interpreter->text, node->token->line, node->token->position, "Can't construct an abstract class");
+            }
+
+            Value *constructorFunction = value_class_get(callValue, "constructor");
             if (constructorFunction != NULL) arguments = constructorFunction->arguments;
         } else {
             arguments = callValue->arguments;
@@ -2185,7 +2230,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *instance = value_new_instance(map_new(), value_ref(callValue));
             returnValue = instance;
 
-            Value *constructorFunction = map_get(callValue->object, "constructor");
+            Value *constructorFunction = value_class_get(callValue, "constructor");
             if (constructorFunction != NULL) {
                 if (constructorFunction->type == VALUE_FUNCTION) {
                     Value *newReturnValue = interpreter_function(interpreter, scope, node, constructorFunction, instance, values);
@@ -2391,9 +2436,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 if (indexOrKey->type != VALUE_STRING) {
                     error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
                 }
-                Value *value = map_get(containerValue->object, indexOrKey->string);
-                if (containerValue->type == VALUE_INSTANCE && value == NULL) {
-                    value = map_get(containerValue->parentClass->object, indexOrKey->string);
+                Value *value;
+                if (containerValue->type == VALUE_INSTANCE) {
+                    value = value_class_get(containerValue, indexOrKey->string);
+                } else {
+                    value = map_get(containerValue->object, indexOrKey->string);
                 }
                 if (value == NULL) {
                     error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");

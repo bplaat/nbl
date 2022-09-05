@@ -66,7 +66,7 @@
 			"patterns": [
 				{
 					"name": "constant.language.nbl",
-					"match": "\\b(this|arguments|null|true|false)\\b"
+					"match": "\\b(arguments|this|super|null|true|false)\\b"
 				}
 			]
 		},

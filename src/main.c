@@ -412,7 +412,7 @@ Map *std_env(void) {
 
     // String
     Map *string = map_new();
-    map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string)));
+    map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string, NULL, false)));
     map_set(string, "constructor", value_new_native_function(list_ref(empty_args), VALUE_STRING, env_string_constructor));
     map_set(string, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_string_length));
 
@@ -420,7 +420,7 @@ Map *std_env(void) {
     Map *array = map_new();
     List *array_function_args = list_new();
     list_add(array_function_args, argument_new("function", VALUE_FUNCTION, NULL));
-    map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array)));
+    map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array, NULL, false)));
     map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
     map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
     map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
@@ -430,7 +430,7 @@ Map *std_env(void) {
 
     // Object
     Map *object = map_new();
-    map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object)));
+    map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object, NULL, false)));
     map_set(object, "constructor", value_new_native_function(list_ref(empty_args), VALUE_OBJECT, env_object_constructor));
     map_set(object, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_object_length));
     map_set(object, "keys", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_keys));

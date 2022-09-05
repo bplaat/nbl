@@ -28,10 +28,10 @@ typedef struct List {
     size_t size;
 } List;
 
-#define list_foreach(list, item, block)       \
+#define list_foreach(list, item, block)                   \
     for (size_t index = 0; index < list->size; index++) { \
-        item = list_get(list, index);             \
-        block                                 \
+        item = list_get(list, index);                     \
+        block                                             \
     }
 
 List *list_new(void);
@@ -61,11 +61,11 @@ typedef struct Map {
     size_t size;
 } Map;
 
-#define map_foreach(map, key, value, block)  \
+#define map_foreach(map, key, value, block)              \
     for (size_t index = 0; index < map->size; index++) { \
-        key = map->keys[index];                  \
-        value = map->values[index];              \
-        block                                \
+        key = map->keys[index];                          \
+        value = map->values[index];                      \
+        block                                            \
     }
 
 Map *map_new(void);
@@ -248,6 +248,7 @@ struct Value {
         struct {
             Map *object;
             Value *parentClass;
+            bool abstract;
         };
         struct {
             List *arguments;
@@ -276,7 +277,7 @@ Value *value_new_array(List *array);
 
 Value *value_new_object(Map *object);
 
-Value *value_new_class(Map *object);
+Value *value_new_class(Map *object, Value *parentClass, bool abstract);
 
 Value *value_new_instance(Map *object, Value *parentClass);
 
@@ -289,6 +290,8 @@ char *value_type_to_string(ValueType type);
 ValueType token_type_to_value_type(TokenType type);
 
 char *value_to_string(Value *value);
+
+Value *value_class_get(Value *instance, char *key);
 
 Value *value_ref(Value *value);
 
@@ -358,7 +361,11 @@ struct Node {
         Value *value;
         char *string;
         List *array;
-        Map *object;
+        struct {
+            Map *object;
+            Node *parentClass;
+            bool abstract;
+        };
         struct {
             ValueType castType;
             Node *unary;
@@ -433,8 +440,8 @@ Node *parser_mul(Parser *parser);
 Node *parser_unary(Parser *parser);
 Node *parser_primary(Parser *parser);
 Node *parser_primary_suffix(Parser *parser, Node *node);
-Value *parser_function(Parser *parser);
-Map *parser_class(Parser *parser);
+Node *parser_function(Parser *parser, Token *token);
+Node *parser_class(Parser *parser, Token *token, bool abstract);
 Argument *parser_argument(Parser *parser);
 
 // Interpreter

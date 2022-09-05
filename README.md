@@ -6,7 +6,6 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite f
 There is also a basic syntax highlighting extension for Visual Studio Code available. To install it you need to copy the `editors/vscode` folder into your `~/.vscode/extensions` folder.
 
 ## Things todo:
-- Class inherintance, abstract classes and polymorpishm
 - Byte code interpreter instead of ast traversing?
 - Make vscode syntax highlighting better?
 
@@ -149,4 +148,36 @@ bastiaan.greet();
 println(type(Person), Person);
 println(type(bastiaan), bastiaan);
 println(Person.SOME_STATIC_VAR, bastiaan.SOME_STATIC_VAR);
+```
+
+## Class inheritance
+```
+const Animal = abstract class {
+    fn constructor(name) {
+        this.name = name;
+    }
+};
+
+const Dog = class extends Animal {
+    fn constructor(name, age = 5) {
+        super.constructor(name);
+        this.age = age;
+    }
+
+    fn jump() {
+        println('The dog ' + this.name + ' jumps', 'and is', this.age, this.age == 1 ? 'year' : 'years', 'old');
+    }
+};
+
+class Cat extends Animal {
+    fn jump() {
+        println('The cat ' + this.name + ' jumps');
+    }
+}
+
+let dog = Dog('Milo');
+dog.jump();
+
+let cat = Cat('Minoes');
+cat.jump();
 ```
