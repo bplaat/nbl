@@ -1,6 +1,36 @@
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+
+// Custom windows headers because TokenType name conflict :(
+#include <stdbool.h>
+#include <stdint.h>
+
+typedef struct _SYSTEMTIME {
+    uint16_t wYear;
+    uint16_t wMonth;
+    uint16_t wDayOfWeek;
+    uint16_t wDay;
+    uint16_t wHour;
+    uint16_t wMinute;
+    uint16_t wSecond;
+    uint16_t wMilliseconds;
+} SYSTEMTIME;
+
+typedef struct _FILETIME {
+    uint32_t dwLowDateTime;
+    uint32_t dwHighDateTime;
+} FILETIME;
+
+typedef union _LARGE_INTEGER {
+    struct {
+        uint32_t LowPart;
+        uint32_t HighPart;
+    };
+    uint64_t QuadPart;
+} LARGE_INTEGER;
+
+extern void GetLocalTime(SYSTEMTIME *lpSystemTime);
+extern bool SystemTimeToFileTime(const SYSTEMTIME *lpSystemTime, FILETIME *lpFileTime);
+
 #else
 #include <sys/time.h>
 #endif
@@ -56,11 +86,11 @@ int64_t time_ms(void) {
 #ifdef _WIN32
     SYSTEMTIME localTime;
     GetLocalTime(&localTime);
-    FILETIME filetime;
+    FILETIME fileTime;
     SystemTimeToFileTime(&localTime, &fileTime);
     LARGE_INTEGER date, adjust;
-    date.HighPart = ft.dwHighDateTime;
-    date.LowPart = ft.dwLowDateTime;
+    date.HighPart = fileTime.dwHighDateTime;
+    date.LowPart = fileTime.dwLowDateTime;
     adjust.QuadPart = 11644473600000 * 10000;
     date.QuadPart -= adjust.QuadPart;
     return date.QuadPart / 10000;
