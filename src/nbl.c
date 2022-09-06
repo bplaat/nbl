@@ -2326,6 +2326,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_INCLUDE) {
         Value *pathValue = interpreter_node(interpreter, scope, node->unary);
+        if (pathValue->type != VALUE_STRING) {
+            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            return interpreter_throw(&context, type_error_exception(VALUE_STRING, pathValue->type));
+        }
         char includePath[255];
         if (strlen(node->token->source->dirname) > 0) {
             sprintf(includePath, "%s/%s", node->token->source->dirname, pathValue->string);
@@ -2335,8 +2339,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         value_free(pathValue);
         char *includeText = file_read(includePath);
         if (includeText == NULL) {
-            print_error(node->token, "Can't read file: %s\n", includePath);
-            exit(1);
+            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            return interpreter_throw(&context, value_new_string_format("Can't read file: %s", includePath));
         }
 
         List *tokens = lexer(includePath, includeText);
