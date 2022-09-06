@@ -1,3 +1,14 @@
+// Helper function
+fn assertFails(callback) {
+    let fails = false;
+    try {
+        callback();
+    } catch (const exception) {
+        fails = true;
+    }
+    assert(fails);
+}
+
 assert(type(1) == 'int');
 assert(type(1.1) == 'float');
 assert(type('string') == 'string');
@@ -37,3 +48,15 @@ assert(true && true);
 assert(!(true && false));
 assert(true || false);
 assert(!(false || false));
+
+assertFails(fn () => 5 + '6');
+assertFails(fn () => 5 + true);
+assertFails(fn () => 5 + []);
+assertFails(fn () => 5 + {});
+assertFails(fn () => [] + {});
+assertFails(fn () => true + false);
+assertFails(fn () => 'fdsa' + false);
+assertFails(fn () => { x = 5}['hoi']);
+assertFails(fn () => { x = 5}[true]);
+assertFails(fn () => { x = 5}[[]]);
+assertFails(fn () => { x = 5}[{}]);

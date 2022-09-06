@@ -1,5 +1,19 @@
+// Helper function
+fn assertFails(callback) {
+    let fails = false;
+    try {
+        callback();
+    } catch (const exception) {
+        fails = true;
+    }
+    assert(fails);
+}
+
 const x = 10;
 assert(x == 10);
+assertFails(fn () {
+    x = 5;
+});
 
 const str = 'Hello!';
 assert(str[1] == 'e');
@@ -16,3 +30,12 @@ const person = {
 assert(person.name == 'Bastiaan');
 const age = 'age';
 assert(type(person[age]) == 'int');
+
+let y = 5;
+y = 10;
+assert(y == 10);
+
+let name: string = 'hoi';
+assertFails(fn () {
+    name = 10.5;
+});

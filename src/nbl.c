@@ -2519,7 +2519,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
         if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
-            if (containerValue->type == VALUE_OBJECT) {
+            if (containerValue->type == VALUE_OBJECT && indexOrKey->type == VALUE_STRING) {
                 Value *objectClass = ((Variable *)map_get(interpreter->env, "Object"))->value;
                 Value *objectClassItem = map_get(objectClass->object, indexOrKey->string);
                 if (objectClassItem != NULL) returnValue = value_retrieve(objectClassItem);

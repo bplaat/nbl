@@ -1,3 +1,14 @@
+// Helper function
+fn assertFails(callback) {
+    let fails = false;
+    try {
+        callback();
+    } catch (const exception) {
+        fails = true;
+    }
+    assert(fails);
+}
+
 let sum = 0;
 let i = 0;
 while (i < 10) {
@@ -18,3 +29,13 @@ for (const city in cities) {
     str += city;
 }
 assert(str == 'GoudaRotterdamAmsterdam');
+
+assertFails(fn () {
+    while (null);
+});
+assertFails(fn () {
+    while (34);
+});
+assertFails(fn () {
+    do {} while ('32');
+});

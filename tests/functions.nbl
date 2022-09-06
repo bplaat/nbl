@@ -1,5 +1,22 @@
+// Helper function
+fn assertFails(callback) {
+    let fails = false;
+    try {
+        callback();
+    } catch (const exception) {
+        fails = true;
+    }
+    assert(fails);
+}
+
 fn double(n: int): int => n * 2;
 assert(double(10) == 20);
+assertFails(fn () => double('10'));
+
+assertFails(fn () {
+    fn double(n: int): string => n * 2;
+    double(10);
+});
 
 class User {
     fn constructor(username) {
