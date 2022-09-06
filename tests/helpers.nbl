@@ -1,0 +1,9 @@
+fn assertFails(callback) {
+    let fails = false;
+    try {
+        callback();
+    } catch (const exception) {
+        fails = true;
+    }
+    assert(fails);
+}

@@ -1,13 +1,4 @@
-// Helper function
-fn assertFails(callback) {
-    let fails = false;
-    try {
-        callback();
-    } catch (const exception) {
-        fails = true;
-    }
-    assert(fails);
-}
+include 'helpers.nbl';
 
 let sum = 0;
 let i = 0;

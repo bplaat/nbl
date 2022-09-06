@@ -1,13 +1,4 @@
-// Helper function
-fn assertFails(callback) {
-    let fails = false;
-    try {
-        callback();
-    } catch (const exception) {
-        fails = true;
-    }
-    assert(fails);
-}
+include 'helpers.nbl';
 
 assert(type(1) == 'int');
 assert(type(1.1) == 'float');

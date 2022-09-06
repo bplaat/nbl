@@ -70,19 +70,6 @@ double random_random(void) {
     return x - floor(x);
 }
 
-char *file_read(char *path) {
-    FILE *file = fopen(path, "rb");
-    if (file == NULL) return NULL;
-    fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *buffer = malloc(fileSize + 1);
-    fileSize = fread(buffer, 1, fileSize, file);
-    buffer[fileSize] = '\0';
-    fclose(file);
-    return buffer;
-}
-
 int64_t time_ms(void) {
 #ifdef _WIN32
     SYSTEMTIME localTime;
@@ -284,6 +271,8 @@ Value *env_math_random(InterpreterContext *context, Value *this, List *values) {
 Value *env_exception_constructor(InterpreterContext *context, Value *this, List *values) {
     Value *error = list_get(values, 0);
     map_set(this->object, "error", value_retrieve(error));
+    map_set(this->object, "path", value_new_string(context->node->token->source->path));
+    map_set(this->object, "text", value_new_string(context->node->token->source->text));
     map_set(this->object, "line", value_new_int(context->node->token->line));
     map_set(this->object, "column", value_new_int(context->node->token->column));
     return value_new_null();
@@ -598,15 +587,15 @@ void repl(void) {
         command[realCommandSize + 1] = '\0';
 
         // Parse
-        List *tokens = lexer(command);
-        Parser parser = {.text = command, .tokens = tokens, .position = 0};
+        List *tokens = lexer("text", command);
+        Parser parser = {.tokens = tokens, .position = 0};
         Node *node = parser_statement(&parser);
         if (node == NULL) {
             continue;
         }
 
         // Run
-        Value *returnValue = interpreter(command, env, node);
+        Value *returnValue = interpreter(env, node);
         if (returnValue != NULL) {
             char *string = value_to_string(returnValue);
             printf("%s\n", string);
@@ -630,17 +619,18 @@ int main(int argc, char **argv) {
     }
 
     // Read and parse
-    char *text = file_read(argv[1]);
+    char *path = argv[1];
+    char *text = file_read(path);
     if (text == NULL) {
-        fprintf(stderr, "Can't read file: %s\n", argv[1]);
+        fprintf(stderr, "Can't read file: %s\n", path);
         return EXIT_FAILURE;
     }
-    List *tokens = lexer(text);
+    List *tokens = lexer(path, text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
     // printf("\n");
-    Node *node = parser(text, tokens);
+    Node *node = parser(tokens, false);
 
     // Run
     Map *env = std_env();
@@ -650,7 +640,7 @@ int main(int argc, char **argv) {
     }
     map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
 
-    Value *returnValue = interpreter(text, env, node);
+    Value *returnValue = interpreter(env, node);
     if (returnValue->type == VALUE_INT) {
         exit(returnValue->integer);
     }

@@ -16,9 +16,11 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-char *format(char *fmt, ...);
+char *file_read(char *path);
 
-void print_error(char *text, int32_t line, int32_t column, char *fmt, ...);
+typedef struct Token Token; // Forward define
+
+void print_error(Token *token, char *fmt, ...);
 
 // List header
 typedef struct List {
@@ -83,6 +85,21 @@ typedef void MapFreeFunc(void *item);
 void map_free(Map *map, MapFreeFunc *freeFunc);
 
 // Lexer header
+
+typedef struct Source {
+    int32_t refs;
+    char *path;
+    char *basename;
+    char *dirname;
+    char *text;
+} Source;
+
+Source *source_new(char *path, char *text);
+
+Source *source_ref(Source *source);
+
+void source_free(Source *source);
+
 typedef enum TokenType {
     TOKEN_EOF,
     TOKEN_UNKNOWN,
@@ -169,12 +186,14 @@ typedef enum TokenType {
     TOKEN_THROW,
     TOKEN_TRY,
     TOKEN_CATCH,
-    TOKEN_FINALLY
+    TOKEN_FINALLY,
+    TOKEN_INCLUDE
 } TokenType;
 
-typedef struct Token {
+struct Token {
     int32_t refs;
     TokenType type;
+    Source *source;
     int32_t line;
     int32_t column;
     union {
@@ -182,15 +201,15 @@ typedef struct Token {
         double floating;
         char *string;
     };
-} Token;
+};
 
-Token *token_new(TokenType type, int32_t line, int32_t column);
+Token *token_new(TokenType type, Source *source, int32_t line, int32_t column);
 
-Token *token_new_int(TokenType type, int32_t line, int32_t column, int64_t integer);
+Token *token_new_int(TokenType type, Source *source, int32_t line, int32_t column, int64_t integer);
 
-Token *token_new_float(int32_t line, int32_t column, double floating);
+Token *token_new_float(Source *source, int32_t line, int32_t column, double floating);
 
-Token *token_new_string(TokenType type, int32_t line, int32_t column, char *string);
+Token *token_new_string(TokenType type, Source *source, int32_t line, int32_t column, char *string);
 
 Token *token_ref(Token *token);
 
@@ -209,7 +228,7 @@ typedef struct Keyword {
     TokenType type;
 } Keyword;
 
-List *lexer(char *text);
+List *lexer(char *path, char *text);
 
 // Value
 typedef struct Node Node;  // Forward define
@@ -328,6 +347,7 @@ typedef enum NodeType {
     NODE_BREAK,
     NODE_RETURN,
     NODE_THROW,
+    NODE_INCLUDE,
 
     NODE_VALUE,
     NODE_ARRAY,
@@ -433,18 +453,17 @@ Node *node_ref(Node *node);
 void node_free(Node *node);
 
 typedef struct Parser {
-    char *text;
     List *tokens;
     int32_t position;
 } Parser;
 
-Node *parser(char *text, List *tokens);
+Node *parser(List *tokens, bool included);
 
 void parser_eat(Parser *parser, TokenType type);
 
 ValueType parser_eat_type(Parser *parser);
 
-Node *parser_program(Parser *parser);
+Node *parser_program(Parser *parser, bool included);
 Node *parser_block(Parser *parser);
 Node *parser_statement(Parser *parser);
 Node *parser_declarations(Parser *parser);
@@ -505,12 +524,10 @@ typedef struct Scope {
 } Scope;
 
 typedef struct Interpreter {
-    char *text;
     Map *env;
 } Interpreter;
 
 struct InterpreterContext {
-    char *text;
     Map *env;
     Scope *scope;
     Node *node;
@@ -518,7 +535,7 @@ struct InterpreterContext {
 
 Variable *block_scope_get(BlockScope *block, char *key);
 
-Value *interpreter(char *text, Map *env, Node *node);
+Value *interpreter(Map *env, Node *node);
 
 Value *type_error_exception(ValueType expected, ValueType got);
 

@@ -200,3 +200,20 @@ try {
     println('Finally');
 }
 ```
+
+## Includes
+```
+// main.nbl
+
+include 'other.nbl';
+
+println(double(10));
+println(name);
+```
+```
+// other.nbl
+
+fn double(number: int): int => number * 2;
+
+const name = 'Bastiaan';
+```
