@@ -18,7 +18,7 @@
 
 char *format(char *fmt, ...);
 
-void error(char *text, size_t line, size_t position, char *fmt, ...);
+void error(char *text, int32_t line, int32_t column, char *fmt, ...);
 
 // List header
 typedef struct List {
@@ -85,6 +85,7 @@ void map_free(Map *map, MapFreeFunc *freeFunc);
 // Lexer header
 typedef enum TokenType {
     TOKEN_EOF,
+    TOKEN_UNKNOWN,
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_LCURLY,
@@ -164,14 +165,18 @@ typedef enum TokenType {
     TOKEN_IN,
     TOKEN_CONTINUE,
     TOKEN_BREAK,
-    TOKEN_RETURN
+    TOKEN_RETURN,
+    TOKEN_THROW,
+    TOKEN_TRY,
+    TOKEN_CATCH,
+    TOKEN_FINALLY
 } TokenType;
 
 typedef struct Token {
     int32_t refs;
     TokenType type;
-    size_t line;
-    size_t position;
+    int32_t line;
+    int32_t column;
     union {
         int64_t integer;
         double floating;
@@ -179,13 +184,13 @@ typedef struct Token {
     };
 } Token;
 
-Token *token_new(TokenType type, size_t line, size_t position);
+Token *token_new(TokenType type, int32_t line, int32_t column);
 
-Token *token_new_int(size_t line, size_t position, int64_t integer);
+Token *token_new_int(TokenType type, int32_t line, int32_t column, int64_t integer);
 
-Token *token_new_float(size_t line, size_t position, double floating);
+Token *token_new_float(int32_t line, int32_t column, double floating);
 
-Token *token_new_string(TokenType type, size_t line, size_t position, char *string);
+Token *token_new_string(TokenType type, int32_t line, int32_t column, char *string);
 
 Token *token_ref(Token *token);
 
@@ -258,7 +263,7 @@ struct Value {
             ValueType returnType;
             union {
                 Node *functionNode;
-                Value *(*nativeFunc)(Value *this, List *values);
+                Value *(*nativeFunc)(Node *callNode, Value *this, List *values);
             };
         };
     };
@@ -286,7 +291,7 @@ Value *value_new_instance(Map *object, Value *instanceClass);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Value *this, List *values));
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Node *callNode, Value *this, List *values));
 
 char *value_type_to_string(ValueType type);
 
@@ -310,6 +315,7 @@ typedef enum NodeType {
     NODE_NODES,
     NODE_BLOCK,
     NODE_IF,
+    NODE_TRY,
     NODE_TENARY,
     NODE_WHILE,
     NODE_DOWHILE,
@@ -318,6 +324,7 @@ typedef enum NodeType {
     NODE_CONTINUE,
     NODE_BREAK,
     NODE_RETURN,
+    NODE_THROW,
 
     NODE_VALUE,
     NODE_ARRAY,
@@ -382,13 +389,19 @@ struct Node {
             union {
                 Node *condition;
                 Node *iterator;
+                Node *catchVariable;
             };
-            Node *thenBlock;
+            union {
+                Node *thenBlock;
+                Node *tryBlock;
+            };
             union {
                 Node *elseBlock;
                 Node *incrementBlock;
-                Node *variable;
+                Node *forinVariable;
+                Node *catchBlock;
             };
+            Node *finallyBlock;
         };
         struct {
             Node *function;
@@ -425,6 +438,8 @@ typedef struct Parser {
 Node *parser(char *text, List *tokens);
 
 void parser_eat(Parser *parser, TokenType type);
+
+ValueType parser_eat_type(Parser *parser);
 
 Node *parser_program(Parser *parser);
 Node *parser_block(Parser *parser);
@@ -463,6 +478,10 @@ typedef struct Interpreter {
     Map *env;
 } Interpreter;
 
+typedef struct ExceptionScope {
+    Value *exceptionValue;
+} ExceptionScope;
+
 typedef struct FunctionScope {
     Value *returnValue;
 } FunctionScope;
@@ -481,6 +500,7 @@ struct BlockScope {
 };
 
 typedef struct Scope {
+    ExceptionScope *exception;
     FunctionScope *function;
     LoopScope *loop;
     BlockScope *block;

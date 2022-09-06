@@ -2,8 +2,8 @@
 #include "nbl.h"
 
 // Utils
-void error(char *text, size_t line, size_t position, char *fmt, ...) {
-    fprintf(stderr, "text:%zu:%zu ERROR: ", line + 1, position + 1);
+void error(char *text, int32_t line, int32_t column, char *fmt, ...) {
+    fprintf(stderr, "text:%d:%d ERROR: ", line + 1, column + 1);
     va_list args;
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
@@ -11,19 +11,19 @@ void error(char *text, size_t line, size_t position, char *fmt, ...) {
 
     // Seek to the right line in text
     char *c = text;
-    for (size_t i = 0; i < line; i++) {
+    for (int32_t i = 0; i < line; i++) {
         while (*c != '\n' && *c != '\r') c++;
         if (*c == '\r') c++;
         c++;
     }
     char *lineStart = c;
     while (*c != '\n' && *c != '\r' && *c != '\0') c++;
-    size_t lineLength = c - lineStart;
+    int32_t lineLength = c - lineStart;
 
-    fprintf(stderr, "\n%4zu | ", line + 1);
+    fprintf(stderr, "\n%4d | ", line + 1);
     fwrite(lineStart, 1, lineLength, stderr);
     fprintf(stderr, "\n     | ");
-    for (size_t i = 0; i < position; i++) fprintf(stderr, " ");
+    for (int32_t i = 0; i < column; i++) fprintf(stderr, " ");
     fprintf(stderr, "^\n");
     exit(EXIT_FAILURE);
 }
@@ -163,29 +163,29 @@ void map_free(Map *map, MapFreeFunc *freeFunc) {
 }
 
 // Lexer
-Token *token_new(TokenType type, size_t line, size_t position) {
+Token *token_new(TokenType type, int32_t line, int32_t column) {
     Token *token = malloc(sizeof(Token));
     token->refs = 1;
     token->type = type;
     token->line = line;
-    token->position = position;
+    token->column = column;
     return token;
 }
 
-Token *token_new_int(size_t line, size_t position, int64_t integer) {
-    Token *token = token_new(TOKEN_INT, line, position);
+Token *token_new_int(TokenType type, int32_t line, int32_t column, int64_t integer) {
+    Token *token = token_new(type, line, column);
     token->integer = integer;
     return token;
 }
 
-Token *token_new_float(size_t line, size_t position, double floating) {
-    Token *token = token_new(TOKEN_FLOAT, line, position);
+Token *token_new_float(int32_t line, int32_t column, double floating) {
+    Token *token = token_new(TOKEN_FLOAT, line, column);
     token->floating = floating;
     return token;
 }
 
-Token *token_new_string(TokenType type, size_t line, size_t position, char *string) {
-    Token *token = token_new(type, line, position);
+Token *token_new_string(TokenType type, int32_t line, int32_t column, char *string) {
+    Token *token = token_new(type, line, column);
     token->string = string;
     return token;
 }
@@ -208,6 +208,7 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_STRING) return "string";
 
     if (type == TOKEN_EOF) return "EOF";
+    if (type == TOKEN_UNKNOWN) return "Unknown character";
     if (type == TOKEN_LPAREN) return "(";
     if (type == TOKEN_RPAREN) return ")";
     if (type == TOKEN_LCURLY) return "{";
@@ -283,6 +284,10 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_CONTINUE) return "continue";
     if (type == TOKEN_BREAK) return "break";
     if (type == TOKEN_RETURN) return "return";
+    if (type == TOKEN_THROW) return "throw";
+    if (type == TOKEN_TRY) return "try";
+    if (type == TOKEN_CATCH) return "catch";
+    if (type == TOKEN_FINALLY) return "finally";
     return NULL;
 }
 
@@ -341,14 +346,18 @@ List *lexer(char *text) {
                           {"in", TOKEN_IN},
                           {"continue", TOKEN_CONTINUE},
                           {"break", TOKEN_BREAK},
-                          {"return", TOKEN_RETURN}};
+                          {"return", TOKEN_RETURN},
+                          {"throw", TOKEN_THROW},
+                          {"try", TOKEN_TRY},
+                          {"catch", TOKEN_CATCH},
+                          {"finally", TOKEN_FINALLY}};
 
     List *tokens = list_new_with_capacity(512);
     char *c = text;
     int32_t line = 0;
     char *lineStart = c;
     while (*c != '\0') {
-        size_t position = c - lineStart;
+        int32_t column = c - lineStart;
 
         // Comments
         if (*c == '#') {
@@ -378,25 +387,25 @@ List *lexer(char *text) {
         // Integers
         if (*c == '0' && *(c + 1) == 'b') {
             c += 2;
-            list_add(tokens, token_new_int(line, position, strtol(c, &c, 2)));
+            list_add(tokens, token_new_int(TOKEN_INT, line, column, strtol(c, &c, 2)));
             continue;
         }
         if (*c == '0' && isdigit(*(c + 1))) {
             c++;
-            list_add(tokens, token_new_int(line, position, strtol(c, &c, 8)));
+            list_add(tokens, token_new_int(TOKEN_INT, line, column, strtol(c, &c, 8)));
             continue;
         }
         if (*c == '0' && *(c + 1) == 'x') {
             c += 2;
-            list_add(tokens, token_new_int(line, position, strtol(c, &c, 16)));
+            list_add(tokens, token_new_int(TOKEN_INT, line, column, strtol(c, &c, 16)));
             continue;
         }
         if (isdigit(*c) || (*c == '.' && isdigit(*(c + 1)))) {
             double floating = strtod(c, &c);
             if ((double)((int64_t)floating) == floating) {
-                list_add(tokens, token_new_int(line, position, (int64_t)floating));
+                list_add(tokens, token_new_int(TOKEN_INT, line, column, (int64_t)floating));
             } else {
-                list_add(tokens, token_new_float(line, position, floating));
+                list_add(tokens, token_new_float(line, column, floating));
             }
             continue;
         }
@@ -440,7 +449,7 @@ List *lexer(char *text) {
                 }
             }
             string[strpos] = '\0';
-            list_add(tokens, token_new_string(TOKEN_STRING, line, position, string));
+            list_add(tokens, token_new_string(TOKEN_STRING, line, column, string));
             continue;
         }
 
@@ -455,7 +464,7 @@ List *lexer(char *text) {
                 Keyword *keyword = &keywords[i];
                 size_t keywordSize = strlen(keyword->keyword);
                 if (!memcmp(ptr, keyword->keyword, keywordSize) && size == keywordSize) {
-                    list_add(tokens, token_new(keyword->type, line, position));
+                    list_add(tokens, token_new(keyword->type, line, column));
                     found = true;
                     break;
                 }
@@ -464,64 +473,64 @@ List *lexer(char *text) {
                 char *string = malloc(size + 1);
                 memcpy(string, ptr, size);
                 string[size] = '\0';
-                list_add(tokens, token_new_string(TOKEN_KEYWORD, line, position, string));
+                list_add(tokens, token_new_string(TOKEN_KEYWORD, line, column, string));
             }
             continue;
         }
 
         // Syntax
         if (*c == '(') {
-            list_add(tokens, token_new(TOKEN_LPAREN, line, position));
+            list_add(tokens, token_new(TOKEN_LPAREN, line, column));
             c++;
             continue;
         }
         if (*c == ')') {
-            list_add(tokens, token_new(TOKEN_RPAREN, line, position));
+            list_add(tokens, token_new(TOKEN_RPAREN, line, column));
             c++;
             continue;
         }
         if (*c == '{') {
-            list_add(tokens, token_new(TOKEN_LCURLY, line, position));
+            list_add(tokens, token_new(TOKEN_LCURLY, line, column));
             c++;
             continue;
         }
         if (*c == '}') {
-            list_add(tokens, token_new(TOKEN_RCURLY, line, position));
+            list_add(tokens, token_new(TOKEN_RCURLY, line, column));
             c++;
             continue;
         }
         if (*c == '[') {
-            list_add(tokens, token_new(TOKEN_LBRACKET, line, position));
+            list_add(tokens, token_new(TOKEN_LBRACKET, line, column));
             c++;
             continue;
         }
         if (*c == ']') {
-            list_add(tokens, token_new(TOKEN_RBRACKET, line, position));
+            list_add(tokens, token_new(TOKEN_RBRACKET, line, column));
             c++;
             continue;
         }
         if (*c == '?') {
-            list_add(tokens, token_new(TOKEN_QUESTION, line, position));
+            list_add(tokens, token_new(TOKEN_QUESTION, line, column));
             c++;
             continue;
         }
         if (*c == ';') {
-            list_add(tokens, token_new(TOKEN_SEMICOLON, line, position));
+            list_add(tokens, token_new(TOKEN_SEMICOLON, line, column));
             c++;
             continue;
         }
         if (*c == ':') {
-            list_add(tokens, token_new(TOKEN_COLON, line, position));
+            list_add(tokens, token_new(TOKEN_COLON, line, column));
             c++;
             continue;
         }
         if (*c == ',') {
-            list_add(tokens, token_new(TOKEN_COMMA, line, position));
+            list_add(tokens, token_new(TOKEN_COMMA, line, column));
             c++;
             continue;
         }
         if (*c == '.') {
-            list_add(tokens, token_new(TOKEN_POINT, line, position));
+            list_add(tokens, token_new(TOKEN_POINT, line, column));
             c++;
             continue;
         }
@@ -529,171 +538,171 @@ List *lexer(char *text) {
         // Operators
         if (*c == '=') {
             if (*(c + 1) == '>') {
-                list_add(tokens, token_new(TOKEN_FAT_ARROW, line, position));
+                list_add(tokens, token_new(TOKEN_FAT_ARROW, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_EQ, line, position));
+                list_add(tokens, token_new(TOKEN_EQ, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_ASSIGN, line, position));
+            list_add(tokens, token_new(TOKEN_ASSIGN, line, column));
             c++;
             continue;
         }
         if (*c == '+') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_ADD, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_ADD, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_ADD, line, position));
+            list_add(tokens, token_new(TOKEN_ADD, line, column));
             c++;
             continue;
         }
         if (*c == '-') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_SUB, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_SUB, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_SUB, line, position));
+            list_add(tokens, token_new(TOKEN_SUB, line, column));
             c++;
             continue;
         }
         if (*c == '*') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_MUL, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_MUL, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '*') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_EXP, line, position));
+                    list_add(tokens, token_new(TOKEN_ASSIGN_EXP, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_EXP, line, position));
+                list_add(tokens, token_new(TOKEN_EXP, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_MUL, line, position));
+            list_add(tokens, token_new(TOKEN_MUL, line, column));
             c++;
             continue;
         }
         if (*c == '/') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_DIV, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_DIV, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_DIV, line, position));
+            list_add(tokens, token_new(TOKEN_DIV, line, column));
             c++;
             continue;
         }
         if (*c == '%') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_MOD, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_MOD, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_MOD, line, position));
+            list_add(tokens, token_new(TOKEN_MOD, line, column));
             c++;
             continue;
         }
         if (*c == '^') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_XOR, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_XOR, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_XOR, line, position));
+            list_add(tokens, token_new(TOKEN_XOR, line, column));
             c++;
             continue;
         }
         if (*c == '~') {
-            list_add(tokens, token_new(TOKEN_NOT, line, position));
+            list_add(tokens, token_new(TOKEN_NOT, line, column));
             c++;
             continue;
         }
         if (*c == '<') {
             if (*(c + 1) == '<') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_SHL, line, position));
+                    list_add(tokens, token_new(TOKEN_ASSIGN_SHL, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_SHL, line, position));
+                list_add(tokens, token_new(TOKEN_SHL, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_LTEQ, line, position));
+                list_add(tokens, token_new(TOKEN_LTEQ, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_LT, line, position));
+            list_add(tokens, token_new(TOKEN_LT, line, column));
             c++;
             continue;
         }
         if (*c == '>') {
             if (*(c + 1) == '>') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_SHR, line, position));
+                    list_add(tokens, token_new(TOKEN_ASSIGN_SHR, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_SHR, line, position));
+                list_add(tokens, token_new(TOKEN_SHR, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_GTEQ, line, position));
+                list_add(tokens, token_new(TOKEN_GTEQ, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_GT, line, position));
+            list_add(tokens, token_new(TOKEN_GT, line, column));
             c++;
             continue;
         }
         if (*c == '!') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_NEQ, line, position));
+                list_add(tokens, token_new(TOKEN_NEQ, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_LOGICAL_NOT, line, position));
+            list_add(tokens, token_new(TOKEN_LOGICAL_NOT, line, column));
             c++;
             continue;
         }
         if (*c == '|') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_OR, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_OR, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '|') {
-                list_add(tokens, token_new(TOKEN_LOGICAL_OR, line, position));
+                list_add(tokens, token_new(TOKEN_LOGICAL_OR, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_OR, line, position));
+            list_add(tokens, token_new(TOKEN_OR, line, column));
             c++;
             continue;
         }
         if (*c == '&') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_AND, line, position));
+                list_add(tokens, token_new(TOKEN_ASSIGN_AND, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '&') {
-                list_add(tokens, token_new(TOKEN_LOGICAL_AND, line, position));
+                list_add(tokens, token_new(TOKEN_LOGICAL_AND, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_AND, line, position));
+            list_add(tokens, token_new(TOKEN_AND, line, column));
             c++;
             continue;
         }
@@ -711,7 +720,8 @@ List *lexer(char *text) {
             continue;
         }
 
-        error(text, line, position, "Unexpected character: '%c'", *c);
+        list_add(tokens, token_new_int(TOKEN_UNKNOWN, line, column, *c));
+        c++;
     }
     list_add(tokens, token_new(TOKEN_EOF, line, c - lineStart));
     return tokens;
@@ -802,7 +812,7 @@ Value *value_new_function(List *args, ValueType returnType, Node *functionNode) 
     return value;
 }
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Value *this, List *values)) {
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Node *callNode, Value *this, List *values)) {
     Value *value = value_new(VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
@@ -1044,7 +1054,7 @@ void node_free(Node *node) {
             node_free(node->parentClass);
         }
     }
-    if (node->type == NODE_RETURN || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
+    if (node->type == NODE_RETURN || node->type == NODE_THROW || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
         node_free(node->unary);
     }
     if (node->type >= NODE_GET && node->type <= NODE_LOGICAL_OR) {
@@ -1055,6 +1065,7 @@ void node_free(Node *node) {
         node_free(node->condition);
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
+        if (node->type == NODE_TRY && node->finallyBlock != NULL) node_free(node->finallyBlock);
     }
     if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || node->type == NODE_CALL) {
         if (node->type == NODE_CALL) node_free(node->function);
@@ -1075,9 +1086,19 @@ void parser_eat(Parser *parser, TokenType type) {
     if (current()->type == type) {
         parser->position++;
     } else {
-        error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed '%s'", token_type_to_string(current()->type),
+        error(parser->text, current()->line, current()->column, "Unexpected token: '%s' needed '%s'", token_type_to_string(current()->type),
               token_type_to_string(type));
     }
+}
+
+ValueType parser_eat_type(Parser *parser) {
+    if (token_type_is_type(current()->type)) {
+        ValueType type = token_type_to_value_type(current()->type);
+        parser->position++;
+        return type;
+    }
+    error(parser->text, current()->line, current()->column, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
+    return VALUE_ANY;
 }
 
 Node *parser_program(Parser *parser) {
@@ -1131,6 +1152,30 @@ Node *parser_statement(Parser *parser) {
         return node;
     }
 
+    if (current()->type == TOKEN_TRY) {
+        Node *node = node_new(NODE_TRY, current());
+        parser_eat(parser, TOKEN_TRY);
+        node->tryBlock = parser_block(parser);
+
+        parser_eat(parser, TOKEN_CATCH);
+        parser_eat(parser, TOKEN_LPAREN);
+        Node *declarations = parser_declarations(parser);
+        if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
+            error(parser->text, declarations->token->line, declarations->token->column, "You can only declare one variable in a catch block");
+        }
+        node->catchVariable = declarations;
+        parser_eat(parser, TOKEN_RPAREN);
+        node->catchBlock = parser_block(parser);
+
+        if (current()->type == TOKEN_FINALLY) {
+            parser_eat(parser, TOKEN_FINALLY);
+            node->finallyBlock = parser_block(parser);
+        } else {
+            node->finallyBlock = NULL;
+        }
+        return node;
+    }
+
     if (current()->type == TOKEN_WHILE) {
         Node *node = node_new(NODE_WHILE, current());
         node->elseBlock = NULL;
@@ -1167,9 +1212,9 @@ Node *parser_statement(Parser *parser) {
         if (current()->type == TOKEN_IN) {
             Node *node = node_new(NODE_FORIN, token);
             if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
-                error(parser->text, declarations->token->line, declarations->token->position, "You can only declare one variable in a for in loop");
+                error(parser->text, declarations->token->line, declarations->token->column, "You can only declare one variable in a for in loop");
             }
-            node->variable = declarations;
+            node->forinVariable = declarations;
             parser_eat(parser, TOKEN_IN);
             node->iterator = parser_tenary(parser);
             parser_eat(parser, TOKEN_RPAREN);
@@ -1220,6 +1265,13 @@ Node *parser_statement(Parser *parser) {
         parser_eat(parser, TOKEN_SEMICOLON);
         return node;
     }
+    if (current()->type == TOKEN_THROW) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_THROW);
+        Node *node = node_new_unary(NODE_THROW, token, parser_tenary(parser));
+        parser_eat(parser, TOKEN_SEMICOLON);
+        return node;
+    }
 
     if (current()->type == TOKEN_FUNCTION) {
         Token *functionToken = current();
@@ -1258,7 +1310,6 @@ Node *parser_declarations(Parser *parser) {
     if (current()->type == TOKEN_CONST || current()->type == TOKEN_LET) {
         List *nodes = list_new();
         NodeType assignType;
-        Token *assignToken = current();
         if (current()->type == TOKEN_CONST) {
             assignType = NODE_CONST_ASSIGN;
             parser_eat(parser, TOKEN_CONST);
@@ -1276,24 +1327,15 @@ Node *parser_declarations(Parser *parser) {
             ValueType declarationType = VALUE_ANY;
             if (current()->type == TOKEN_COLON) {
                 parser_eat(parser, TOKEN_COLON);
-                if (token_type_is_type(current()->type)) {
-                    declarationType = token_type_to_value_type(current()->type);
-                    parser_eat(parser, current()->type);
-                } else {
-                    error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token",
-                          token_type_to_string(current()->type));
-                }
+                declarationType = parser_eat_type(parser);
             }
 
             Node *node;
-            if (current()->type == TOKEN_ASSIGN || (assignType == NODE_CONST_ASSIGN && current()->type != TOKEN_IN)) {
+            if (current()->type == TOKEN_ASSIGN) {
                 Token *token = current();
                 parser_eat(parser, TOKEN_ASSIGN);
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));
             } else {
-                if (declarationType != VALUE_ANY) {
-                    error(parser->text, assignToken->line, assignToken->position, "No assign value given", token_type_to_string(current()->type));
-                }
                 node = node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null()));
             }
             node->declarationType = declarationType;
@@ -1589,13 +1631,9 @@ Node *parser_unary(Parser *parser) {
     if (current()->type == TOKEN_LPAREN && token_type_is_type(next(0)->type) && next(1)->type == TOKEN_RPAREN) {
         Token *token = current();
         parser_eat(parser, TOKEN_LPAREN);
-        if (token_type_is_type(current()->type)) {
-            ValueType castType = token_type_to_value_type(current()->type);
-            parser_eat(parser, current()->type);
-            parser_eat(parser, TOKEN_RPAREN);
-            return node_new_cast(token, castType, parser_unary(parser));
-        }
-        error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
+        ValueType castType = parser_eat_type(parser);
+        parser_eat(parser, TOKEN_RPAREN);
+        return node_new_cast(token, castType, parser_unary(parser));
     }
     return parser_primary(parser);
 }
@@ -1706,7 +1744,7 @@ Node *parser_primary(Parser *parser) {
         return parser_class(parser, classToken, abstract);
     }
 
-    error(parser->text, current()->line, current()->position, "Unexpected token: '%s'", token_type_to_string(current()->type));
+    error(parser->text, current()->line, current()->column, "Unexpected token: '%s'", token_type_to_string(current()->type));
     return NULL;
 }
 
@@ -1761,12 +1799,7 @@ Node *parser_function(Parser *parser, Token *token) {
     ValueType returnType = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
         parser_eat(parser, TOKEN_COLON);
-        if (token_type_is_type(current()->type)) {
-            returnType = token_type_to_value_type(current()->type);
-            parser_eat(parser, current()->type);
-        } else {
-            error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
-        }
+        returnType = parser_eat_type(parser);
     }
 
     if (current()->type == TOKEN_FAT_ARROW) {
@@ -1822,11 +1855,7 @@ Argument *parser_argument(Parser *parser) {
     ValueType type = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
         parser_eat(parser, TOKEN_COLON);
-        if (!token_type_is_type(current()->type)) {
-            error(parser->text, current()->line, current()->position, "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
-        }
-        type = token_type_to_value_type(current()->type);
-        parser_eat(parser, current()->type);
+        type = parser_eat_type(parser);
     }
     Node *defaultNode = NULL;
     if (current()->type == TOKEN_ASSIGN) {
@@ -1860,10 +1889,17 @@ Variable *block_scope_get(BlockScope *block, char *key) {
 
 Value *interpreter(char *text, Map *env, Node *node) {
     Interpreter interpreter = {.text = text, .env = env};
-    Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
+    Scope scope = {.exception = &(ExceptionScope){.exceptionValue = NULL},
+                   .function = &(FunctionScope){.returnValue = NULL},
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                    .block = &(BlockScope){.parentBlock = NULL, .env = env}};
     Value *returnValue = interpreter_node(&interpreter, &scope, node);
+    if (scope.exception->exceptionValue != NULL) {
+        Value *errorMessage = value_class_get(scope.exception->exceptionValue, "error");
+        Value *line = value_class_get(scope.exception->exceptionValue, "line");
+        Value *column = value_class_get(scope.exception->exceptionValue, "column");
+        error(text, line->integer, column->integer, "Uncatched exception: %s", errorMessage->string);
+    }
     if (returnValue != NULL) {
         return returnValue;
     }
@@ -1876,17 +1912,27 @@ Value *interpreter(char *text, Map *env, Node *node) {
 
 Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments) {
     Interpreter interpreter = {.text = text, .env = env};
+    // TODO
     Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
                    .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                    .block = &(BlockScope){.parentBlock = NULL, .env = env}};
     return interpreter_function(&interpreter, &scope, NULL, function, this, arguments);
 }
 
+#define interpreter_statement_in_try(interpreter, scope, node, cleanup) \
+    {                                                                   \
+        Value *nodeValue = interpreter_node(interpreter, scope, node);  \
+        if (nodeValue != NULL) value_free(nodeValue);                   \
+        if ((scope)->function->returnValue != NULL) {                   \
+            cleanup;                                                    \
+            return NULL;                                                \
+        }                                                               \
+    }
+
 #define interpreter_statement_in_loop(interpreter, scope, node, cleanup) \
     {                                                                    \
-        Value *nodeValue = interpreter_node(interpreter, scope, node);   \
-        if (nodeValue != NULL) value_free(nodeValue);                    \
-        if ((scope)->function->returnValue != NULL) {                    \
+        interpreter_statement_in_try(interpreter, scope, node, cleanup); \
+        if ((scope)->exception->exceptionValue != NULL) {                \
             cleanup;                                                     \
             return NULL;                                                 \
         }                                                                \
@@ -1906,7 +1952,8 @@ Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List
     }
 
 Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments) {
-    Scope functionScope = {.function = &(FunctionScope){.returnValue = NULL},
+    Scope functionScope = {.exception = scope->exception,
+                           .function = &(FunctionScope){.returnValue = NULL},
                            .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
     if (this != NULL) {
@@ -1928,7 +1975,7 @@ Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, 
                     value_type_to_string(function->returnType));
             exit(1);
         }
-        error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+        error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
               value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(function->returnType));
     }
     map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
@@ -1949,7 +1996,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_BLOCK) {
-        Scope blockScope = {.function = scope->function, .loop = scope->loop, .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+        Scope blockScope = {.exception = scope->exception,
+                            .function = scope->function,
+                            .loop = scope->loop,
+                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
         list_foreach(node->nodes, Node * child,
                      { interpreter_statement(interpreter, &blockScope, child, { map_free(blockScope.block->env, (MapFreeFunc *)variable_free); }); });
         map_free(blockScope.block->env, (MapFreeFunc *)variable_free);
@@ -1958,7 +2008,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_IF) {
         Value *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
-            error(interpreter->text, node->token->line, node->token->position, "If condition type is not a bool");
+            error(interpreter->text, node->token->line, node->token->column, "If condition type is not a bool");
         }
         if (condition->boolean) {
             interpreter_statement(interpreter, scope, node->thenBlock, { value_free(condition); });
@@ -1971,7 +2021,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_TENARY) {
         Value *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
-            error(interpreter->text, node->token->line, node->token->position, "Tenary condition type is not a bool");
+            error(interpreter->text, node->token->line, node->token->column, "Tenary condition type is not a bool");
         }
         if (condition->boolean) {
             value_free(condition);
@@ -1980,13 +2030,35 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         value_free(condition);
         return interpreter_node(interpreter, scope, node->elseBlock);
     }
+    if (node->type == NODE_TRY) {
+        Scope tryScope = {.exception = &(ExceptionScope){.exceptionValue = NULL}, .function = scope->function, .loop = scope->loop, .block = scope->block};
+        interpreter_statement_in_try(interpreter, &tryScope, node->tryBlock, {});
+        if (tryScope.exception->exceptionValue != NULL) {
+            Scope catchScope = {.exception = scope->exception,
+                                .function = scope->function,
+                                .loop = scope->loop,
+                                .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+            map_set(catchScope.block->env, node->catchVariable->lhs->string,
+                    variable_new(node->catchVariable->declarationType, node->catchVariable->type == NODE_LET_ASSIGN,
+                                 value_ref(tryScope.exception->exceptionValue)));
+            interpreter_statement(interpreter, &catchScope, node->catchBlock, { map_free(catchScope.block->env, (MapFreeFunc *)variable_free); });
+            map_free(catchScope.block->env, (MapFreeFunc *)variable_free);
+            value_free(tryScope.exception->exceptionValue);
+        }
+        if (node->finallyBlock != NULL) {
+            interpreter_statement(interpreter, scope, node->finallyBlock, {});
+        }
+        return NULL;
+    }
     if (node->type == NODE_WHILE) {
-        Scope loopScope = {
-            .function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
+        Scope loopScope = {.exception = scope->exception,
+                           .function = scope->function,
+                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                           .block = scope->block};
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                error(interpreter->text, node->token->line, node->token->position, "While condition type is not a bool");
+                error(interpreter->text, node->token->line, node->token->column, "While condition type is not a bool");
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2005,8 +2077,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_DOWHILE) {
-        Scope loopScope = {
-            .function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
+        Scope loopScope = {.exception = scope->exception,
+                           .function = scope->function,
+                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                           .block = scope->block};
         for (;;) {
             interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
             if (loopScope.loop->isContinuing) {
@@ -2018,7 +2092,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                error(interpreter->text, node->token->line, node->token->position, "While condition type is not a bool");
+                error(interpreter->text, node->token->line, node->token->column, "While condition type is not a bool");
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2029,12 +2103,14 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_FOR) {
-        Scope loopScope = {
-            .function = scope->function, .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false}, .block = scope->block};
+        Scope loopScope = {.exception = scope->exception,
+                           .function = scope->function,
+                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                           .block = scope->block};
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                error(interpreter->text, node->token->line, node->token->position, "For condition type is not a bool");
+                error(interpreter->text, node->token->line, node->token->column, "For condition type is not a bool");
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2058,11 +2134,12 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *iterator = interpreter_node(interpreter, scope, node->iterator);
         if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT && iterator->type != VALUE_CLASS &&
             iterator->type != VALUE_INSTANCE) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array, object, class or instance it is: %s",
+            error(interpreter->text, node->token->line, node->token->column, "Variable is not a string, array, object, class or instance it is: %s",
                   value_type_to_string(iterator->type));
         }
 
-        Scope loopScope = {.function = scope->function,
+        Scope loopScope = {.exception = scope->exception,
+                           .function = scope->function,
                            .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
         size_t size;
@@ -2089,13 +2166,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
             }
-            Variable *previousVariable = map_get(loopScope.block->env, node->variable->lhs->string);
+            Variable *previousVariable = map_get(loopScope.block->env, node->forinVariable->lhs->string);
             if (previousVariable != NULL) {
                 value_free(previousVariable->value);
                 previousVariable->value = iteratorValue;
             } else {
-                map_set(loopScope.block->env, node->variable->lhs->string,
-                        variable_new(node->variable->declarationType, node->variable->type == NODE_LET_ASSIGN, iteratorValue));
+                map_set(loopScope.block->env, node->forinVariable->lhs->string,
+                        variable_new(node->forinVariable->declarationType, node->forinVariable->type == NODE_LET_ASSIGN, iteratorValue));
             }
 
             interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
@@ -2112,20 +2189,28 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_CONTINUE) {
         if (!scope->loop->inLoop) {
-            error(interpreter->text, node->token->line, node->token->position, "Not in a loop");
+            error(interpreter->text, node->token->line, node->token->column, "Not in a loop");
         }
         scope->loop->isContinuing = true;
         return NULL;
     }
     if (node->type == NODE_BREAK) {
         if (!scope->loop->inLoop) {
-            error(interpreter->text, node->token->line, node->token->position, "Not in a loop");
+            error(interpreter->text, node->token->line, node->token->column, "Not in a loop");
         }
         scope->loop->isBreaking = true;
         return NULL;
     }
     if (node->type == NODE_RETURN) {
         scope->function->returnValue = interpreter_node(interpreter, scope, node->unary);
+        return NULL;
+    }
+    if (node->type == NODE_THROW) {
+        Value *exception = interpreter_node(interpreter, scope, node->unary);
+        if (exception->type != VALUE_INSTANCE) {
+            error(interpreter->text, node->token->line, node->token->column, "Thrown value not an instance");
+        }
+        scope->exception->exceptionValue = exception;
         return NULL;
     }
 
@@ -2162,13 +2247,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         Value *callValue = interpreter_node(interpreter, scope, node->function);
         if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a function or a class");
+            error(interpreter->text, node->token->line, node->token->column, "Variable is not a function or a class");
         }
 
         List *arguments = NULL;
         if (callValue->type == VALUE_CLASS) {
             if (callValue->abstract) {
-                error(interpreter->text, node->token->line, node->token->position, "Can't construct an abstract class");
+                error(interpreter->text, node->token->line, node->token->column, "Can't construct an abstract class");
             }
 
             Value *constructorFunction = value_class_get(callValue, "constructor");
@@ -2185,7 +2270,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     if (argument->defaultNode != NULL) {
                         Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
                         if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
-                            error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->position,
+                            error(interpreter->text, argument->defaultNode->token->line, argument->defaultNode->token->column,
                                   "Unexpected function default argument type: '%s' needed '%s'", value_type_to_string(defaultValue->type),
                                   value_type_to_string(argument->type));
                         }
@@ -2193,13 +2278,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                         continue;
                     }
 
-                    error(interpreter->text, node->token->line, node->token->position, "Not all function arguments are given");
+                    error(interpreter->text, node->token->line, node->token->column, "Not all function arguments are given");
                 }
             }
 
             Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
             if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
-                error(interpreter->text, node->token->line, node->token->position, "Unexpected function argument type: '%s' needed '%s'",
+                error(interpreter->text, node->token->line, node->token->column, "Unexpected function argument type: '%s' needed '%s'",
                       value_type_to_string(nodeValue->type), value_type_to_string(argument->type));
             }
             list_add(values, nodeValue);
@@ -2211,10 +2296,9 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         if (callValue->type == VALUE_NATIVE_FUNCTION) {
-            bool isAssert = node->function->type == NODE_VARIABLE && !strcmp(node->function->string, "assert");
-            returnValue = callValue->nativeFunc(isAssert ? (Value *)node : thisValue, values);
+            returnValue = callValue->nativeFunc(node, thisValue, values);
             if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
-                error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
                       value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
             }
         }
@@ -2236,13 +2320,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 }
 
                 if (constructorFunction->type == VALUE_NATIVE_FUNCTION) {
-                    Value *newReturnValue = constructorFunction->nativeFunc(instance, values);
+                    Value *newReturnValue = constructorFunction->nativeFunc(node, instance, values);
                     if (newReturnValue != NULL) {
                         returnValue = newReturnValue;
                         value_free(instance);
                     }
                     if (constructorFunction->returnType != VALUE_ANY && returnValue->type != constructorFunction->returnType) {
-                        error(interpreter->text, node->token->line, node->token->position, "Unexpected function return type: '%s' needed '%s'",
+                        error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
                               value_type_to_string(returnValue->type), value_type_to_string(constructorFunction->returnType));
                     }
                 }
@@ -2367,13 +2451,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
 
-        error(interpreter->text, node->token->line, node->token->position, "Type error");
+        error(interpreter->text, node->token->line, node->token->column, "Type error");
     }
 
     if (node->type == NODE_VARIABLE) {
         Variable *variable = block_scope_get(scope->block, node->string);
         if (variable == NULL) {
-            error(interpreter->text, node->token->line, node->token->position, "Can't find variable: '%s'", node->string);
+            error(interpreter->text, node->token->line, node->token->column, "Can't find variable: '%s'", node->string);
         }
         return value_retrieve(variable->value);
     }
@@ -2381,7 +2465,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
         if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT &&
             containerValue->type != VALUE_CLASS && containerValue->type != VALUE_INSTANCE) {
-            error(interpreter->text, node->token->line, node->token->position, "Variable is not a string, array, object, class or instance it is: %s",
+            error(interpreter->text, node->token->line, node->token->column, "Variable is not a string, array, object, class or instance it is: %s",
                   value_type_to_string(containerValue->type));
         }
 
@@ -2395,7 +2479,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
-                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "String index is not an int");
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->column, "String index is not an int");
                 }
                 if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
                     char character[] = {containerValue->string[indexOrKey->integer], '\0'};
@@ -2413,7 +2497,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
-                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->column, "Array index is not an int");
                 }
                 Value *value = list_get(containerValue->array, indexOrKey->integer);
                 returnValue = value != NULL ? value_retrieve(value) : value_new_null();
@@ -2427,7 +2511,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_STRING) {
-                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->column, "Object key is not a string");
                 }
                 Value *value;
                 if (containerValue->type == VALUE_INSTANCE) {
@@ -2436,7 +2520,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     value = map_get(containerValue->object, indexOrKey->string);
                 }
                 if (value == NULL) {
-                    error(interpreter->text, node->token->line, node->token->position, "Can't find key in object");
+                    error(interpreter->text, node->token->line, node->token->column, "Can't find key in object");
                 }
                 returnValue = value_retrieve(value);
             }
@@ -2449,10 +2533,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_CONST_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
-            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare const variable: '%s'", node->lhs->string);
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->column, "Can't redeclare const variable: '%s'", node->lhs->string);
         }
         if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
-            error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+            error(interpreter->text, node->token->line, node->token->column, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
                   value_type_to_string(node->declarationType));
         }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, false, value_retrieve(rhs)));
@@ -2461,10 +2545,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
-            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't redeclare let variable: '%s'", node->lhs->string);
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->column, "Can't redeclare let variable: '%s'", node->lhs->string);
         }
         if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
-            error(interpreter->text, node->token->line, node->token->position, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+            error(interpreter->text, node->token->line, node->token->column, "Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
                   value_type_to_string(node->declarationType));
         }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, true, value_retrieve(rhs)));
@@ -2476,14 +2560,14 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
             if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT && containerValue->type != VALUE_CLASS &&
                 containerValue->type != VALUE_INSTANCE) {
-                error(interpreter->text, node->token->line, node->token->position, "Variable is not an array, object, class or instance it is: %s",
+                error(interpreter->text, node->token->line, node->token->column, "Variable is not an array, object, class or instance it is: %s",
                       value_type_to_string(containerValue->type));
             }
 
             Value *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
             if (containerValue->type == VALUE_ARRAY) {
                 if (indexOrKey->type != VALUE_INT) {
-                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Array index is not an int");
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->column, "Array index is not an int");
                 }
                 Value *previousValue = list_get(containerValue->array, indexOrKey->integer);
                 if (previousValue != NULL) value_free(previousValue);
@@ -2491,7 +2575,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
                 if (indexOrKey->type != VALUE_STRING) {
-                    error(interpreter->text, node->rhs->token->line, node->rhs->token->position, "Object key is not a string");
+                    error(interpreter->text, node->rhs->token->line, node->rhs->token->column, "Object key is not a string");
                 }
                 Value *previousValue = map_get(containerValue->object, indexOrKey->string);
                 if (previousValue != NULL) value_free(previousValue);
@@ -2504,13 +2588,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         Variable *variable = block_scope_get(scope->block, node->lhs->string);
         if (variable == NULL) {
-            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Variable: '%s' is not declared", node->lhs->string);
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->column, "Variable: '%s' is not declared", node->lhs->string);
         }
         if (!variable->mutable) {
-            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Can't mutate const variable: '%s'", node->lhs->string);
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->column, "Can't mutate const variable: '%s'", node->lhs->string);
         }
         if (variable->type != VALUE_ANY && variable->type != rhs->type) {
-            error(interpreter->text, node->lhs->token->line, node->lhs->token->position, "Unexpected variable type: '%s' needed '%s'",
+            error(interpreter->text, node->lhs->token->line, node->lhs->token->column, "Unexpected variable type: '%s' needed '%s'",
                   value_type_to_string(rhs->type), value_type_to_string(variable->type));
         }
         value_free(variable->value);
@@ -2949,7 +3033,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
 
-        error(interpreter->text, node->token->line, node->token->position, "Type error");
+        error(interpreter->text, node->token->line, node->token->column, "Type error");
     }
 
     fprintf(stderr, "Unkown node type: %d\n", node->type);

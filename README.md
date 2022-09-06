@@ -181,3 +181,20 @@ dog.jump();
 let cat = Cat('Minoes');
 cat.jump();
 ```
+
+## Exceptions
+```
+fn myfunc() {
+    println("Hello!");
+    throw Exception('My custom exception');
+    println("Won't run!");
+}
+
+try {
+    myfunc();
+} catch (const exception) {
+    println('Catched exception:', exception);
+} finally {
+    println('Finally');
+}
+```

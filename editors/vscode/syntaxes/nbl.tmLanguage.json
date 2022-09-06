@@ -24,7 +24,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.nbl",
-					"match": "\\b(any|bool|int|float|string|array|object|function|fn|class|extends|abstract|instance|const|let|if|else|while|do|for|in|continue|break|return)\\b"
+					"match": "\\b(any|bool|int|float|string|array|object|function|fn|class|extends|abstract|instance|const|let|if|else|while|do|for|in|continue|break|return|throw|try|catch|finally)\\b"
 				}
 			]
 		},

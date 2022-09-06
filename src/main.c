@@ -72,6 +72,7 @@ double random_random(void) {
 
 char *file_read(char *path) {
     FILE *file = fopen(path, "rb");
+    if (file == NULL) return NULL;
     fseek(file, 0, SEEK_END);
     size_t fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -106,7 +107,8 @@ char *script_text;
 Map *script_env;
 
 // Math
-Value *env_math_abs(Value *this, List *values) {
+Value *env_math_abs(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     if (x->type == VALUE_INT) {
@@ -117,69 +119,82 @@ Value *env_math_abs(Value *this, List *values) {
     }
     return value_new_null();
 }
-Value *env_math_sin(Value *this, List *values) {
+Value *env_math_sin(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sin(x->floating));
 }
-Value *env_math_cos(Value *this, List *values) {
+Value *env_math_cos(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(cos(x->floating));
 }
-Value *env_math_tan(Value *this, List *values) {
+Value *env_math_tan(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(tan(x->floating));
 }
-Value *env_math_asin(Value *this, List *values) {
+Value *env_math_asin(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(asin(x->floating));
 }
-Value *env_math_acos(Value *this, List *values) {
+Value *env_math_acos(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(acos(x->floating));
 }
-Value *env_math_atan(Value *this, List *values) {
+Value *env_math_atan(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(atan(x->floating));
 }
-Value *env_math_atan2(Value *this, List *values) {
+Value *env_math_atan2(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *y = list_get(values, 0);
     Value *x = list_get(values, 1);
     return value_new_float(atan2(y->floating, x->floating));
 }
-Value *env_math_pow(Value *this, List *values) {
+Value *env_math_pow(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     Value *y = list_get(values, 1);
     return value_new_float(pow(x->floating, y->floating));
 }
-Value *env_math_sqrt(Value *this, List *values) {
+Value *env_math_sqrt(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sqrt(x->floating));
 }
-Value *env_math_floor(Value *this, List *values) {
+Value *env_math_floor(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(floor(x->floating));
 }
-Value *env_math_ceil(Value *this, List *values) {
+Value *env_math_ceil(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(ceil(x->floating));
 }
-Value *env_math_round(Value *this, List *values) {
+Value *env_math_round(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(round(x->floating));
 }
-Value *env_math_min(Value *this, List *values) {
+Value *env_math_min(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *first = list_get(values, 0);
     int64_t minInteger;
@@ -213,7 +228,8 @@ Value *env_math_min(Value *this, List *values) {
     });
     return onlyInteger ? value_new_int(minInteger) : value_new_float(minFloating);
 }
-Value *env_math_max(Value *this, List *values) {
+Value *env_math_max(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *first = list_get(values, 0);
     int64_t maxInteger;
@@ -247,24 +263,37 @@ Value *env_math_max(Value *this, List *values) {
     });
     return onlyInteger ? value_new_int(maxInteger) : value_new_float(maxFloating);
 }
-Value *env_math_exp(Value *this, List *values) {
+Value *env_math_exp(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(exp(x->floating));
 }
-Value *env_math_log(Value *this, List *values) {
+Value *env_math_log(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(log(x->floating));
 }
-Value *env_math_random(Value *this, List *values) {
+Value *env_math_random(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     (void)values;
     return value_new_float(random_random());
 }
 
+// Exception
+Value *env_exception_constructor(Node *callNode, Value *this, List *values) {
+    Value *error = list_get(values, 0);
+    map_set(this->object, "error", value_retrieve(error));
+    map_set(this->object, "line", value_new_int(callNode->token->line + 1));
+    map_set(this->object, "column", value_new_int(callNode->token->column + 1));
+    return NULL;
+}
+
 // String
-Value *env_string_constructor(Value *this, List *values) {
+Value *env_string_constructor(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *first = list_get(values, 0);
     char *string = value_to_string(first);
@@ -272,13 +301,15 @@ Value *env_string_constructor(Value *this, List *values) {
     free(string);
     return value;
 }
-Value *env_string_length(Value *this, List *values) {
+Value *env_string_length(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)values;
     return value_new_int(strlen(this->string));
 }
 
 // Array
-Value *env_array_constructor(Value *this, List *values) {
+Value *env_array_constructor(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_ARRAY) {
@@ -286,15 +317,18 @@ Value *env_array_constructor(Value *this, List *values) {
     }
     return value_new_array(list_new());
 }
-Value *env_array_length(Value *this, List *values) {
+Value *env_array_length(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)values;
     return value_new_int(this->array->size);
 }
-Value *env_array_push(Value *this, List *values) {
+Value *env_array_push(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
-Value *env_array_foreach(Value *this, List *values) {
+Value *env_array_foreach(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     Value *function = list_get(values, 0);
     list_foreach(this->array, Value * value, {
         List *arguments = list_new();
@@ -306,7 +340,8 @@ Value *env_array_foreach(Value *this, List *values) {
     });
     return value_new_null();
 }
-Value *env_array_map(Value *this, List *values) {
+Value *env_array_map(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     Value *function = list_get(values, 0);
     List *items = list_new();
     list_foreach(this->array, Value * value, {
@@ -319,7 +354,7 @@ Value *env_array_map(Value *this, List *values) {
     });
     return value_new_array(items);
 }
-Value *env_array_filter(Value *this, List *values) {
+Value *env_array_filter(Node *callNode, Value *this, List *values) {
     Value *function = list_get(values, 0);
     List *items = list_new();
     list_foreach(this->array, Value * value, {
@@ -329,7 +364,7 @@ Value *env_array_filter(Value *this, List *values) {
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            error(script_text, 0, 0, "Array filter condition type is not a bool");
+            error(script_text, callNode->token->line, callNode->token->column, "Array filter condition type is not a bool");
         }
         if (returnValue->boolean) {
             list_add(items, value);
@@ -339,7 +374,7 @@ Value *env_array_filter(Value *this, List *values) {
     });
     return value_new_array(items);
 }
-Value *env_array_find(Value *this, List *values) {
+Value *env_array_find(Node *callNode, Value *this, List *values) {
     Value *function = list_get(values, 0);
     list_foreach(this->array, Value * value, {
         List *arguments = list_new();
@@ -348,7 +383,7 @@ Value *env_array_find(Value *this, List *values) {
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            error(script_text, 0, 0, "Array find condition type is not a bool");
+            error(script_text, callNode->token->line, callNode->token->column, "Array find condition type is not a bool");
         }
         if (returnValue->boolean) {
             value_free(returnValue);
@@ -362,7 +397,8 @@ Value *env_array_find(Value *this, List *values) {
 }
 
 // Object
-Value *env_object_constructor(Value *this, List *values) {
+Value *env_object_constructor(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_OBJECT) {
@@ -370,11 +406,13 @@ Value *env_object_constructor(Value *this, List *values) {
     }
     return value_new_object(map_new());
 }
-Value *env_object_length(Value *this, List *values) {
+Value *env_object_length(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)values;
     return value_new_int(this->object->size);
 }
-Value *env_object_keys(Value *this, List *values) {
+Value *env_object_keys(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
@@ -382,7 +420,8 @@ Value *env_object_keys(Value *this, List *values) {
     }
     return value_new_array(items);
 }
-Value *env_object_values(Value *this, List *values) {
+Value *env_object_values(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
@@ -392,20 +431,23 @@ Value *env_object_values(Value *this, List *values) {
 }
 
 // Date
-Value *env_date_now(Value *this, List *values) {
+Value *env_date_now(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     (void)values;
     return value_new_int(time_ms());
 }
 
 // Root
-Value *env_type(Value *this, List *values) {
+Value *env_type(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *value = list_get(values, 0);
     return value_new_string(value_type_to_string(value->type));
 }
 
-Value *env_print(Value *this, List *values) {
+Value *env_print(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     for (size_t i = 0; i < values->size; i++) {
         char *string = value_to_string(list_get(values, i));
@@ -416,13 +458,14 @@ Value *env_print(Value *this, List *values) {
     return value_new_null();
 }
 
-Value *env_println(Value *this, List *values) {
-    Value *value = env_print(this, values);
+Value *env_println(Node *callNode, Value *this, List *values) {
+    Value *value = env_print(callNode, this, values);
     printf("\n");
     return value;
 }
 
-Value *env_exit(Value *this, List *values) {
+Value *env_exit(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *exitCode = list_get(values, 0);
     if (exitCode->type == VALUE_INT) {
@@ -431,11 +474,12 @@ Value *env_exit(Value *this, List *values) {
     return value_new_null();
 }
 
-Value *env_assert(Value *this, List *values) {
+Value *env_assert(Node *callNode, Value *this, List *values) {
+    (void)callNode;
     (void)this;
     Value *assertion = list_get(values, 0);
     if (!assertion->boolean) {
-        error(script_text, ((Node *)this)->token->line, ((Node *)this)->token->position, "Assertion failed");
+        error(script_text, callNode->token->line, callNode->token->column, "Assertion failed");
     }
     return value_new_null();
 }
@@ -484,6 +528,13 @@ Map *std_env(void) {
     map_set(math, "log", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log));
     random_seed = time_ms();
     map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
+
+    // Exception
+    Map *exception = map_new();
+    List *exception_constructor_args = list_new();
+    list_add(exception_constructor_args, argument_new("error", VALUE_STRING, NULL));
+    map_set(env, "Exception", variable_new(VALUE_CLASS, false, value_new_class(exception, NULL, false)));
+    map_set(exception, "constructor", value_new_native_function(exception_constructor_args, VALUE_ANY, env_exception_constructor));
 
     // String
     Map *string = map_new();
@@ -585,6 +636,10 @@ int main(int argc, char **argv) {
 
     // Read and parse
     script_text = file_read(argv[1]);
+    if (script_text == NULL) {
+        fprintf(stderr, "Can't read file: %s\n", argv[1]);
+        return EXIT_FAILURE;
+    }
     List *tokens = lexer(script_text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
