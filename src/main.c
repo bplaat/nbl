@@ -349,7 +349,8 @@ Value *env_array_filter(InterpreterContext *context, Value *this, List *values) 
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            return interpreter_throw(context, value_new_string_format("Array filter condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
+            return interpreter_throw(context,
+                                     value_new_string_format("Array filter condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
         if (returnValue->boolean) {
             list_add(items, value);
@@ -368,7 +369,8 @@ Value *env_array_find(InterpreterContext *context, Value *this, List *values) {
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            return interpreter_throw(context, value_new_string_format("Array find condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
+            return interpreter_throw(context,
+                                     value_new_string_format("Array find condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
         if (returnValue->boolean) {
             value_free(returnValue);

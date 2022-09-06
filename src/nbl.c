@@ -178,8 +178,8 @@ void map_free(Map *map, MapFreeFunc *freeFunc) {
 Source *source_new(char *path, char *text) {
     Source *source = malloc(sizeof(Source));
     source->refs = 1;
-    source->path = path;
-    source->text = text;
+    source->path = strdup(path);
+    source->text = strdup(text);
 
     char *c = path + strlen(path);
     while (*c != '/' && c != path) c--;
@@ -344,6 +344,7 @@ void token_free(Token *token) {
     token->refs--;
     if (token->refs > 0) return;
 
+    source_free(token->source);
     if (token->type == TOKEN_KEYWORD || token->type == TOKEN_STRING) free(token->string);
     free(token);
 }
@@ -2045,7 +2046,9 @@ Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *th
         map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
         if (callValue->returnType != VALUE_ANY && context->scope->exception->exceptionValue == NULL &&
             functionScope.function->returnValue->type != callValue->returnType) {
-            return interpreter_throw(context, type_error_exception(callValue->returnType, functionScope.function->returnValue->type));
+            ValueType returnValueType = functionScope.function->returnValue->type;
+            value_free(functionScope.function->returnValue);
+            return interpreter_throw(context, type_error_exception(callValue->returnType, returnValueType));
         }
 
         if (functionScope.function->returnValue != NULL) {
@@ -2116,8 +2119,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_IF) {
         Value *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
+            ValueType conditionType = condition->type;
+            value_free(condition);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, condition->type));
+            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
             interpreter_statement(interpreter, scope, node->thenBlock, { value_free(condition); });
@@ -2130,8 +2135,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_TENARY) {
         Value *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
+            ValueType conditionType = condition->type;
+            value_free(condition);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, condition->type));
+            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
             value_free(condition);
@@ -2168,8 +2175,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
+                ValueType conditionType = condition->type;
+                value_free(condition);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, condition->type));
+                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2203,8 +2212,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
+                ValueType conditionType = condition->type;
+                value_free(condition);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, condition->type));
+                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2222,8 +2233,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         for (;;) {
             Value *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
+                ValueType conditionType = condition->type;
+                value_free(condition);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, condition->type));
+                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -2247,9 +2260,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *iterator = interpreter_node(interpreter, scope, node->iterator);
         if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT && iterator->type != VALUE_CLASS &&
             iterator->type != VALUE_INSTANCE) {
+            ValueType iteratorType = iterator->type;
+            value_free(iterator);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
-            return interpreter_throw(&context, value_new_string_format("Variable is not a string, array, object, class or instance it is: %s",
-                                                                       value_type_to_string(iterator->type)));
+            return interpreter_throw(
+                &context, value_new_string_format("Variable is not a string, array, object, class or instance it is: %s", value_type_to_string(iteratorType)));
         }
 
         Scope loopScope = {.exception = scope->exception,
@@ -2328,8 +2343,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_INCLUDE) {
         Value *pathValue = interpreter_node(interpreter, scope, node->unary);
         if (pathValue->type != VALUE_STRING) {
+            ValueType pathValueType = pathValue->type;
+            value_free(pathValue);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
-            return interpreter_throw(&context, type_error_exception(VALUE_STRING, pathValue->type));
+            return interpreter_throw(&context, type_error_exception(VALUE_STRING, pathValueType));
         }
         char includePath[255];
         if (strlen(node->token->source->dirname) > 0) {
@@ -2390,13 +2407,18 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         Value *callValue = interpreter_node(interpreter, scope, node->function);
         if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
+            ValueType callValueType = callValue->type;
+            value_free(callValue);
+            if (thisValue != NULL) value_free(thisValue);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
-            return interpreter_throw(&context, value_new_string_format("Variable is not a function or a class but: %s", value_type_to_string(callValue->type)));
+            return interpreter_throw(&context, value_new_string_format("Variable is not a function or a class but: %s", value_type_to_string(callValueType)));
         }
 
         List *callArguments = NULL;
         if (callValue->type == VALUE_CLASS) {
             if (callValue->abstract) {
+                value_free(callValue);
+                if (thisValue != NULL) value_free(thisValue);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
                 return interpreter_throw(&context, value_new_string("Can't construct an abstract class"));
             }
@@ -2414,13 +2436,21 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     if (argument->defaultNode != NULL) {
                         Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
                         if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
+                            ValueType defaultValueType = defaultValue->type;
+                            value_free(defaultValue);
+                            list_free(arguments, (ListFreeFunc *)value_free);
+                            value_free(callValue);
+                            if (thisValue != NULL) value_free(thisValue);
                             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = argument->defaultNode};
-                            return interpreter_throw(&context, type_error_exception(argument->type, defaultValue->type));
+                            return interpreter_throw(&context, type_error_exception(argument->type, defaultValueType));
                         }
                         list_add(arguments, defaultValue);
                         continue;
                     }
 
+                    list_free(arguments, (ListFreeFunc *)value_free);
+                    value_free(callValue);
+                    if (thisValue != NULL) value_free(thisValue);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
                     return interpreter_throw(&context, value_new_string("Not all function arguments are given"));
                 }
@@ -2428,8 +2458,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
             Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
             if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
+                ValueType nodeValueType = nodeValue->type;
+                value_free(nodeValue);
+                list_free(arguments, (ListFreeFunc *)value_free);
+                value_free(callValue);
+                if (thisValue != NULL) value_free(thisValue);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-                return interpreter_throw(&context, type_error_exception(argument->type, nodeValue->type));
+                return interpreter_throw(&context, type_error_exception(argument->type, nodeValueType));
             }
             list_add(arguments, nodeValue);
         }
@@ -2555,6 +2590,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
 
+        value_free(unary);
         InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return interpreter_throw(&context, value_new_string("Type error"));
     }
@@ -2571,9 +2607,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
         if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT &&
             containerValue->type != VALUE_CLASS && containerValue->type != VALUE_INSTANCE) {
+            ValueType containerValueType = containerValue->type;
+            value_free(containerValue);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string_format("Variable is not a string, array, object, class or instance it is: %s",
-                                                                       value_type_to_string(containerValue->type)));
+                                                                       value_type_to_string(containerValueType)));
         }
 
         Value *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
@@ -2586,8 +2624,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
+                    ValueType indexOrKeyType = indexOrKey->type;
+                    value_free(indexOrKey);
+                    value_free(containerValue);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKey->type));
+                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
                 if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
                     char character[] = {containerValue->string[indexOrKey->integer], '\0'};
@@ -2605,8 +2646,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
+                    ValueType indexOrKeyType = indexOrKey->type;
+                    value_free(indexOrKey);
+                    value_free(containerValue);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKey->type));
+                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
                 Value *value = list_get(containerValue->array, indexOrKey->integer);
                 returnValue = value != NULL ? value_retrieve(value) : value_new_null();
@@ -2620,8 +2664,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_STRING) {
+                    ValueType indexOrKeyType = indexOrKey->type;
+                    value_free(indexOrKey);
+                    value_free(containerValue);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKey->type));
+                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
                 }
                 Value *value;
                 if (containerValue->type == VALUE_INSTANCE) {
@@ -2630,8 +2677,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     value = map_get(containerValue->object, indexOrKey->string);
                 }
                 if (value == NULL) {
+                    char *indexOrKeyString = strdup(indexOrKey->string);
+                    value_free(indexOrKey);
+                    value_free(containerValue);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-                    return interpreter_throw(&context, value_new_string_format("Can't find %s in object", indexOrKey->string));
+                    Value *exception = value_new_string_format("Can't find %s in object", indexOrKeyString);
+                    free(indexOrKeyString);
+                    return interpreter_throw(&context, exception);
                 }
                 returnValue = value_retrieve(value);
             }
@@ -2644,12 +2696,15 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_CONST_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't redeclare const variable: '%s'", node->lhs->string));
         }
         if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
+            ValueType rhsType = rhs->type;
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-            return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+            return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhsType),
                                                                        value_type_to_string(node->declarationType)));
         }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, false, value_retrieve(rhs)));
@@ -2658,12 +2713,15 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     if (node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't redeclare let variable: '%s'", node->lhs->string));
         }
         if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
+            ValueType rhsType = rhs->type;
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-            return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhs->type),
+            return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhsType),
                                                                        value_type_to_string(node->declarationType)));
         }
         map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, true, value_retrieve(rhs)));
@@ -2675,16 +2733,23 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             Value *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
             if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT && containerValue->type != VALUE_CLASS &&
                 containerValue->type != VALUE_INSTANCE) {
+                ValueType containerValueType = containerValue->type;
+                value_free(rhs);
+                value_free(containerValue);
                 InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
                 return interpreter_throw(&context, value_new_string_format("Variable is not an array, object, class or instance it is: %s",
-                                                                           value_type_to_string(containerValue->type)));
+                                                                           value_type_to_string(containerValueType)));
             }
 
             Value *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
             if (containerValue->type == VALUE_ARRAY) {
                 if (indexOrKey->type != VALUE_INT) {
+                    ValueType indexOrKeyType = indexOrKey->type;
+                    value_free(rhs);
+                    value_free(containerValue);
+                    value_free(indexOrKey);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKey->type));
+                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
                 Value *previousValue = list_get(containerValue->array, indexOrKey->integer);
                 if (previousValue != NULL) value_free(previousValue);
@@ -2692,8 +2757,12 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
                 if (indexOrKey->type != VALUE_STRING) {
+                    ValueType indexOrKeyType = indexOrKey->type;
+                    value_free(rhs);
+                    value_free(containerValue);
+                    value_free(indexOrKey);
                     InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKey->type));
+                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
                 }
                 Value *previousValue = map_get(containerValue->object, indexOrKey->string);
                 if (previousValue != NULL) value_free(previousValue);
@@ -2706,16 +2775,20 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         Variable *variable = block_scope_get(scope->block, node->lhs->string);
         if (variable == NULL) {
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Variable: '%s' is not declared", node->lhs->string));
         }
         if (!variable->mutable) {
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
         }
         if (variable->type != VALUE_ANY && variable->type != rhs->type) {
+            ValueType rhsType = rhs->type;
+            value_free(rhs);
             InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
-            return interpreter_throw(&context, type_error_exception(variable->type, rhs->type));
+            return interpreter_throw(&context, type_error_exception(variable->type, rhsType));
         }
         value_free(variable->value);
         variable->value = value_retrieve(rhs);
@@ -3153,6 +3226,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
         }
 
+        value_free(lhs);
+        value_free(rhs);
         InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return interpreter_throw(&context, value_new_string("Type error"));
     }

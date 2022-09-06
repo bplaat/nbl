@@ -18,7 +18,7 @@
 
 char *file_read(char *path);
 
-typedef struct Token Token; // Forward define
+typedef struct Token Token;  // Forward define
 
 void print_error(Token *token, char *fmt, ...);
 
@@ -231,8 +231,8 @@ typedef struct Keyword {
 List *lexer(char *path, char *text);
 
 // Value
-typedef struct Node Node;  // Forward define
-typedef struct InterpreterContext InterpreterContext; // Forward define
+typedef struct Node Node;                              // Forward define
+typedef struct InterpreterContext InterpreterContext;  // Forward define
 
 typedef enum ValueType {
     VALUE_ANY,
