@@ -1,3 +1,9 @@
+rm -f -r .vscode
+if [ "$1" = "clean" ]; then
+    rm -f -r nbl.dSYM dump nbl nbl.exe
+    exit
+fi
+
 if [ "$1" = "format" ]; then
     clang-format -i $(find . -name *.h -o -name *.c)
     exit

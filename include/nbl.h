@@ -18,7 +18,7 @@
 
 char *format(char *fmt, ...);
 
-void error(char *text, int32_t line, int32_t column, char *fmt, ...);
+void print_error(char *text, int32_t line, int32_t column, char *fmt, ...);
 
 // List header
 typedef struct List {
@@ -282,6 +282,8 @@ Value *value_new_float(double integer);
 
 Value *value_new_string(char *string);
 
+Value *value_new_string_format(char *format, ...);
+
 Value *value_new_array(List *array);
 
 Value *value_new_object(Map *object);
@@ -511,16 +513,18 @@ struct InterpreterContext {
     char *text;
     Map *env;
     Scope *scope;
-    Node *callNode;
+    Node *node;
 };
 
 Variable *block_scope_get(BlockScope *block, char *key);
 
 Value *interpreter(char *text, Map *env, Node *node);
 
+Value *type_error_exception(ValueType expected, ValueType got);
+
 Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *this, List *arguments);
 
-void interpreter_throw(InterpreterContext *context, Value *exception);
+Value *interpreter_throw(InterpreterContext *context, Value *exception);
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
 

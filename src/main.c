@@ -284,8 +284,8 @@ Value *env_math_random(InterpreterContext *context, Value *this, List *values) {
 Value *env_exception_constructor(InterpreterContext *context, Value *this, List *values) {
     Value *error = list_get(values, 0);
     map_set(this->object, "error", value_retrieve(error));
-    map_set(this->object, "line", value_new_int(context->callNode->token->line));
-    map_set(this->object, "column", value_new_int(context->callNode->token->column));
+    map_set(this->object, "line", value_new_int(context->node->token->line));
+    map_set(this->object, "column", value_new_int(context->node->token->column));
     return value_new_null();
 }
 
@@ -360,8 +360,7 @@ Value *env_array_filter(InterpreterContext *context, Value *this, List *values) 
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            interpreter_throw(context, value_new_string("Array filter condition type is not a bool"));
-            return value_new_array(list_new());
+            return interpreter_throw(context, value_new_string_format("Array filter condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
         if (returnValue->boolean) {
             list_add(items, value);
@@ -380,8 +379,7 @@ Value *env_array_find(InterpreterContext *context, Value *this, List *values) {
         list_add(arguments, value_ref(this));
         Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            interpreter_throw(context, value_new_string("Array find condition type is not a bool"));
-            return value_new_array(list_new());
+            return interpreter_throw(context, value_new_string_format("Array find condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
         if (returnValue->boolean) {
             value_free(returnValue);
@@ -477,7 +475,7 @@ Value *env_assert(InterpreterContext *context, Value *this, List *values) {
     (void)this;
     Value *assertion = list_get(values, 0);
     if (!assertion->boolean) {
-        interpreter_throw(context, value_new_string("Assertion failed"));
+        return interpreter_throw(context, value_new_string("Assertion failed"));
     }
     return value_new_null();
 }
