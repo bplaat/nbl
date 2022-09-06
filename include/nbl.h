@@ -145,6 +145,7 @@ typedef enum TokenType {
     TOKEN_ASSIGN_SHL,
     TOKEN_SHR,
     TOKEN_ASSIGN_SHR,
+    TOKEN_INSTANCEOF,
     TOKEN_EQ,
     TOKEN_NEQ,
     TOKEN_LT,
@@ -323,6 +324,8 @@ char *value_to_string(Value *value);
 
 Value *value_class_get(Value *instance, char *key);
 
+bool value_class_instanceof(Value *instance, Value *class);
+
 Value *value_ref(Value *value);
 
 Value *value_retrieve(Value *value);
@@ -376,6 +379,7 @@ typedef enum NodeType {
     NODE_OR,
     NODE_SHL,
     NODE_SHR,
+    NODE_INSTANCEOF,
     NODE_EQ,
     NODE_NEQ,
     NODE_LT,
@@ -473,6 +477,7 @@ Node *parser_tenary(Parser *parser);
 Node *parser_logical(Parser *parser);
 Node *parser_equality(Parser *parser);
 Node *parser_relational(Parser *parser);
+Node *parser_instanceof(Parser *parser);
 Node *parser_bitwise(Parser *parser);
 Node *parser_shift(Parser *parser);
 Node *parser_add(Parser *parser);

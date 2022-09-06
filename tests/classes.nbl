@@ -47,6 +47,8 @@ let milo = Dog('Milo');
 assert(type(Dog) == 'class');
 assert(type(milo) == 'instance');
 assert(milo.jump() == 'jump-Milo-years');
+assert(milo instanceof Animal);
+assert(milo instanceof Dog);
 
 let woof = Dog('Woof', 1);
 assert(woof.jump() == 'jump-Woof-year');
@@ -56,3 +58,21 @@ assert(type(Cat) == 'class');
 assert(type(cat) == 'instance');
 assert(cat.jump() == 'jump-Minoes');
 assertFails(fn () => cat.notExisting);
+assert(cat instanceof Animal);
+assert(cat instanceof Cat);
+
+class Mega {
+    name = 'Bastiaan',
+
+    fn deluxe() {
+        return 'MegaDeluxe';
+    }
+}
+
+assert(Mega.deluxe() == 'MegaDeluxe');
+assert(Mega().deluxe() == 'MegaDeluxe');
+assert(Mega.name == 'Bastiaan');
+assert(Mega().name == 'Bastiaan');
+assert(Mega() instanceof Mega);
+assert(!(Mega() instanceof Dog));
+assert(!(milo instanceof Mega));

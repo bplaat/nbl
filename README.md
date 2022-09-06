@@ -177,9 +177,11 @@ class Cat extends Animal {
 
 let dog = Dog('Milo');
 dog.jump();
+println(dog instanceof Dog ? "dog is a Dog" : "dog is not a Dog");
 
 let cat = Cat('Minoes');
 cat.jump();
+println(cat instanceof Animal ? "cat is an Animal" : "cat isn't an Animal");
 ```
 
 ## Exceptions

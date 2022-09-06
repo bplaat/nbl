@@ -303,6 +303,7 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_LOGICAL_OR) return "||";
     if (type == TOKEN_LOGICAL_AND) return "&&";
     if (type == TOKEN_LOGICAL_NOT) return "!";
+    if (type == TOKEN_INSTANCEOF) return "instanceof";
 
     if (type == TOKEN_TYPE_ANY) return "any";
     if (type == TOKEN_NULL) return "null";
@@ -369,7 +370,8 @@ int64_t string_to_int(char *string) {
 double string_to_float(char *string) { return strtod(string, NULL); }
 
 List *lexer(char *path, char *text) {
-    Keyword keywords[] = {{"any", TOKEN_TYPE_ANY},
+    Keyword keywords[] = {{"instanceof", TOKEN_INSTANCEOF},
+                          {"any", TOKEN_TYPE_ANY},
                           {"null", TOKEN_NULL},
                           {"bool", TOKEN_TYPE_BOOL},
                           {"true", TOKEN_TRUE},
@@ -998,6 +1000,17 @@ Value *value_class_get(Value *instance, char *key) {
     return NULL;
 }
 
+bool value_class_instanceof(Value *instance, Value *class) {
+    bool result = instance->instanceClass == class;
+    if (result) {
+        return true;
+    }
+    if (instance->instanceClass->parentClass != NULL) {
+        return value_class_instanceof(instance->instanceClass, class);
+    }
+    return false;
+}
+
 Value *value_ref(Value *value) {
     value->refs++;
     return value;
@@ -1569,28 +1582,38 @@ Node *parser_equality(Parser *parser) {
 }
 
 Node *parser_relational(Parser *parser) {
-    Node *node = parser_bitwise(parser);
+    Node *node = parser_instanceof(parser);
     while (current()->type == TOKEN_LT || current()->type == TOKEN_LTEQ || current()->type == TOKEN_GT || current()->type == TOKEN_GTEQ) {
         if (current()->type == TOKEN_LT) {
             Token *token = current();
             parser_eat(parser, TOKEN_LT);
-            node = node_new_operation(NODE_LT, token, node, parser_bitwise(parser));
+            node = node_new_operation(NODE_LT, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_LTEQ) {
             Token *token = current();
             parser_eat(parser, TOKEN_LTEQ);
-            node = node_new_operation(NODE_LTEQ, token, node, parser_bitwise(parser));
+            node = node_new_operation(NODE_LTEQ, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_GT) {
             Token *token = current();
             parser_eat(parser, TOKEN_GT);
-            node = node_new_operation(NODE_GT, token, node, parser_bitwise(parser));
+            node = node_new_operation(NODE_GT, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_GTEQ) {
             Token *token = current();
             parser_eat(parser, TOKEN_GTEQ);
-            node = node_new_operation(NODE_GTEQ, token, node, parser_bitwise(parser));
+            node = node_new_operation(NODE_GTEQ, token, node, parser_instanceof(parser));
         }
+    }
+    return node;
+}
+
+Node *parser_instanceof(Parser *parser) {
+    Node *node = parser_bitwise(parser);
+    while (current()->type == TOKEN_INSTANCEOF) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_INSTANCEOF);
+        node = node_new_operation(NODE_INSTANCEOF, token, node, parser_bitwise(parser));
     }
     return node;
 }
@@ -2994,6 +3017,15 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 lhs->integer >>= rhs->integer;
                 value_free(rhs);
                 return lhs;
+            }
+        }
+
+        if (node->type == NODE_INSTANCEOF) {
+            if (lhs->type == VALUE_INSTANCE && rhs->type == VALUE_CLASS) {
+                bool result = value_class_instanceof(lhs, rhs);
+                value_free(lhs);
+                value_free(rhs);
+                return value_new_bool(result);
             }
         }
 
