@@ -103,12 +103,10 @@ int64_t time_ms(void) {
 }
 
 // Standard library
-char *script_text;
-Map *script_env;
 
 // Math
-Value *env_math_abs(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_abs(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     if (x->type == VALUE_INT) {
@@ -119,82 +117,82 @@ Value *env_math_abs(Node *callNode, Value *this, List *values) {
     }
     return value_new_null();
 }
-Value *env_math_sin(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_sin(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sin(x->floating));
 }
-Value *env_math_cos(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_cos(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(cos(x->floating));
 }
-Value *env_math_tan(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_tan(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(tan(x->floating));
 }
-Value *env_math_asin(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_asin(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(asin(x->floating));
 }
-Value *env_math_acos(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_acos(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(acos(x->floating));
 }
-Value *env_math_atan(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_atan(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(atan(x->floating));
 }
-Value *env_math_atan2(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_atan2(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *y = list_get(values, 0);
     Value *x = list_get(values, 1);
     return value_new_float(atan2(y->floating, x->floating));
 }
-Value *env_math_pow(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_pow(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     Value *y = list_get(values, 1);
     return value_new_float(pow(x->floating, y->floating));
 }
-Value *env_math_sqrt(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_sqrt(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(sqrt(x->floating));
 }
-Value *env_math_floor(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_floor(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(floor(x->floating));
 }
-Value *env_math_ceil(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_ceil(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(ceil(x->floating));
 }
-Value *env_math_round(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_round(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(round(x->floating));
 }
-Value *env_math_min(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_min(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *first = list_get(values, 0);
     int64_t minInteger;
@@ -228,8 +226,8 @@ Value *env_math_min(Node *callNode, Value *this, List *values) {
     });
     return onlyInteger ? value_new_int(minInteger) : value_new_float(minFloating);
 }
-Value *env_math_max(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_max(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *first = list_get(values, 0);
     int64_t maxInteger;
@@ -263,37 +261,37 @@ Value *env_math_max(Node *callNode, Value *this, List *values) {
     });
     return onlyInteger ? value_new_int(maxInteger) : value_new_float(maxFloating);
 }
-Value *env_math_exp(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_exp(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(exp(x->floating));
 }
-Value *env_math_log(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_log(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *x = list_get(values, 0);
     return value_new_float(log(x->floating));
 }
-Value *env_math_random(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_math_random(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     (void)values;
     return value_new_float(random_random());
 }
 
 // Exception
-Value *env_exception_constructor(Node *callNode, Value *this, List *values) {
+Value *env_exception_constructor(InterpreterContext *context, Value *this, List *values) {
     Value *error = list_get(values, 0);
     map_set(this->object, "error", value_retrieve(error));
-    map_set(this->object, "line", value_new_int(callNode->token->line + 1));
-    map_set(this->object, "column", value_new_int(callNode->token->column + 1));
-    return NULL;
+    map_set(this->object, "line", value_new_int(context->callNode->token->line));
+    map_set(this->object, "column", value_new_int(context->callNode->token->column));
+    return value_new_null();
 }
 
 // String
-Value *env_string_constructor(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_string_constructor(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *first = list_get(values, 0);
     char *string = value_to_string(first);
@@ -301,15 +299,15 @@ Value *env_string_constructor(Node *callNode, Value *this, List *values) {
     free(string);
     return value;
 }
-Value *env_string_length(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_string_length(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)values;
     return value_new_int(strlen(this->string));
 }
 
 // Array
-Value *env_array_constructor(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_array_constructor(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_ARRAY) {
@@ -317,31 +315,29 @@ Value *env_array_constructor(Node *callNode, Value *this, List *values) {
     }
     return value_new_array(list_new());
 }
-Value *env_array_length(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_array_length(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)values;
     return value_new_int(this->array->size);
 }
-Value *env_array_push(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_array_push(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
-Value *env_array_foreach(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_array_foreach(InterpreterContext *context, Value *this, List *values) {
     Value *function = list_get(values, 0);
     list_foreach(this->array, Value * value, {
         List *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        interpreter_call(script_text, script_env, function, NULL, arguments);
+        interpreter_call(context, function, NULL, arguments);
         list_free(arguments, (ListFreeFunc *)value_free);
     });
     return value_new_null();
 }
-Value *env_array_map(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_array_map(InterpreterContext *context, Value *this, List *values) {
     Value *function = list_get(values, 0);
     List *items = list_new();
     list_foreach(this->array, Value * value, {
@@ -349,12 +345,12 @@ Value *env_array_map(Node *callNode, Value *this, List *values) {
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        list_add(items, interpreter_call(script_text, script_env, function, NULL, arguments));
+        list_add(items, interpreter_call(context, function, NULL, arguments));
         list_free(arguments, (ListFreeFunc *)value_free);
     });
     return value_new_array(items);
 }
-Value *env_array_filter(Node *callNode, Value *this, List *values) {
+Value *env_array_filter(InterpreterContext *context, Value *this, List *values) {
     Value *function = list_get(values, 0);
     List *items = list_new();
     list_foreach(this->array, Value * value, {
@@ -362,9 +358,10 @@ Value *env_array_filter(Node *callNode, Value *this, List *values) {
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
+        Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            error(script_text, callNode->token->line, callNode->token->column, "Array filter condition type is not a bool");
+            interpreter_throw(context, value_new_string("Array filter condition type is not a bool"));
+            return value_new_array(list_new());
         }
         if (returnValue->boolean) {
             list_add(items, value);
@@ -374,16 +371,17 @@ Value *env_array_filter(Node *callNode, Value *this, List *values) {
     });
     return value_new_array(items);
 }
-Value *env_array_find(Node *callNode, Value *this, List *values) {
+Value *env_array_find(InterpreterContext *context, Value *this, List *values) {
     Value *function = list_get(values, 0);
     list_foreach(this->array, Value * value, {
         List *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        Value *returnValue = interpreter_call(script_text, script_env, function, NULL, arguments);
+        Value *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
-            error(script_text, callNode->token->line, callNode->token->column, "Array find condition type is not a bool");
+            interpreter_throw(context, value_new_string("Array find condition type is not a bool"));
+            return value_new_array(list_new());
         }
         if (returnValue->boolean) {
             value_free(returnValue);
@@ -397,8 +395,8 @@ Value *env_array_find(Node *callNode, Value *this, List *values) {
 }
 
 // Object
-Value *env_object_constructor(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_object_constructor(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_OBJECT) {
@@ -406,13 +404,13 @@ Value *env_object_constructor(Node *callNode, Value *this, List *values) {
     }
     return value_new_object(map_new());
 }
-Value *env_object_length(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_object_length(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)values;
     return value_new_int(this->object->size);
 }
-Value *env_object_keys(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_object_keys(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
@@ -420,8 +418,8 @@ Value *env_object_keys(Node *callNode, Value *this, List *values) {
     }
     return value_new_array(items);
 }
-Value *env_object_values(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_object_values(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)values;
     List *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
@@ -431,23 +429,23 @@ Value *env_object_values(Node *callNode, Value *this, List *values) {
 }
 
 // Date
-Value *env_date_now(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_date_now(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     (void)values;
     return value_new_int(time_ms());
 }
 
 // Root
-Value *env_type(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_type(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *value = list_get(values, 0);
     return value_new_string(value_type_to_string(value->type));
 }
 
-Value *env_print(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_print(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     for (size_t i = 0; i < values->size; i++) {
         char *string = value_to_string(list_get(values, i));
@@ -458,14 +456,14 @@ Value *env_print(Node *callNode, Value *this, List *values) {
     return value_new_null();
 }
 
-Value *env_println(Node *callNode, Value *this, List *values) {
-    Value *value = env_print(callNode, this, values);
+Value *env_println(InterpreterContext *context, Value *this, List *values) {
+    Value *value = env_print(context, this, values);
     printf("\n");
     return value;
 }
 
-Value *env_exit(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_exit(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *exitCode = list_get(values, 0);
     if (exitCode->type == VALUE_INT) {
@@ -474,12 +472,12 @@ Value *env_exit(Node *callNode, Value *this, List *values) {
     return value_new_null();
 }
 
-Value *env_assert(Node *callNode, Value *this, List *values) {
-    (void)callNode;
+Value *env_assert(InterpreterContext *context, Value *this, List *values) {
+    (void)context;
     (void)this;
     Value *assertion = list_get(values, 0);
     if (!assertion->boolean) {
-        error(script_text, callNode->token->line, callNode->token->column, "Assertion failed");
+        interpreter_throw(context, value_new_string("Assertion failed"));
     }
     return value_new_null();
 }
@@ -588,9 +586,8 @@ Map *std_env(void) {
 }
 
 void repl(void) {
-    script_env = std_env();
+    Map *env = std_env();
     char *command = malloc(1024);
-    script_text = command;
     for (;;) {
         // Read
         printf("> ");
@@ -611,7 +608,7 @@ void repl(void) {
         }
 
         // Run
-        Value *returnValue = interpreter(command, script_env, node);
+        Value *returnValue = interpreter(command, env, node);
         if (returnValue != NULL) {
             char *string = value_to_string(returnValue);
             printf("%s\n", string);
@@ -624,7 +621,7 @@ void repl(void) {
         list_free(tokens, (ListFreeFunc *)token_free);
     }
     free(command);
-    map_free(script_env, (MapFreeFunc *)variable_free);
+    map_free(env, (MapFreeFunc *)variable_free);
 }
 
 int main(int argc, char **argv) {
@@ -635,36 +632,36 @@ int main(int argc, char **argv) {
     }
 
     // Read and parse
-    script_text = file_read(argv[1]);
-    if (script_text == NULL) {
+    char *text = file_read(argv[1]);
+    if (text == NULL) {
         fprintf(stderr, "Can't read file: %s\n", argv[1]);
         return EXIT_FAILURE;
     }
-    List *tokens = lexer(script_text);
+    List *tokens = lexer(text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
     // printf("\n");
-    Node *node = parser(script_text, tokens);
+    Node *node = parser(text, tokens);
 
     // Run
-    script_env = std_env();
+    Map *env = std_env();
     List *arguments = list_new();
     for (int i = 2; i < argc; i++) {
         list_add(arguments, value_new_string(argv[i]));
     }
-    map_set(script_env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
+    map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
 
-    Value *returnValue = interpreter(script_text, script_env, node);
+    Value *returnValue = interpreter(text, env, node);
     if (returnValue->type == VALUE_INT) {
         exit(returnValue->integer);
     }
     value_free(returnValue);
 
     // Cleanup
-    map_free(script_env, (MapFreeFunc *)variable_free);
+    map_free(env, (MapFreeFunc *)variable_free);
     node_free(node);
     list_free(tokens, (ListFreeFunc *)token_free);
-    free(script_text);
+    free(text);
     return EXIT_SUCCESS;
 }

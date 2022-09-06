@@ -213,6 +213,7 @@ List *lexer(char *text);
 
 // Value
 typedef struct Node Node;  // Forward define
+typedef struct InterpreterContext InterpreterContext; // Forward define
 
 typedef enum ValueType {
     VALUE_ANY,
@@ -263,7 +264,7 @@ struct Value {
             ValueType returnType;
             union {
                 Node *functionNode;
-                Value *(*nativeFunc)(Node *callNode, Value *this, List *values);
+                Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values);
             };
         };
     };
@@ -291,7 +292,7 @@ Value *value_new_instance(Map *object, Value *instanceClass);
 
 Value *value_new_function(List *args, ValueType returnType, Node *node);
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Node *callNode, Value *this, List *values));
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values));
 
 char *value_type_to_string(ValueType type);
 
@@ -473,11 +474,6 @@ Variable *variable_new(ValueType type, bool mutable, Value *value);
 
 void variable_free(Variable *variable);
 
-typedef struct Interpreter {
-    char *text;
-    Map *env;
-} Interpreter;
-
 typedef struct ExceptionScope {
     Value *exceptionValue;
 } ExceptionScope;
@@ -506,13 +502,25 @@ typedef struct Scope {
     BlockScope *block;
 } Scope;
 
+typedef struct Interpreter {
+    char *text;
+    Map *env;
+} Interpreter;
+
+struct InterpreterContext {
+    char *text;
+    Map *env;
+    Scope *scope;
+    Node *callNode;
+};
+
 Variable *block_scope_get(BlockScope *block, char *key);
 
 Value *interpreter(char *text, Map *env, Node *node);
 
-Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments);
+Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *this, List *arguments);
 
-Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments);
+void interpreter_throw(InterpreterContext *context, Value *exception);
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
 

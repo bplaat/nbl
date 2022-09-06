@@ -3,7 +3,7 @@
 
 // Utils
 void error(char *text, int32_t line, int32_t column, char *fmt, ...) {
-    fprintf(stderr, "text:%d:%d ERROR: ", line + 1, column + 1);
+    fprintf(stderr, "text:%d:%d ERROR: ", line, column);
     va_list args;
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
@@ -11,7 +11,7 @@ void error(char *text, int32_t line, int32_t column, char *fmt, ...) {
 
     // Seek to the right line in text
     char *c = text;
-    for (int32_t i = 0; i < line; i++) {
+    for (int32_t i = 0; i < line - 1; i++) {
         while (*c != '\n' && *c != '\r') c++;
         if (*c == '\r') c++;
         c++;
@@ -20,10 +20,10 @@ void error(char *text, int32_t line, int32_t column, char *fmt, ...) {
     while (*c != '\n' && *c != '\r' && *c != '\0') c++;
     int32_t lineLength = c - lineStart;
 
-    fprintf(stderr, "\n%4d | ", line + 1);
+    fprintf(stderr, "\n%4d | ", line);
     fwrite(lineStart, 1, lineLength, stderr);
     fprintf(stderr, "\n     | ");
-    for (int32_t i = 0; i < column; i++) fprintf(stderr, " ");
+    for (int32_t i = 0; i < column - 1; i++) fprintf(stderr, " ");
     fprintf(stderr, "^\n");
     exit(EXIT_FAILURE);
 }
@@ -354,10 +354,10 @@ List *lexer(char *text) {
 
     List *tokens = list_new_with_capacity(512);
     char *c = text;
-    int32_t line = 0;
+    int32_t line = 1;
     char *lineStart = c;
     while (*c != '\0') {
-        int32_t column = c - lineStart;
+        int32_t column = c - lineStart + 1;
 
         // Comments
         if (*c == '#') {
@@ -812,7 +812,7 @@ Value *value_new_function(List *args, ValueType returnType, Node *functionNode) 
     return value;
 }
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(Node *callNode, Value *this, List *values)) {
+Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values)) {
     Value *value = value_new(VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
@@ -1910,15 +1910,6 @@ Value *interpreter(char *text, Map *env, Node *node) {
     }
 }
 
-Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List *arguments) {
-    Interpreter interpreter = {.text = text, .env = env};
-    // TODO
-    Scope scope = {.function = &(FunctionScope){.returnValue = NULL},
-                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                   .block = &(BlockScope){.parentBlock = NULL, .env = env}};
-    return interpreter_function(&interpreter, &scope, NULL, function, this, arguments);
-}
-
 #define interpreter_statement_in_try(interpreter, scope, node, cleanup) \
     {                                                                   \
         Value *nodeValue = interpreter_node(interpreter, scope, node);  \
@@ -1951,39 +1942,81 @@ Value *interpreter_call(char *text, Map *env, Value *function, Value *this, List
         }                                                             \
     }
 
-Value *interpreter_function(Interpreter *interpreter, Scope *scope, Node *node, Value *function, Value *this, List *arguments) {
-    Scope functionScope = {.exception = scope->exception,
-                           .function = &(FunctionScope){.returnValue = NULL},
-                           .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                           .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
-    if (this != NULL) {
-        if (this->instanceClass->parentClass != NULL) {
-            map_set(functionScope.block->env, "super",
-                    variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
+Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *this, List *arguments) {
+    if (callValue->type == VALUE_FUNCTION) {
+        Scope functionScope = {.exception = context->scope->exception,
+                               .function = &(FunctionScope){.returnValue = NULL},
+                               .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                               .block = &(BlockScope){.parentBlock = context->scope->block, .env = map_new()}};
+        if (this != NULL) {
+            if (this->instanceClass->parentClass != NULL) {
+                map_set(functionScope.block->env, "super",
+                        variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
+            }
+            map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
         }
-        map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
-    }
-    map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
-    for (size_t i = 0; i < function->arguments->size; i++) {
-        Argument *argument = list_get(function->arguments, i);
-        map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(arguments, i))));
-    }
-    interpreter_node(interpreter, &functionScope, function->functionNode);
-    if (function->returnType != VALUE_ANY && functionScope.function->returnValue->type != function->returnType) {
-        if (node == NULL) {
-            fprintf(stderr, "Unexpected function return type: '%s' needed '%s'", value_type_to_string(functionScope.function->returnValue->type),
-                    value_type_to_string(function->returnType));
-            exit(1);
+        map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
+        for (size_t i = 0; i < callValue->arguments->size; i++) {
+            Argument *argument = list_get(callValue->arguments, i);
+            map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(arguments, i))));
         }
-        error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
-              value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(function->returnType));
-    }
-    map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
+        Interpreter interpreter = {.text = context->text, .env = context->env};
+        interpreter_node(&interpreter, &functionScope, callValue->functionNode);
+        if (callValue->returnType != VALUE_ANY && functionScope.function->returnValue->type != callValue->returnType) {
+            if (context->callNode == NULL) {
+                fprintf(stderr, "Unexpected function return type: '%s' needed '%s'", value_type_to_string(functionScope.function->returnValue->type),
+                        value_type_to_string(callValue->returnType));
+                exit(1);
+            }
+            error(context->text, context->callNode->token->line, context->callNode->token->column, "Unexpected function return type: '%s' needed '%s'",
+                  value_type_to_string(functionScope.function->returnValue->type), value_type_to_string(callValue->returnType));
+        }
+        map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
 
-    if (functionScope.function->returnValue != NULL) {
-        return functionScope.function->returnValue;
+        if (functionScope.function->returnValue != NULL) {
+            return functionScope.function->returnValue;
+        }
+        return value_new_null();
     }
-    return value_new_null();
+
+    if (callValue->type == VALUE_NATIVE_FUNCTION) {
+        Value *returnValue = callValue->nativeFunc(context, this, arguments);
+        if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
+            error(context->text, context->callNode->token->line, context->callNode->token->column, "Unexpected function return type: '%s' needed '%s'",
+                  value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
+        }
+        return returnValue;
+    }
+
+    if (callValue->type == VALUE_CLASS) {
+        Value *instance = value_new_instance(map_new(), value_ref(callValue));
+        Value *constructorFunction = value_class_get(callValue, "constructor");
+        if (constructorFunction != NULL) {
+            Value *newReturnValue = interpreter_call(context, constructorFunction, instance, arguments);
+            if (newReturnValue->type == VALUE_NULL) {
+                value_free(newReturnValue);
+            } else {
+                value_free(instance);
+                return newReturnValue;
+            }
+        }
+        return instance;
+    }
+    return NULL;
+}
+
+void interpreter_throw(InterpreterContext *context, Value *exception) {
+    if (exception->type == VALUE_STRING) {
+        Value *exceptionClass = ((Variable *)map_get(context->env, "Exception"))->value;
+        List *arguments = list_new();
+        list_add(arguments, exception);
+        exception = interpreter_call(context, exceptionClass, NULL, arguments);
+        list_free(arguments, (ListFreeFunc *)value_free);
+    }
+    if (exception->type != VALUE_INSTANCE) {
+        error(context->text, context->callNode->token->line, context->callNode->token->column, "Thrown value not an instance");
+    }
+    context->scope->exception->exceptionValue = exception;
 }
 
 Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
@@ -2206,11 +2239,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_THROW) {
-        Value *exception = interpreter_node(interpreter, scope, node->unary);
-        if (exception->type != VALUE_INSTANCE) {
-            error(interpreter->text, node->token->line, node->token->column, "Thrown value not an instance");
-        }
-        scope->exception->exceptionValue = exception;
+        InterpreterContext context = {.text = interpreter->text, .env = interpreter->env, .scope = scope, .callNode = node->unary};
+        interpreter_throw(&context, interpreter_node(interpreter, scope, node->unary));
         return NULL;
     }
 
@@ -2250,22 +2280,21 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             error(interpreter->text, node->token->line, node->token->column, "Variable is not a function or a class");
         }
 
-        List *arguments = NULL;
+        List *callArguments = NULL;
         if (callValue->type == VALUE_CLASS) {
             if (callValue->abstract) {
                 error(interpreter->text, node->token->line, node->token->column, "Can't construct an abstract class");
             }
-
             Value *constructorFunction = value_class_get(callValue, "constructor");
-            if (constructorFunction != NULL) arguments = constructorFunction->arguments;
+            if (constructorFunction != NULL) callArguments = constructorFunction->arguments;
         } else {
-            arguments = callValue->arguments;
+            callArguments = callValue->arguments;
         }
-        List *values = list_new_with_capacity(node->nodes->capacity);
-        for (size_t i = 0; i < MAX(arguments != NULL ? arguments->size : 0, node->nodes->size); i++) {
+        List *arguments = list_new_with_capacity(node->nodes->capacity);
+        for (size_t i = 0; i < MAX(callArguments != NULL ? callArguments->size : 0, node->nodes->size); i++) {
             Argument *argument = NULL;
-            if (arguments != NULL) {
-                argument = list_get(arguments, i);
+            if (callArguments != NULL) {
+                argument = list_get(callArguments, i);
                 if (list_get(node->nodes, i) == NULL && argument != NULL) {
                     if (argument->defaultNode != NULL) {
                         Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
@@ -2274,7 +2303,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                                   "Unexpected function default argument type: '%s' needed '%s'", value_type_to_string(defaultValue->type),
                                   value_type_to_string(argument->type));
                         }
-                        list_add(values, defaultValue);
+                        list_add(arguments, defaultValue);
                         continue;
                     }
 
@@ -2287,53 +2316,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 error(interpreter->text, node->token->line, node->token->column, "Unexpected function argument type: '%s' needed '%s'",
                       value_type_to_string(nodeValue->type), value_type_to_string(argument->type));
             }
-            list_add(values, nodeValue);
+            list_add(arguments, nodeValue);
         }
 
-        Value *returnValue = NULL;
-        if (callValue->type == VALUE_FUNCTION) {
-            returnValue = interpreter_function(interpreter, scope, node, callValue, thisValue, values);
-        }
+        InterpreterContext context = {.text = interpreter->text, .env = interpreter->env, .scope = scope, .callNode = node};
+        Value *returnValue = interpreter_call(&context, callValue, thisValue, arguments);
 
-        if (callValue->type == VALUE_NATIVE_FUNCTION) {
-            returnValue = callValue->nativeFunc(node, thisValue, values);
-            if (callValue->returnType != VALUE_ANY && returnValue->type != callValue->returnType) {
-                error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
-                      value_type_to_string(returnValue->type), value_type_to_string(callValue->returnType));
-            }
-        }
-
-        if (callValue->type == VALUE_CLASS) {
-            Value *instance = value_new_instance(map_new(), value_ref(callValue));
-            returnValue = instance;
-
-            Value *constructorFunction = value_class_get(callValue, "constructor");
-            if (constructorFunction != NULL) {
-                if (constructorFunction->type == VALUE_FUNCTION) {
-                    Value *newReturnValue = interpreter_function(interpreter, scope, node, constructorFunction, instance, values);
-                    if (newReturnValue->type == VALUE_NULL) {
-                        value_free(newReturnValue);
-                    } else {
-                        returnValue = newReturnValue;
-                        value_free(instance);
-                    }
-                }
-
-                if (constructorFunction->type == VALUE_NATIVE_FUNCTION) {
-                    Value *newReturnValue = constructorFunction->nativeFunc(node, instance, values);
-                    if (newReturnValue != NULL) {
-                        returnValue = newReturnValue;
-                        value_free(instance);
-                    }
-                    if (constructorFunction->returnType != VALUE_ANY && returnValue->type != constructorFunction->returnType) {
-                        error(interpreter->text, node->token->line, node->token->column, "Unexpected function return type: '%s' needed '%s'",
-                              value_type_to_string(returnValue->type), value_type_to_string(constructorFunction->returnType));
-                    }
-                }
-            }
-        }
-
-        list_free(values, (ListFreeFunc *)value_free);
+        list_free(arguments, (ListFreeFunc *)value_free);
         value_free(callValue);
         if (thisValue != NULL) value_free(thisValue);
         return returnValue;

@@ -1,6 +1,6 @@
 fn myfunc() {
     let x: int = 10;
-    throw Exception('My custom exception');
+    throw 'My custom exception';
     x += 50;
 }
 
@@ -10,7 +10,7 @@ try {
 } catch (const exception) {
     assert(exception.error == 'My custom exception');
     assert(exception.line == 3);
-    assert(exception.column == 20);
+    assert(exception.column == 11);
 } finally {
     x = 20;
 }

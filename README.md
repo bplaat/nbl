@@ -186,14 +186,16 @@ cat.jump();
 ```
 fn myfunc() {
     println("Hello!");
-    throw Exception('My custom exception');
+    throw 'My custom exception';
     println("Won't run!");
+    throw Exception('Other custom exception that won't be run');
 }
 
 try {
     myfunc();
 } catch (const exception) {
     println('Catched exception:', exception);
+    println('At', exception.line + ':' + exception.column);
 } finally {
     println('Finally');
 }
