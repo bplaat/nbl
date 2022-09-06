@@ -189,7 +189,8 @@ Source *source_new(char *path, char *text) {
     while (c != source->basename) c++;
     size_t dirnameSize = c - path - 1;
     char *dirname = malloc(dirnameSize + 1);
-    strncpy(dirname, path, dirnameSize);
+    memcpy(dirname, path, dirnameSize);
+    dirname[dirnameSize] = '\0';
     source->dirname = dirname;
     return source;
 }
@@ -2838,25 +2839,25 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         if (node->type == NODE_DIV) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->integer /= rhs->integer;
+                lhs->integer = rhs->integer != 0 ? lhs->integer / rhs->integer : 0;
                 value_free(rhs);
                 return lhs;
             }
             if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
                 lhs->type = VALUE_FLOAT;
-                lhs->floating /= rhs->floating;
+                lhs->floating = rhs->integer != 0 ? lhs->floating / rhs->floating : 0;
                 value_free(rhs);
                 return lhs;
             }
             if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
                 lhs->type = VALUE_FLOAT;
-                lhs->floating /= rhs->integer;
+                lhs->floating = rhs->integer != 0 ? lhs->floating / rhs->integer : 0;
                 value_free(rhs);
                 return lhs;
             }
             if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
                 lhs->type = VALUE_FLOAT;
-                lhs->floating = lhs->integer / rhs->floating;
+                lhs->floating = rhs->integer != 0 ? lhs->integer / rhs->floating : 0;
                 value_free(rhs);
                 return lhs;
             }

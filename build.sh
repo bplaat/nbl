@@ -26,7 +26,7 @@ fi
 gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -o nbl || exit
 if [ "$1" = "test" ]; then
     for file in $(find tests -name *.nbl); do
-        echo $file
+        echo "Running test $(basename $file)..."
         ./nbl $file
         if [ $? != 0 ]; then
             echo "FAIL"
