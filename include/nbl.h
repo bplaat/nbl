@@ -364,10 +364,10 @@ typedef enum NodeType {
     NODE_CAST,
 
     NODE_VARIABLE,
-    NODE_GET,
     NODE_CONST_ASSIGN,
     NODE_LET_ASSIGN,
     NODE_ASSIGN,
+    NODE_GET,
     NODE_ADD,
     NODE_SUB,
     NODE_MUL,
