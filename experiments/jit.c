@@ -1,5 +1,6 @@
-// New Bastiaan Language JIT ARM64 Experiment
-// gcc jit-arm64.c -lm -o jit-arm64 && ./jit-arm64 "(10 - 2) * 5"
+// New Bastiaan Language JIT Experiment
+// Works on: Win32 & Posix with x86_64 & ARM64
+// gcc jit.c -lm -o jit && ./jit "(10 - 2) * 5"
 #include <ctype.h>
 #include <math.h>
 #include <stdbool.h>
@@ -7,7 +8,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// Custom windows headers because why not :)
+#ifdef _WIN32
+
+#define MEM_COMMIT 0x00001000
+#define MEM_RESERVE 0x00002000
+#define PAGE_READWRITE 0x04
+#define PAGE_EXECUTE_READ 0x20
+#define MEM_RELEASE 0x00008000
+
+extern void *VirtualAlloc(void *lpAddress, size_t dwSize, uint32_t flAllocationType, uint32_t flProtect);
+extern bool VirtualProtect(void *lpAddress, size_t dwSize, uint32_t flNewProtect, uint32_t *lpflOldProtect);
+extern bool VirtualFree(void *lpAddress, size_t dwSize, uint32_t dwFreeType);
+
+#else
+
 #include <sys/mman.h>
+
+#endif
 
 // Utils Header
 size_t align(size_t size, size_t alignment);
@@ -414,23 +433,39 @@ void page_free(Page *page);
 // Page
 Page *page_new(size_t size) {
     Page *page = malloc(sizeof(Page));
+    page->size = size;
+#ifdef _WIN32
+    page->data = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (page->data == NULL) {
+        return NULL;
+    }
+#else
     page->data = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (page->data == (void *)-1) {
         return NULL;
     }
-    page->size = size;
+#endif
     return page;
 }
 
 bool page_make_executable(Page *page) {
+#ifdef _WIN32
+    uint32_t oldProtect;
+    return VirtualProtect(page->data, page->size, PAGE_EXECUTE_READ, &oldProtect);
+#else
     if (mprotect(page->data, page->size, PROT_READ | PROT_EXEC) == -1) {
         return false;
     }
     return true;
+#endif
 }
 
 void page_free(Page *page) {
+#ifdef _WIN32
+    VirtualFree(page->data, 0, MEM_RELEASE);
+#else
     munmap(page->data, page->size);
+#endif
     free(page);
 }
 
@@ -451,7 +486,7 @@ char *value_string_concat(char *a, char *b) {
 typedef struct Parser {
     List *tokens;
     int32_t position;
-    uint32_t *code;
+    uint8_t *code;
     int32_t codePos;
     uint8_t *data;
     int32_t dataPos;
@@ -467,65 +502,176 @@ ValueType parser_unary(Parser *parser);
 ValueType parser_primary(Parser *parser);
 
 // Codegen
+
+// x86_64
+#ifdef __x86_64__
+#define X86_64
+#endif
+#define rax 0
+#define rcx 1
+#define rdx 2
+#define rbx 3
+#define rsp 4
+#define rbp 5
+#define rdi 6
+#define rsi 7
+#define xmm0 16 + 0
+#define xmm1 16 + 1
+
+// arm64
+#ifdef __aarch64__
+#define ARM64
+#endif
 #define x0 0
 #define x1 1
 #define x2 2
+#define x3 3
+#define x4 4
+#define x5 5
+#define x6 6
+#define x7 7
 #define d0 32 + 0
 #define d1 32 + 1
 
+#define x86_64_inst1(parser, a) (parser)->code[(parser)->codePos++] = a;
+#define x86_64_inst2(parser, a, b) \
+    x86_64_inst1(parser, a);       \
+    (parser)->code[(parser)->codePos++] = b;
+#define x86_64_inst3(parser, a, b, c) \
+    x86_64_inst2(parser, a, b);       \
+    (parser)->code[(parser)->codePos++] = c;
+#define x86_64_inst4(parser, a, b, c, d) \
+    x86_64_inst3(parser, a, b, c);       \
+    (parser)->code[(parser)->codePos++] = d;
+#define x86_64_inst5(parser, a, b, c, d, e) \
+    x86_64_inst4(parser, a, b, c, d);       \
+    (parser)->code[(parser)->codePos++] = e;
+
+#define arm64_inst(parser, inst)                          \
+    *((uint32_t *)&parser->code[parser->codePos]) = inst; \
+    parser->codePos += sizeof(uint32_t);
+
 void mov_reg_imm(Parser *parser, int32_t reg, uint64_t imm) {
-    parser->code[parser->codePos++] = 0xD2800000 | ((imm & 0xffff) << 5) | (reg & 31);                                    // mov reg, imm
-    if (imm > 0xffff) parser->code[parser->codePos++] = 0xF2A00000 | (((imm >> 16) & 0xffff) << 5) | (reg & 31);          // movk reg, imm, lsl 16
-    if (imm > 0xffffffff) parser->code[parser->codePos++] = 0xF2C00000 | (((imm >> 32) & 0xffff) << 5) | (reg & 31);      // movk reg, imm, lsl 32
-    if (imm > 0xffffffffffff) parser->code[parser->codePos++] = 0xF2E00000 | (((imm >> 48) & 0xffff) << 5) | (reg & 31);  // movk reg, imm, lsl 48
+#ifdef X86_64
+    x86_64_inst2(parser, 0x48, 0xb8 | (reg & 7));  // mov reg64, imm
+    *((uint64_t *)&parser->code[parser->codePos]) = imm;
+    parser->codePos += sizeof(uint64_t);
+#endif
+#ifdef ARM64
+    arm64_inst(parser, 0xD2800000 | ((imm & 0xffff) << 5) | (reg & 31));                                    // mov reg, imm
+    if (imm > 0xffff) arm64_inst(parser, 0xF2A00000 | (((imm >> 16) & 0xffff) << 5) | (reg & 31));          // movk reg, imm, lsl 16
+    if (imm > 0xffffffff) arm64_inst(parser, 0xF2C00000 | (((imm >> 32) & 0xffff) << 5) | (reg & 31));      // movk reg, imm, lsl 32
+    if (imm > 0xffffffffffff) arm64_inst(parser, 0xF2E00000 | (((imm >> 48) & 0xffff) << 5) | (reg & 31));  // movk reg, imm, lsl 48
+#endif
 }
 
 void push_reg(Parser *parser, int32_t reg) {
-    if (reg < 32) {
-        parser->code[parser->codePos++] = 0xF81F0FE0 | (reg & 31);  // str xreg, [sp, -16]!
+#ifdef X86_64
+    if (reg < 16) {
+        x86_64_inst1(parser, 0x50 | (reg & 7));  // push reg64
     } else {
-        parser->code[parser->codePos++] = 0xFC1F0FE0 | (reg & 31);  // str dreg, [sp, -16]!
+        x86_64_inst4(parser, 0x48, 0x83, 0xec, 0x10);                            // sub rsp, 16
+        x86_64_inst5(parser, 0xf3, 0x0f, 0x7f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu XMMWORD PTR [rsp+0x0], xmm0
+        x86_64_inst4(parser, 0x00, 0x00, 0x00, 0x00);
     }
+#endif
+#ifdef ARM64
+    if (reg < 32) {
+        arm64_inst(parser, 0xF81F0FE0 | (reg & 31));  // str xreg, [sp, -16]!
+    } else {
+        arm64_inst(parser, 0xFC1F0FE0 | (reg & 31));  // str dreg, [sp, -16]!
+    }
+#endif
 }
 
 void pop_reg(Parser *parser, int32_t reg) {
-    if (reg < 32) {
-        parser->code[parser->codePos++] = 0xF84107E0 | (reg & 31);  // ldr xreg, [sp], 16
+#ifdef X86_64
+    if (reg < 16) {
+        x86_64_inst1(parser, 0x58 | (reg & 7));  // pop reg64
     } else {
-        parser->code[parser->codePos++] = 0xFC4107E0 | (reg & 31);  // ldr dreg, [sp], 16
+        x86_64_inst5(parser, 0xf3, 0x0f, 0x6f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu xmm0, XMMWORD PTR [rsp+0x0]
+        x86_64_inst4(parser, 0x00, 0x00, 0x00, 0x00);
+        x86_64_inst4(parser, 0x48, 0x83, 0xc4, 0x10);  // add rsp, 16
     }
+#endif
+#ifdef ARM64
+    if (reg < 32) {
+        arm64_inst(parser, 0xF84107E0 | (reg & 31));  // ldr xreg, [sp], 16
+    } else {
+        arm64_inst(parser, 0xFC4107E0 | (reg & 31));  // ldr dreg, [sp], 16
+    }
+#endif
 }
 
 void load_float(Parser *parser, ValueType lhsType, ValueType rhsType) {
+#ifdef X86_64
+    if (rhsType == VALUE_INT) {
+        pop_reg(parser, rdx);
+        x86_64_inst5(parser, 0xf2, 0x48, 0x0f, 0x2a, 0xca);  // cvtsi2sd xmm1, rdx
+    } else {
+        pop_reg(parser, xmm1);
+    }
+    if (lhsType == VALUE_INT) {
+        pop_reg(parser, rax);
+        x86_64_inst5(parser, 0xf2, 0x48, 0x0f, 0x2a, 0xc0);  // cvtsi2sd xmm0, rax
+    } else {
+        pop_reg(parser, xmm0);
+    }
+#endif
+#ifdef ARM64
     if (rhsType == VALUE_INT) {
         pop_reg(parser, x1);
-        parser->code[parser->codePos++] = 0x9E620021;  // scvtf d1, x1
+        arm64_inst(parser, 0x9E620021);  // scvtf d1, x1
     } else {
         pop_reg(parser, d1);
     }
     if (lhsType == VALUE_INT) {
         pop_reg(parser, x0);
-        parser->code[parser->codePos++] = 0x9E620000;  // scvtf d0, x0
+        arm64_inst(parser, 0x9E620000);  // scvtf d0, x0
     } else {
         pop_reg(parser, d0);
     }
+#endif
 }
 
 // Parser
 ValueType parser(List *tokens, void *codePage, void *dataPage) {
     Parser parser = {.tokens = tokens, .position = 0, .code = codePage, .codePos = 0, .data = dataPage, .dataPos = 0};
+
+#ifdef X86_64
+    x86_64_inst4(&parser, 0x48, 0x83, 0xec, 0x38);  // sub rsp, 56
+#endif
+#ifdef ARM64
     parser.code[parser.codePos++] = 0xA9BF7BFD;  // stp fp, lr, [sp, -16]!
+#endif
 
     ValueType returnType = parser_add(&parser);
+
+#ifdef X86_64
+    if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT || returnType == VALUE_STRING) {
+        pop_reg(&parser, rax);
+    }
+    if (returnType == VALUE_FLOAT) {
+        pop_reg(&parser, xmm0);
+    }
+#endif
+#ifdef ARM64
     if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT || returnType == VALUE_STRING) {
         pop_reg(&parser, x0);
     }
     if (returnType == VALUE_FLOAT) {
         pop_reg(&parser, d0);
     }
-
+#endif
+#ifdef X86_64
+    x86_64_inst4(&parser, 0x48, 0x83, 0xc4, 0x38);  // add rsp, 56
+    parser.code[parser.codePos++] = 0xc3;           // ret
+#endif
+#ifdef ARM64
     parser.code[parser.codePos++] = 0xA8C17BFD;  // ldp fp, lr, [sp], 16
     parser.code[parser.codePos++] = 0xD65F03C0;  // ret
+#endif
+
     return returnType;
 }
 
@@ -548,26 +694,49 @@ ValueType parser_add(Parser *parser) {
             parser_eat(parser, TOKEN_ADD);
             ValueType rhsType = parser_mul(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
+#ifdef X86_64
+                pop_reg(parser, rdx);
+                pop_reg(parser, rax);
+                x86_64_inst3(parser, 0x48, 0x01, 0xd0);  // add rax, rdx
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0x8B010000;  // add x0, x0, x1
+                arm64_inst(parser, 0x8B010000);  // add x0, x0, x1
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
-                parser->code[parser->codePos++] = 0x1E612800;  // fadd d0, d0, d1
+#ifdef X86_64
+                x86_64_inst4(parser, 0xf2, 0x0f, 0x58, 0xc1);  // addsd xmm0, xmm1
+                push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
+                arm64_inst(parser, 0x1E613800);  // fsub d0, d0, d1
                 push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
             if (lhsType == VALUE_STRING && rhsType == VALUE_STRING) {
+#ifdef X86_64
+                pop_reg(parser, rdx);
+                pop_reg(parser, rcx);
+                mov_reg_imm(parser, rax, (uint64_t)value_string_concat);
+                x86_64_inst2(parser, 0xff, 0xd0);  // call rax
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
                 mov_reg_imm(parser, x2, (uint64_t)value_string_concat);
-                parser->code[parser->codePos++] = 0xD63F0040;  // blr x2
+                arm64_inst(parser, 0xD63F0040);  // blr x2
                 push_reg(parser, x0);
+#endif
                 continue;
             }
         }
@@ -576,17 +745,31 @@ ValueType parser_add(Parser *parser) {
             parser_eat(parser, TOKEN_SUB);
             ValueType rhsType = parser_mul(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
+#ifdef X86_64
+                pop_reg(parser, rdx);
+                pop_reg(parser, rax);
+                x86_64_inst3(parser, 0x48, 0x29, 0xd0);  // sub rax, rdx
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0xCB010000;  // sub x0, x0, x1
+                arm64_inst(parser, 0xCB010000);  // sub x0, x0, x1
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
-                parser->code[parser->codePos++] = 0x1E613800;  // fsub d0, d0, d1
+#ifdef X86_64
+                x86_64_inst4(parser, 0xf2, 0x0f, 0x5c, 0xc1);  // subsd xmm0, xmm1
                 push_reg(parser, d0);
+#endif
+#ifdef ARM64
+                arm64_inst(parser, 0x1E613800);  // fsub d0, d0, d1
+                push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
@@ -605,17 +788,31 @@ ValueType parser_mul(Parser *parser) {
             parser_eat(parser, TOKEN_MUL);
             ValueType rhsType = parser_unary(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
+#ifdef X86_64
+                pop_reg(parser, rdx);
+                pop_reg(parser, rax);
+                x86_64_inst4(parser, 0x48, 0x0f, 0xaf, 0xc2);  // imul rax, rdx
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0x9B017C00;  // mul x0, x0, x1
+                arm64_inst(parser, 0x9B017C00);  // mul x0, x0, x1
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
-                parser->code[parser->codePos++] = 0x1E610800;  // fmul d0, d0, d1
+#ifdef X86_64
+                x86_64_inst4(parser, 0xf2, 0x0f, 0x59, 0xc1);  // mulsd xmm0, xmm1
+                push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
+                arm64_inst(parser, 0x1E610800);  // fmul d0, d0, d1
                 push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
@@ -625,22 +822,35 @@ ValueType parser_mul(Parser *parser) {
             parser_eat(parser, TOKEN_EXP);
             ValueType rhsType = parser_unary(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
-                pop_reg(parser, x1);
-                pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0xAA0003E2;  // mov x2, x0
-                parser->code[parser->codePos++] = 0xD1000421;  // sub x1, x1, 1
-                parser->code[parser->codePos++] = 0xB4000061;  // cbz x1, +12
-                parser->code[parser->codePos++] = 0x9B027C00;  // mul x0, x0, x2
-                parser->code[parser->codePos++] = 0x17FFFFFD;  // b -12
+                load_float(parser, lhsType, rhsType);
+#ifdef X86_64
+                mov_reg_imm(parser, rax, (uint64_t)pow);
+                x86_64_inst2(parser, 0xff, 0xd0);                    // call rax
+                x86_64_inst5(parser, 0xf2, 0x48, 0x0f, 0x2c, 0xc0);  // cvttsd2si rax, xmm0
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
+                mov_reg_imm(parser, x2, (uint64_t)pow);
+                arm64_inst(parser, 0xD63F0040);  // blr x2
+                arm64_inst(parser, 0x5EE1B800);  // fcvtzs d0, d0
+                arm64_inst(parser, 0x9E660000);  // fmov x0, d0
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
+#ifdef X86_64
+                mov_reg_imm(parser, rax, (uint64_t)pow);
+                x86_64_inst2(parser, 0xff, 0xd0);  // call rax
+                push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
                 mov_reg_imm(parser, x2, (uint64_t)pow);
-                parser->code[parser->codePos++] = 0xD63F0040;  // blr x2
+                arm64_inst(parser, 0xD63F0040);  // blr x2
                 push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
@@ -650,17 +860,32 @@ ValueType parser_mul(Parser *parser) {
             parser_eat(parser, TOKEN_DIV);
             ValueType rhsType = parser_unary(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
+#ifdef X86_64
+                pop_reg(parser, rcx);
+                pop_reg(parser, rax);
+                x86_64_inst2(parser, 0x48, 0x99);        // cqo
+                x86_64_inst3(parser, 0x48, 0xf7, 0xf9);  // idiv rcx
+                push_reg(parser, rax);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0x9AC10C00;  // sdiv x0, x0, x1
+                arm64_inst(parser, 0x9AC10C00);  // sdiv x0, x0, x1
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
-                parser->code[parser->codePos++] = 0x1E611800;  // fdiv d0, d0, d1
+#ifdef X86_64
+                x86_64_inst4(parser, 0xf2, 0x0f, 0x5e, 0xc1);  // divsd xmm0, xmm1
+                push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
+                arm64_inst(parser, 0x1E611800);  // fdiv d0, d0, d1
                 push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
@@ -670,19 +895,35 @@ ValueType parser_mul(Parser *parser) {
             parser_eat(parser, TOKEN_MOD);
             ValueType rhsType = parser_unary(parser);
             if (lhsType == VALUE_INT && rhsType == VALUE_INT) {
+#ifdef X86_64
+                pop_reg(parser, rcx);
+                pop_reg(parser, rax);
+                x86_64_inst2(parser, 0x48, 0x99);        // cqo
+                x86_64_inst3(parser, 0x48, 0xf7, 0xf9);  // idiv rcx
+                push_reg(parser, rdx);
+#endif
+#ifdef ARM64
                 pop_reg(parser, x1);
                 pop_reg(parser, x0);
-                parser->code[parser->codePos++] = 0x9AC10802;  // udiv x2, x0, x1
-                parser->code[parser->codePos++] = 0x9B018040;  // msub x0, x2, x1, x0
+                arm64_inst(parser, 0x9AC10802);  // udiv x2, x0, x1
+                arm64_inst(parser, 0x9B018040);  // msub x0, x2, x1, x0
                 push_reg(parser, x0);
+#endif
                 continue;
             }
             if ((lhsType == VALUE_FLOAT && rhsType == VALUE_FLOAT) || (lhsType == VALUE_FLOAT && rhsType == VALUE_INT) ||
                 (lhsType == VALUE_INT && rhsType == VALUE_FLOAT)) {
                 load_float(parser, lhsType, rhsType);
+#ifdef X86_64
+                mov_reg_imm(parser, rax, (uint64_t)fmod);
+                x86_64_inst2(parser, 0xff, 0xd0);  // call rax
+                push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
                 mov_reg_imm(parser, x2, (uint64_t)fmod);
-                parser->code[parser->codePos++] = 0xD63F0040;  // blr x2
+                arm64_inst(parser, 0xD63F0040);  // blr x2
                 push_reg(parser, d0);
+#endif
                 lhsType = VALUE_FLOAT;
                 continue;
             }
@@ -707,18 +948,35 @@ ValueType parser_unary(Parser *parser) {
     if (current()->type == TOKEN_SUB) {
         parser_eat(parser, TOKEN_SUB);
         ValueType type = parser_unary(parser);
+#ifdef X86_64
+        if (type == VALUE_INT) {
+            pop_reg(parser, rax);
+            x86_64_inst3(parser, 0x48, 0xf7, 0xd8);  // neg rax
+            push_reg(parser, rax);
+            return VALUE_INT;
+        }
+        if (type == VALUE_FLOAT) {
+            x86_64_inst3(parser, 0x0f, 0x57, 0xc0);  // xorps xmm0, xmm0
+            pop_reg(parser, xmm1);
+            x86_64_inst4(parser, 0xf2, 0x0f, 0x5c, 0xc1);  // subsd xmm0, xmm1
+            push_reg(parser, xmm0);
+            return VALUE_FLOAT;
+        }
+#endif
+#ifdef ARM64
         if (type == VALUE_INT) {
             pop_reg(parser, x0);
-            parser->code[parser->codePos++] = 0xCB0003E0;  // sub x0, xzr, x0
+            arm64_inst(parser, 0xCB0003E0);  // sub x0, xzr, x0
             push_reg(parser, x0);
             return VALUE_INT;
         }
         if (type == VALUE_FLOAT) {
             pop_reg(parser, d0);
-            parser->code[parser->codePos++] = 0x1E614000;  // fneg d0, d0
+            arm64_inst(parser, 0x1E614000);  // fneg d0, d0
             push_reg(parser, d0);
             return VALUE_FLOAT;
         }
+#endif
         fprintf(stderr, "Type error\n");
         exit(EXIT_FAILURE);
     }
@@ -733,26 +991,50 @@ ValueType parser_primary(Parser *parser) {
         return type;
     }
     if (current()->type == TOKEN_NULL) {
+#ifdef X86_64
+        mov_reg_imm(parser, rax, 0);
+        push_reg(parser, rax);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, 0);
         push_reg(parser, x0);
+#endif
         parser_eat(parser, TOKEN_NULL);
         return VALUE_NULL;
     }
     if (current()->type == TOKEN_FALSE) {
+#ifdef X86_64
+        mov_reg_imm(parser, rax, 0);
+        push_reg(parser, rax);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, 0);
         push_reg(parser, x0);
+#endif
         parser_eat(parser, TOKEN_FALSE);
         return VALUE_BOOL;
     }
     if (current()->type == TOKEN_TRUE) {
+#ifdef X86_64
+        mov_reg_imm(parser, rax, 1);
+        push_reg(parser, rax);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, 1);
         push_reg(parser, x0);
+#endif
         parser_eat(parser, TOKEN_TRUE);
         return VALUE_BOOL;
     }
     if (current()->type == TOKEN_INT) {
+#ifdef X86_64
+        mov_reg_imm(parser, rax, current()->integer);
+        push_reg(parser, rax);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, current()->integer);
         push_reg(parser, x0);
+#endif
         parser_eat(parser, TOKEN_INT);
         return VALUE_INT;
     }
@@ -761,9 +1043,16 @@ ValueType parser_primary(Parser *parser) {
         memcpy(&parser->data[parser->dataPos], &current()->floating, sizeof(double));
         parser->dataPos += sizeof(double);
 
+#ifdef X86_64
+        mov_reg_imm(parser, rax, floatAddr);
+        x86_64_inst4(parser, 0xf2, 0x0f, 0x10, 0x00);  // movsd xmm0, [rax]
+        push_reg(parser, xmm0);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, floatAddr);
-        parser->code[parser->codePos++] = 0xFD400000; // ldr d0, [x0]
+        arm64_inst(parser, 0xFD400000);  // ldr d0, [x0]
         push_reg(parser, d0);
+#endif
         parser_eat(parser, TOKEN_FLOAT);
         return VALUE_FLOAT;
     }
@@ -773,8 +1062,14 @@ ValueType parser_primary(Parser *parser) {
         memcpy(&parser->data[parser->dataPos], current()->string, stringSize);
         parser->dataPos += align(stringSize, 8);
 
+#ifdef X86_64
+        mov_reg_imm(parser, rax, stringAddr);
+        push_reg(parser, rax);
+#endif
+#ifdef ARM64
         mov_reg_imm(parser, x0, stringAddr);
         push_reg(parser, x0);
+#endif
         parser_eat(parser, TOKEN_STRING);
         return VALUE_STRING;
     }
