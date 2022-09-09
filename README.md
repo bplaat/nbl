@@ -6,7 +6,7 @@ It is a mix of **JavaScript**, **PHP** and **Lua**. It is weird but also quite f
 There is also a basic syntax highlighting extension for Visual Studio Code available. To install it you need to copy the `editors/vscode` folder into your `~/.vscode/extensions` folder.
 
 ## Things todo:
-- Byte code interpreter instead of ast traversing?
+- Byte code interpreter / JIT engine instead of ast traversing?
 - Make vscode syntax highlighting better?
 
 ## Types:

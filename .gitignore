@@ -3,3 +3,4 @@ nbl.dSYM/
 nbl
 nbl.exe
 dump
+jit-arm64
