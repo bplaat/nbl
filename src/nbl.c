@@ -250,11 +250,6 @@ bool token_type_is_type(TokenType type) {
 }
 
 char *token_type_to_string(TokenType type) {
-    if (type == TOKEN_KEYWORD) return "keyword";
-    if (type == TOKEN_INT) return "int";
-    if (type == TOKEN_FLOAT) return "float";
-    if (type == TOKEN_STRING) return "string";
-
     if (type == TOKEN_EOF) return "EOF";
     if (type == TOKEN_UNKNOWN) return "Unknown character";
     if (type == TOKEN_LPAREN) return "(";
@@ -269,6 +264,11 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_COMMA) return ",";
     if (type == TOKEN_POINT) return ".";
     if (type == TOKEN_FAT_ARROW) return "=>";
+
+    if (type == TOKEN_KEYWORD) return "keyword";
+    if (type == TOKEN_INT) return "int";
+    if (type == TOKEN_FLOAT) return "float";
+    if (type == TOKEN_STRING) return "string";
 
     if (type == TOKEN_ASSIGN) return "=";
     if (type == TOKEN_ADD) return "+";
@@ -444,7 +444,8 @@ List *lexer(char *path, char *text) {
             list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 2)));
             continue;
         }
-        if (*c == '0' && isdigit(*(c + 1))) {
+        if (*c == '0' && (isdigit(*(c + 1)) || *(c + 1) == 'o')) {
+            if (*(c + 1) == 'o') c++;
             c++;
             list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 8)));
             continue;
@@ -454,12 +455,18 @@ List *lexer(char *path, char *text) {
             list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 16)));
             continue;
         }
-        if (isdigit(*c) || (*c == '.' && isdigit(*(c + 1)))) {
-            double floating = strtod(c, &c);
-            if ((double)((int64_t)floating) == floating) {
-                list_add(tokens, token_new_int(TOKEN_INT, source, line, column, (int64_t)floating));
+
+        if (isdigit(*c)) {
+            char *start = c;
+            bool isFloat = false;
+            while (isdigit(*c) || *c == '.') {
+                if (*c == '.') isFloat = true;
+                c++;
+            }
+            if (isFloat) {
+                list_add(tokens, token_new_float(source, line, column, strtod(start, &c)));
             } else {
-                list_add(tokens, token_new_float(source, line, column, floating));
+                list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(start, &c, 10)));
             }
             continue;
         }
