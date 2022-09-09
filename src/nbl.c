@@ -2,6 +2,12 @@
 #include "nbl.h"
 
 // Utils
+char *strdup(char *str) {
+    char *copy = malloc(strlen(str) + 1);
+    strcpy(copy, str);
+    return copy;
+}
+
 char *file_read(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) return NULL;

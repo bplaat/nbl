@@ -16,6 +16,8 @@
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+char *strdup(char *str);
+
 char *file_read(char *path);
 
 typedef struct Token Token;  // Forward define
