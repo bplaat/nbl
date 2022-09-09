@@ -453,7 +453,7 @@ Page *page_new(size_t size) {
 bool page_make_executable(Page *page) {
 #ifdef WIN32
     uint32_t oldProtect;
-    return VirtualProtect(page->data, page->size, PAGE_EXECUTE_READ, &oldProtect);
+    return VirtualProtect(page->data, page->size, PAGE_EXECUTE_READ, &oldProtect) != 0;
 #else
     if (mprotect(page->data, page->size, PROT_READ | PROT_EXEC) == -1) {
         return false;
@@ -579,7 +579,7 @@ void push_reg(Parser *parser, int32_t reg) {
         x86_64_inst1(parser, 0x50 | (reg & 7));  // push reg64
     } else {
         x86_64_inst4(parser, 0x48, 0x83, 0xec, 0x10);                            // sub rsp, 16
-        x86_64_inst5(parser, 0xf3, 0x0f, 0x7f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu XMMWORD PTR [rsp+0x0], xmm0
+        x86_64_inst5(parser, 0xf3, 0x0f, 0x7f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu XMMWORD PTR [rsp+0x0], xmmreg
         x86_64_inst4(parser, 0x00, 0x00, 0x00, 0x00);
     }
 #endif
@@ -597,7 +597,7 @@ void pop_reg(Parser *parser, int32_t reg) {
     if (reg < 16) {
         x86_64_inst1(parser, 0x58 | (reg & 7));  // pop reg64
     } else {
-        x86_64_inst5(parser, 0xf3, 0x0f, 0x6f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu xmm0, XMMWORD PTR [rsp+0x0]
+        x86_64_inst5(parser, 0xf3, 0x0f, 0x6f, 0x84 | ((reg - 16) << 3), 0x24);  // movdqu xmmreg, XMMWORD PTR [rsp+0x0]
         x86_64_inst4(parser, 0x00, 0x00, 0x00, 0x00);
         x86_64_inst4(parser, 0x48, 0x83, 0xc4, 0x10);  // add rsp, 16
     }
@@ -673,7 +673,7 @@ ValueType parser(List *tokens, void *codePage, void *dataPage) {
 #endif
 #ifdef X86_64
     x86_64_inst4(&parser, 0x48, 0x83, 0xc4, 0x38);  // add rsp, 56
-    parser.code[parser.codePos++] = 0xc3;           // ret
+    x86_64_inst1(&parser, 0xc3);                    // ret
 #endif
 #ifdef ARM64
     arm64_inst(&parser, 0xA8C17BFD);  // ldp fp, lr, [sp], 16
@@ -724,7 +724,7 @@ ValueType parser_add(Parser *parser) {
                 push_reg(parser, xmm0);
 #endif
 #ifdef ARM64
-                arm64_inst(parser, 0x1E613800);  // fsub d0, d0, d1
+                arm64_inst(parser, 0x1E612800);  // fadd d0, d0, d1
                 push_reg(parser, d0);
 #endif
                 lhsType = VALUE_FLOAT;
