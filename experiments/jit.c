@@ -2,6 +2,7 @@
 // Works on: Win32 & Posix with x86_64 & ARM64
 // gcc jit.c -lm -o jit && ./jit "(10 - 2) * 5"
 #include <ctype.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,6 +12,7 @@
 
 // Custom windows headers because why not :)
 #ifdef _WIN32
+#define WIN32
 
 #define MEM_COMMIT 0x00001000
 #define MEM_RESERVE 0x00002000
@@ -434,7 +436,7 @@ void page_free(Page *page);
 Page *page_new(size_t size) {
     Page *page = malloc(sizeof(Page));
     page->size = size;
-#ifdef _WIN32
+#ifdef WIN32
     page->data = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (page->data == NULL) {
         return NULL;
@@ -449,7 +451,7 @@ Page *page_new(size_t size) {
 }
 
 bool page_make_executable(Page *page) {
-#ifdef _WIN32
+#ifdef WIN32
     uint32_t oldProtect;
     return VirtualProtect(page->data, page->size, PAGE_EXECUTE_READ, &oldProtect);
 #else
@@ -461,7 +463,7 @@ bool page_make_executable(Page *page) {
 }
 
 void page_free(Page *page) {
-#ifdef _WIN32
+#ifdef WIN32
     VirtualFree(page->data, 0, MEM_RELEASE);
 #else
     munmap(page->data, page->size);
@@ -724,8 +726,13 @@ ValueType parser_add(Parser *parser) {
             }
             if (lhsType == VALUE_STRING && rhsType == VALUE_STRING) {
 #ifdef X86_64
+#ifdef WIN32
                 pop_reg(parser, rdx);
                 pop_reg(parser, rcx);
+#else
+                pop_reg(parser, rsi);
+                pop_reg(parser, rdi);
+#endif
                 mov_reg_imm(parser, rax, (uint64_t)value_string_concat);
                 x86_64_inst2(parser, 0xff, 0xd0);  // call rax
                 push_reg(parser, rax);
@@ -1102,7 +1109,7 @@ int main(int argc, char **argv) {
 
     if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT) {
         JitIntFunc func = codePage->data;
-        printf("Result: (int) %lld\n", func());
+        printf("Result: (int) %" PRIi64 "\n", func());
     }
     if (returnType == VALUE_FLOAT) {
         JitFloatFunc func = codePage->data;
