@@ -549,9 +549,9 @@ ValueType parser_primary(Parser *parser);
     x86_64_inst4(parser, a, b, c, d);       \
     (parser)->code[(parser)->codePos++] = e;
 
-#define arm64_inst(parser, inst)                          \
-    *((uint32_t *)&parser->code[parser->codePos]) = inst; \
-    parser->codePos += sizeof(uint32_t);
+#define arm64_inst(parser, inst)                                \
+    *((uint32_t *)&((parser)->code[(parser)->codePos])) = inst; \
+    (parser)->codePos += sizeof(uint32_t);
 
 void mov_reg_imm(Parser *parser, int32_t reg, uint64_t imm) {
 #ifdef X86_64
@@ -560,10 +560,16 @@ void mov_reg_imm(Parser *parser, int32_t reg, uint64_t imm) {
     parser->codePos += sizeof(uint64_t);
 #endif
 #ifdef ARM64
-    arm64_inst(parser, 0xD2800000 | ((imm & 0xffff) << 5) | (reg & 31));                                    // mov reg, imm
-    if (imm > 0xffff) arm64_inst(parser, 0xF2A00000 | (((imm >> 16) & 0xffff) << 5) | (reg & 31));          // movk reg, imm, lsl 16
-    if (imm > 0xffffffff) arm64_inst(parser, 0xF2C00000 | (((imm >> 32) & 0xffff) << 5) | (reg & 31));      // movk reg, imm, lsl 32
-    if (imm > 0xffffffffffff) arm64_inst(parser, 0xF2E00000 | (((imm >> 48) & 0xffff) << 5) | (reg & 31));  // movk reg, imm, lsl 48
+    arm64_inst(parser, 0xD2800000 | ((imm & 0xffff) << 5) | (reg & 31));  // mov reg, imm
+    if (imm > 0xffff) {
+        arm64_inst(parser, 0xF2A00000 | (((imm >> 16) & 0xffff) << 5) | (reg & 31));  // movk reg, imm, lsl 16
+    }
+    if (imm > 0xffffffff) {
+        arm64_inst(parser, 0xF2C00000 | (((imm >> 32) & 0xffff) << 5) | (reg & 31));  // movk reg, imm, lsl 32
+    }
+    if (imm > 0xffffffffffff) {
+        arm64_inst(parser, 0xF2E00000 | (((imm >> 48) & 0xffff) << 5) | (reg & 31));  // movk reg, imm, lsl 48
+    }
 #endif
 }
 
@@ -644,7 +650,7 @@ ValueType parser(List *tokens, void *codePage, void *dataPage) {
     x86_64_inst4(&parser, 0x48, 0x83, 0xec, 0x38);  // sub rsp, 56
 #endif
 #ifdef ARM64
-    parser.code[parser.codePos++] = 0xA9BF7BFD;  // stp fp, lr, [sp, -16]!
+    arm64_inst(&parser, 0xA9BF7BFD);  // stp fp, lr, [sp, -16]!
 #endif
 
     ValueType returnType = parser_add(&parser);
@@ -670,8 +676,8 @@ ValueType parser(List *tokens, void *codePage, void *dataPage) {
     parser.code[parser.codePos++] = 0xc3;           // ret
 #endif
 #ifdef ARM64
-    parser.code[parser.codePos++] = 0xA8C17BFD;  // ldp fp, lr, [sp], 16
-    parser.code[parser.codePos++] = 0xD65F03C0;  // ret
+    arm64_inst(&parser, 0xA8C17BFD);  // ldp fp, lr, [sp], 16
+    arm64_inst(&parser, 0xD65F03C0);  // ret
 #endif
 
     return returnType;
@@ -1093,6 +1099,17 @@ typedef char *(*JitStringFunc)(void);
 int main(int argc, char **argv) {
     if (argc == 1) {
         printf("New Bastiaan Language JIT\n");
+#ifdef WIN32
+        printf("Platform: win32, ");
+#else
+        printf("Platform: posix, ");
+#endif
+#ifdef X86_64
+        printf("arch: x86_64\n");
+#endif
+#ifdef ARM64
+        printf("arch: arm64\n");
+#endif
         return EXIT_SUCCESS;
     }
 

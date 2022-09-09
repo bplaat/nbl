@@ -2,8 +2,9 @@
 #include "nbl.h"
 
 // Utils
-char *strdup(char *str) {
+char *strdup(const char *str) {
     char *copy = malloc(strlen(str) + 1);
+    if (copy == NULL) return NULL;
     strcpy(copy, str);
     return copy;
 }
