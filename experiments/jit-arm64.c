@@ -400,28 +400,38 @@ List *lexer(char *text) {
 }
 
 // Page Header
-void *page_alloc(size_t size);
+typedef struct Page {
+    void *data;
+    size_t size;
+} Page;
 
-bool page_make_executable(void *page, size_t size);
+Page *page_new(size_t size);
 
-typedef int64_t (*JitIntFunc)(void);
-typedef double (*JitFloatFunc)(void);
-typedef char *(*JitStringFunc)(void);
+bool page_make_executable(Page *page);
+
+void page_free(Page *page);
 
 // Page
-void *page_alloc(size_t size) {
-    void *page = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (page != (void *)-1) {
-        return page;
+Page *page_new(size_t size) {
+    Page *page = malloc(sizeof(Page));
+    page->data = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (page->data == (void *)-1) {
+        return NULL;
     }
-    return NULL;
+    page->size = size;
+    return page;
 }
 
-bool page_make_executable(void *page, size_t size) {
-    if (mprotect(page, size, PROT_READ | PROT_EXEC) == -1) {
+bool page_make_executable(Page *page) {
+    if (mprotect(page->data, page->size, PROT_READ | PROT_EXEC) == -1) {
         return false;
     }
     return true;
+}
+
+void page_free(Page *page) {
+    munmap(page->data, page->size);
+    free(page);
 }
 
 // Runtime Header
@@ -752,7 +762,7 @@ ValueType parser_primary(Parser *parser) {
         parser->dataPos += sizeof(double);
 
         mov_reg_imm(parser, x0, floatAddr);
-        parser->code[parser->codePos++] = 0xFD400000;  // ldr d0, [x0]
+        parser->code[parser->codePos++] = 0xFD400000; // ldr d0, [x0]
         push_reg(parser, d0);
         parser_eat(parser, TOKEN_FLOAT);
         return VALUE_FLOAT;
@@ -774,6 +784,10 @@ ValueType parser_primary(Parser *parser) {
 }
 
 // Main
+typedef int64_t (*JitIntFunc)(void);
+typedef double (*JitFloatFunc)(void);
+typedef char *(*JitStringFunc)(void);
+
 int main(int argc, char **argv) {
     if (argc == 1) {
         printf("New Bastiaan Language JIT\n");
@@ -785,27 +799,27 @@ int main(int argc, char **argv) {
 
     List *tokens = lexer(text);
     size_t PAGE_SIZE = 4096;
-    void *codePage = page_alloc(PAGE_SIZE);
-    void *dataPage = page_alloc(PAGE_SIZE);
+    Page *codePage = page_new(PAGE_SIZE);
+    Page *dataPage = page_new(PAGE_SIZE);
 
-    ValueType returnType = parser(tokens, codePage, dataPage);
-    page_make_executable(codePage, PAGE_SIZE);
+    ValueType returnType = parser(tokens, codePage->data, dataPage->data);
+    page_make_executable(codePage);
 
     if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT) {
-        JitIntFunc func = codePage;
+        JitIntFunc func = codePage->data;
         printf("Result: (int) %lld\n", func());
     }
     if (returnType == VALUE_FLOAT) {
-        JitFloatFunc func = codePage;
+        JitFloatFunc func = codePage->data;
         printf("Result: (float) %g\n", func());
     }
     if (returnType == VALUE_STRING) {
-        JitStringFunc func = codePage;
+        JitStringFunc func = codePage->data;
         printf("Result: (string) %s\n", func());
     }
 
     list_free(tokens, (ListFreeFunc *)token_free);
-    munmap(codePage, PAGE_SIZE);
-    munmap(dataPage, PAGE_SIZE);
+    page_free(codePage);
+    page_free(dataPage);
     return EXIT_SUCCESS;
 }
