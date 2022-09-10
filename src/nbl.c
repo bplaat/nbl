@@ -2462,14 +2462,6 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return classValue;
     }
 
-    if (node->type == NODE_VARIABLE) {
-        Variable *variable = block_scope_get(scope->block, node->string);
-        if (variable == NULL) {
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-            return interpreter_throw(&context, value_new_string_format("Can't find variable: '%s'", node->string));
-        }
-        return value_retrieve(variable->value);
-    }
     if (node->type == NODE_CONST_ASSIGN || node->type == NODE_LET_ASSIGN) {
         Value *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
@@ -2558,6 +2550,15 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         value_free(variable->value);
         variable->value = value_retrieve(rhs);
         return rhs;
+    }
+
+    if (node->type == NODE_VARIABLE) {
+        Variable *variable = block_scope_get(scope->block, node->string);
+        if (variable == NULL) {
+            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            return interpreter_throw(&context, value_new_string_format("Can't find variable: '%s'", node->string));
+        }
+        return value_retrieve(variable->value);
     }
     if (node->type == NODE_GET) {
         Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
