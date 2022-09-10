@@ -8,7 +8,7 @@ assert(type({}) == 'object');
 assert(type(fn () => true) == 'function');
 assert(type(class {}) == 'class');
 
-assert(---63 == -63);
+assert(- - -63 == -63);
 assert(~-1 == 0);
 assert(!!!false == true);
 assert((string)10 == '10');

@@ -4,12 +4,12 @@ let sum = 0;
 let i = 0;
 while (i < 10) {
     sum += i;
-    i += 1;
+    i++;
 }
 assert(sum == 45);
 
 sum = 0;
-for (let i = 0; i < 10; i += 1) {
+for (let i = 0; i < 10; i++) {
     sum += i;
 }
 assert(sum == 45);

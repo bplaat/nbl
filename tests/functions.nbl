@@ -22,7 +22,7 @@ assert(users.map(fn (user) => user.username)[0] == 'bplaat');
 
 fn sum() {
     let sum: int = 0;
-    for (let i: int = 0; i < arguments.length(); i += 1) {
+    for (let i: int = 0; i < arguments.length(); i++) {
         sum += (int)arguments[i];
     }
     return sum;

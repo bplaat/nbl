@@ -279,8 +279,10 @@ char *token_type_to_string(TokenType type) {
 
     if (type == TOKEN_ASSIGN) return "=";
     if (type == TOKEN_ADD) return "+";
+    if (type == TOKEN_INC) return "++";
     if (type == TOKEN_ASSIGN_ADD) return "+=";
     if (type == TOKEN_SUB) return "-";
+    if (type == TOKEN_DEC) return "--";
     if (type == TOKEN_ASSIGN_SUB) return "-=";
     if (type == TOKEN_MUL) return "*";
     if (type == TOKEN_ASSIGN_MUL) return "*=";
@@ -620,6 +622,11 @@ List *lexer(char *path, char *text) {
             continue;
         }
         if (*c == '+') {
+            if (*(c + 1) == '+') {
+                list_add(tokens, token_new(TOKEN_INC, source, line, column));
+                c += 2;
+                continue;
+            }
             if (*(c + 1) == '=') {
                 list_add(tokens, token_new(TOKEN_ASSIGN_ADD, source, line, column));
                 c += 2;
@@ -630,6 +637,11 @@ List *lexer(char *path, char *text) {
             continue;
         }
         if (*c == '-') {
+            if (*(c + 1) == '-') {
+                list_add(tokens, token_new(TOKEN_DEC, source, line, column));
+                c += 2;
+                continue;
+            }
             if (*(c + 1) == '=') {
                 list_add(tokens, token_new(TOKEN_ASSIGN_SUB, source, line, column));
                 c += 2;
@@ -1727,6 +1739,16 @@ Node *parser_unary(Parser *parser) {
         parser_eat(parser, TOKEN_SUB);
         return node_new_unary(NODE_NEG, token, parser_unary(parser));
     }
+    if (current()->type == TOKEN_INC) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_INC);
+        return node_new_unary(NODE_INC_PRE, token, parser_unary(parser));
+    }
+    if (current()->type == TOKEN_DEC) {
+        Token *token = current();
+        parser_eat(parser, TOKEN_DEC);
+        return node_new_unary(NODE_DEC_PRE, token, parser_unary(parser));
+    }
     if (current()->type == TOKEN_NOT) {
         Token *token = current();
         parser_eat(parser, TOKEN_NOT);
@@ -1859,7 +1881,8 @@ Node *parser_primary(Parser *parser) {
 }
 
 Node *parser_primary_suffix(Parser *parser, Node *node) {
-    while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT || current()->type == TOKEN_LPAREN) {
+    while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT || current()->type == TOKEN_LPAREN || current()->type == TOKEN_INC ||
+           current()->type == TOKEN_DEC) {
         Token *token = current();
         if (current()->type == TOKEN_LBRACKET) {
             parser_eat(parser, TOKEN_LBRACKET);
@@ -1888,6 +1911,14 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
             }
             parser_eat(parser, TOKEN_RPAREN);
             node = callNode;
+        }
+        if (current()->type == TOKEN_INC) {
+            parser_eat(parser, TOKEN_INC);
+            node = node_new_unary(NODE_INC_POST, token, node);
+        }
+        if (current()->type == TOKEN_DEC) {
+            parser_eat(parser, TOKEN_DEC);
+            node = node_new_unary(NODE_DEC_POST, token, node);
         }
     }
     return node;
@@ -2502,6 +2533,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             return rhs;
         }
 
+        if (node->lhs->type != NODE_VARIABLE) {
+            value_free(rhs);
+            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            return interpreter_throw(&context, value_new_string_format("Is not a variable"));
+        }
         Variable *variable = block_scope_get(scope->block, node->lhs->string);
         if (variable == NULL) {
             value_free(rhs);
@@ -2706,6 +2742,33 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
             }
             if (unary->type == VALUE_FLOAT) {
                 unary->floating = -unary->floating;
+                return unary;
+            }
+        }
+        if (node->type == NODE_INC_PRE || node->type == NODE_DEC_PRE || node->type == NODE_INC_POST || node->type == NODE_DEC_POST) {
+            if (node->unary->type != NODE_VARIABLE) {
+                value_free(unary);
+                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                return interpreter_throw(&context, value_new_string_format("Is not a variable"));
+            }
+            Variable *variable = block_scope_get(scope->block, node->lhs->string);
+            if (!variable->mutable) {
+                value_free(unary);
+                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
+            }
+            if (unary->type == VALUE_INT) {
+                if (node->type == NODE_INC_PRE) unary->integer++;
+                if (node->type == NODE_INC_PRE || node->type == NODE_INC_POST) variable->value->integer++;
+                if (node->type == NODE_DEC_PRE) unary->integer--;
+                if (node->type == NODE_DEC_PRE || node->type == NODE_DEC_POST) variable->value->integer--;
+                return unary;
+            }
+            if (unary->type == VALUE_FLOAT) {
+                if (node->type == NODE_INC_PRE) unary->floating++;
+                if (node->type == NODE_INC_PRE || node->type == NODE_INC_POST) variable->value->floating++;
+                if (node->type == NODE_DEC_PRE) unary->floating--;
+                if (node->type == NODE_DEC_PRE || node->type == NODE_DEC_POST) variable->value->floating--;
                 return unary;
             }
         }

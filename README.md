@@ -95,13 +95,13 @@ println(x);
 // Do while loops
 x = 0;
 do {
-    x += 1;
+    x++;
     break;
 } while(x > 10);
 println(x);
 
 // For loops
-for (let i = 0; i < 100; i += 1) {
+for (let i = 0; i < 100; i++) {
     println('-', i);
 }
 
