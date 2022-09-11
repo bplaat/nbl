@@ -455,10 +455,7 @@ bool page_make_executable(Page *page) {
     uint32_t oldProtect;
     return VirtualProtect(page->data, page->size, PAGE_EXECUTE_READ, &oldProtect) != 0;
 #else
-    if (mprotect(page->data, page->size, PROT_READ | PROT_EXEC) == -1) {
-        return false;
-    }
-    return true;
+    return mprotect(page->data, page->size, PROT_READ | PROT_EXEC) != -1;
 #endif
 }
 
@@ -961,35 +958,33 @@ ValueType parser_unary(Parser *parser) {
     if (current()->type == TOKEN_SUB) {
         parser_eat(parser, TOKEN_SUB);
         ValueType type = parser_unary(parser);
-#ifdef X86_64
         if (type == VALUE_INT) {
+#ifdef X86_64
             pop_reg(parser, rax);
             x86_64_inst3(parser, 0x48, 0xf7, 0xd8);  // neg rax
             push_reg(parser, rax);
+#endif
+#ifdef ARM64
+            pop_reg(parser, x0);
+            arm64_inst(parser, 0xCB0003E0);  // sub x0, xzr, x0
+            push_reg(parser, x0);
+#endif
             return VALUE_INT;
         }
         if (type == VALUE_FLOAT) {
+#ifdef X86_64
             x86_64_inst3(parser, 0x0f, 0x57, 0xc0);  // xorps xmm0, xmm0
             pop_reg(parser, xmm1);
             x86_64_inst4(parser, 0xf2, 0x0f, 0x5c, 0xc1);  // subsd xmm0, xmm1
             push_reg(parser, xmm0);
-            return VALUE_FLOAT;
-        }
 #endif
 #ifdef ARM64
-        if (type == VALUE_INT) {
-            pop_reg(parser, x0);
-            arm64_inst(parser, 0xCB0003E0);  // sub x0, xzr, x0
-            push_reg(parser, x0);
-            return VALUE_INT;
-        }
-        if (type == VALUE_FLOAT) {
             pop_reg(parser, d0);
             arm64_inst(parser, 0x1E614000);  // fneg d0, d0
             push_reg(parser, d0);
+#endif
             return VALUE_FLOAT;
         }
-#endif
         fprintf(stderr, "Type error\n");
         exit(EXIT_FAILURE);
     }
