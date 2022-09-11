@@ -335,6 +335,7 @@ char *token_type_to_string(TokenType type) {
     if (type == TOKEN_LET) return "let";
     if (type == TOKEN_IF) return "if";
     if (type == TOKEN_ELSE) return "else";
+    if (type == TOKEN_LOOP) return "loop";
     if (type == TOKEN_WHILE) return "while";
     if (type == TOKEN_DO) return "do";
     if (type == TOKEN_FOR) return "for";
@@ -401,6 +402,7 @@ List *lexer(char *path, char *text) {
                           {"let", TOKEN_LET},
                           {"if", TOKEN_IF},
                           {"else", TOKEN_ELSE},
+                          {"loop", TOKEN_LOOP},
                           {"while", TOKEN_WHILE},
                           {"do", TOKEN_DO},
                           {"for", TOKEN_FOR},
@@ -1163,7 +1165,7 @@ void node_free(Node *node) {
         node_free(node->rhs);
     }
     if (node->type >= NODE_IF && node->type <= NODE_FORIN) {
-        node_free(node->condition);
+        if (node->condition != NULL) node_free(node->condition);
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
         if (node->type == NODE_TRY && node->finallyBlock != NULL) node_free(node->finallyBlock);
@@ -1276,6 +1278,15 @@ Node *parser_statement(Parser *parser) {
         } else {
             node->finallyBlock = NULL;
         }
+        return node;
+    }
+
+    if (current()->type == TOKEN_LOOP) {
+        Node *node = node_new(NODE_LOOP, current());
+        node->elseBlock = NULL;
+        parser_eat(parser, TOKEN_LOOP);
+        node->condition = NULL;
+        node->thenBlock = parser_block(parser);
         return node;
     }
 
@@ -2232,6 +2243,22 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         if (node->finallyBlock != NULL) {
             interpreter_statement(interpreter, scope, node->finallyBlock, {});
+        }
+        return NULL;
+    }
+    if (node->type == NODE_LOOP) {
+        Scope loopScope = {.exception = scope->exception,
+                           .function = scope->function,
+                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                           .block = scope->block};
+        for (;;) {
+            interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
+            if (loopScope.loop->isContinuing) {
+                loopScope.loop->isContinuing = false;
+            }
+            if (loopScope.loop->isBreaking) {
+                break;
+            }
         }
         return NULL;
     }

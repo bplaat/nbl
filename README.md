@@ -84,6 +84,11 @@ else {
 
 ## Loops
 ```
+// Infite loops
+loop {
+    println('forever...');
+}
+
 // While loops
 let x = 10;
 while (x > 0) {

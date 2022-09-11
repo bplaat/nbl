@@ -2,9 +2,16 @@ include 'helpers.nbl';
 
 let sum = 0;
 let i = 0;
+loop {
+    if (i == 10) break;
+    sum += i++;
+}
+assert(sum == 45);
+
+sum = 0;
+i = 0;
 while (i < 10) {
-    sum += i;
-    i++;
+    sum += i++;
 }
 assert(sum == 45);
 
