@@ -36,81 +36,6 @@ size_t align(size_t size, size_t alignment);
 // Utils
 size_t align(size_t size, size_t alignment) { return (size + alignment - 1) / alignment * alignment; }
 
-// List header
-typedef struct List {
-    int32_t refs;
-    void **items;
-    size_t capacity;
-    size_t size;
-} List;
-
-#define list_foreach(list, item, block)                   \
-    for (size_t index = 0; index < list->size; index++) { \
-        item = list_get(list, index);                     \
-        block                                             \
-    }
-
-List *list_new(void);
-
-List *list_new_with_capacity(size_t capacity);
-
-List *list_ref(List *list);
-
-void *list_get(List *list, size_t index);
-
-void list_add(List *list, void *item);
-
-typedef void ListFreeFunc(void *item);
-
-void list_free(List *list, ListFreeFunc *freeFunc);
-
-// List
-List *list_new(void) { return list_new_with_capacity(8); }
-
-List *list_new_with_capacity(size_t capacity) {
-    List *list = malloc(sizeof(List));
-    list->refs = 1;
-    list->items = malloc(sizeof(void *) * capacity);
-    list->capacity = capacity;
-    list->size = 0;
-    return list;
-}
-
-List *list_ref(List *list) {
-    list->refs++;
-    return list;
-}
-
-void *list_get(List *list, size_t index) {
-    if (index < list->size) {
-        return list->items[index];
-    }
-    return NULL;
-}
-
-void list_add(List *list, void *item) {
-    if (list->size == list->capacity) {
-        list->capacity *= 2;
-        list->items = realloc(list->items, sizeof(void *) * list->capacity);
-    }
-    list->items[list->size++] = item;
-}
-
-void list_free(List *list, ListFreeFunc *freeFunc) {
-    list->refs--;
-    if (list->refs > 0) return;
-
-    if (freeFunc != NULL) {
-        for (size_t i = 0; i < list->size; i++) {
-            if (list->items[i] != NULL) {
-                freeFunc(list->items[i]);
-            }
-        }
-    }
-    free(list->items);
-    free(list);
-}
-
 // Lexer Header
 typedef enum TokenType {
     TOKEN_EOF,
@@ -135,62 +60,25 @@ typedef enum TokenType {
 } TokenType;
 
 typedef struct Token {
-    int32_t refs;
     TokenType type;
     union {
+        char character;
         int64_t integer;
         double floating;
         char *string;
     };
 } Token;
 
-Token *token_new(TokenType type);
-
-Token *token_new_int(TokenType type, int64_t integer);
-
-Token *token_new_float(double floating);
-
-Token *token_new_string(TokenType type, char *string);
-
-Token *token_ref(Token *token);
-
 char *token_type_to_string(TokenType type);
-
-void token_free(Token *token);
 
 typedef struct Keyword {
     char *keyword;
     TokenType type;
 } Keyword;
 
-List *lexer(char *text);
+Token *lexer(char *text, size_t *tokensSize);
 
 // Lexer
-Token *token_new(TokenType type) {
-    Token *token = malloc(sizeof(Token));
-    token->refs = 1;
-    token->type = type;
-    return token;
-}
-
-Token *token_new_int(TokenType type, int64_t integer) {
-    Token *token = token_new(type);
-    token->integer = integer;
-    return token;
-}
-
-Token *token_new_float(double floating) {
-    Token *token = token_new(TOKEN_FLOAT);
-    token->floating = floating;
-    return token;
-}
-
-Token *token_new_string(TokenType type, char *string) {
-    Token *token = token_new(type);
-    token->string = string;
-    return token;
-}
-
 char *token_type_to_string(TokenType type) {
     if (type == TOKEN_EOF) return "EOF";
     if (type == TOKEN_UNKNOWN) return "Unknown character";
@@ -214,23 +102,27 @@ char *token_type_to_string(TokenType type) {
     return NULL;
 }
 
-void token_free(Token *token) {
-    token->refs--;
-    if (token->refs > 0) return;
+Token *lexer(char *text, size_t *tokensSize) {
+    size_t capacity = 1024;
+    Token *tokens = malloc(capacity * sizeof(Token));
+    size_t size = 0;
 
-    if (token->type == TOKEN_KEYWORD) free(token->string);
-    free(token);
-}
-
-List *lexer(char *text) {
     Keyword keywords[] = {{"null", TOKEN_NULL}, {"true", TOKEN_TRUE}, {"false", TOKEN_FALSE}};
-
-    List *tokens = list_new_with_capacity(512);
     char *c = text;
     int32_t line = 1;
     char *lineStart = c;
-    while (*c != '\0') {
+    for (;;) {
         int32_t column = c - lineStart + 1;
+        if (size == capacity) {
+            capacity *= 2;
+            tokens = realloc(tokens, capacity * sizeof(Token));
+        }
+
+        // EOF
+        if (*c == '\0') {
+            tokens[size++].type = TOKEN_EOF;
+            break;
+        }
 
         // Comments
         if (*c == '#') {
@@ -260,18 +152,21 @@ List *lexer(char *text) {
         // Numbers
         if (*c == '0' && *(c + 1) == 'b') {
             c += 2;
-            list_add(tokens, token_new_int(TOKEN_INT, strtol(c, &c, 2)));
+            tokens[size].type = TOKEN_INT;
+            tokens[size++].integer = strtol(c, &c, 2);
             continue;
         }
         if (*c == '0' && (isdigit(*(c + 1)) || *(c + 1) == 'o')) {
             if (*(c + 1) == 'o') c++;
             c++;
-            list_add(tokens, token_new_int(TOKEN_INT, strtol(c, &c, 8)));
+            tokens[size].type = TOKEN_INT;
+            tokens[size++].integer = strtol(c, &c, 8);
             continue;
         }
         if (*c == '0' && *(c + 1) == 'x') {
             c += 2;
-            list_add(tokens, token_new_int(TOKEN_INT, strtol(c, &c, 16)));
+            tokens[size].type = TOKEN_INT;
+            tokens[size++].integer = strtol(c, &c, 16);
             continue;
         }
         if (isdigit(*c)) {
@@ -282,9 +177,11 @@ List *lexer(char *text) {
                 c++;
             }
             if (isFloat) {
-                list_add(tokens, token_new_float(strtod(start, &c)));
+                tokens[size].type = TOKEN_FLOAT;
+                tokens[size++].floating = strtod(start, &c);
             } else {
-                list_add(tokens, token_new_int(TOKEN_INT, strtol(start, &c, 10)));
+                tokens[size].type = TOKEN_INT;
+                tokens[size++].integer = strtol(start, &c, 10);
             }
             continue;
         }
@@ -295,12 +192,12 @@ List *lexer(char *text) {
             c++;
             char *ptr = c;
             while (*c != endChar) c++;
-            size_t size = c - ptr;
+            size_t strsize = c - ptr;
             c++;
 
-            char *string = malloc(size + 1);
+            char *string = malloc(strsize + 1);
             int32_t strpos = 0;
-            for (size_t i = 0; i < size; i++) {
+            for (size_t i = 0; i < strsize; i++) {
                 if (ptr[i] == '\\') {
                     i++;
                     if (ptr[i] == 'b')
@@ -328,7 +225,8 @@ List *lexer(char *text) {
                 }
             }
             string[strpos] = '\0';
-            list_add(tokens, token_new_string(TOKEN_STRING, string));
+            tokens[size].type = TOKEN_STRING;
+            tokens[size++].string = string;
             continue;
         }
 
@@ -336,66 +234,67 @@ List *lexer(char *text) {
         if (isalpha(*c) || *c == '_' || *c == '$') {
             char *ptr = c;
             while (isalnum(*c) || *c == '_' || *c == '$') c++;
-            size_t size = c - ptr;
+            size_t strsize = c - ptr;
 
             bool found = false;
             for (size_t i = 0; i < sizeof(keywords) / sizeof(Keyword); i++) {
                 Keyword *keyword = &keywords[i];
                 size_t keywordSize = strlen(keyword->keyword);
-                if (!memcmp(ptr, keyword->keyword, keywordSize) && size == keywordSize) {
-                    list_add(tokens, token_new(keyword->type));
+                if (!memcmp(ptr, keyword->keyword, keywordSize) && strsize == keywordSize) {
+                    tokens[size++].type = keyword->type;
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                char *string = malloc(size + 1);
-                memcpy(string, ptr, size);
-                string[size] = '\0';
-                list_add(tokens, token_new_string(TOKEN_KEYWORD, string));
+                char *string = malloc(strsize + 1);
+                memcpy(string, ptr, strsize);
+                string[strsize] = '\0';
+                tokens[size].type = TOKEN_KEYWORD;
+                tokens[size++].string = string;
             }
             continue;
         }
 
         // Syntax
         if (*c == '(') {
-            list_add(tokens, token_new(TOKEN_LPAREN));
+            tokens[size++].type = TOKEN_LPAREN;
             c++;
             continue;
         }
         if (*c == ')') {
-            list_add(tokens, token_new(TOKEN_RPAREN));
+            tokens[size++].type = TOKEN_RPAREN;
             c++;
             continue;
         }
 
         if (*c == '+') {
-            list_add(tokens, token_new(TOKEN_ADD));
+            tokens[size++].type = TOKEN_ADD;
             c++;
             continue;
         }
         if (*c == '-') {
-            list_add(tokens, token_new(TOKEN_SUB));
+            tokens[size++].type = TOKEN_SUB;
             c++;
             continue;
         }
         if (*c == '*') {
             if (*(c + 1) == '*') {
-                list_add(tokens, token_new(TOKEN_EXP));
+                tokens[size++].type = TOKEN_EXP;
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_MUL));
+            tokens[size++].type = TOKEN_MUL;
             c++;
             continue;
         }
         if (*c == '/') {
-            list_add(tokens, token_new(TOKEN_DIV));
+            tokens[size++].type = TOKEN_DIV;
             c++;
             continue;
         }
         if (*c == '%') {
-            list_add(tokens, token_new(TOKEN_MOD));
+            tokens[size++].type = TOKEN_MOD;
             c++;
             continue;
         }
@@ -413,10 +312,11 @@ List *lexer(char *text) {
             continue;
         }
 
-        list_add(tokens, token_new_int(TOKEN_UNKNOWN, *c));
+        tokens[size].type = TOKEN_UNKNOWN;
+        tokens[size++].character = *c;
         c++;
     }
-    list_add(tokens, token_new(TOKEN_EOF));
+    *tokensSize = size;
     return tokens;
 }
 
@@ -483,15 +383,17 @@ char *value_string_concat(char *a, char *b) {
 
 // Parser Header
 typedef struct Parser {
-    List *tokens;
+    Token *tokens;
+    size_t tokensSize;
     int32_t position;
+
     uint8_t *code;
     int32_t codePos;
     uint8_t *data;
     int32_t dataPos;
 } Parser;
 
-ValueType parser(List *tokens, void *codePage, void *dataPage);
+ValueType parser(Token *tokens, size_t tokensSize, void *codePage, void *dataPage);
 
 void parser_eat(Parser *parser, TokenType type);
 
@@ -524,11 +426,7 @@ ValueType parser_primary(Parser *parser);
 #define x0 0
 #define x1 1
 #define x2 2
-#define x3 3
-#define x4 4
-#define x5 5
-#define x6 6
-#define x7 7
+#define lr 30
 #define d0 32 + 0
 #define d1 32 + 1
 
@@ -640,14 +538,21 @@ void load_float(Parser *parser, ValueType lhsType, ValueType rhsType) {
 }
 
 // Parser
-ValueType parser(List *tokens, void *codePage, void *dataPage) {
-    Parser parser = {.tokens = tokens, .position = 0, .code = codePage, .codePos = 0, .data = dataPage, .dataPos = 0};
+ValueType parser(Token *tokens, size_t tokensSize, void *codePage, void *dataPage) {
+    Parser parser = {.tokens = tokens,
+                     .tokensSize = tokensSize,
+                     .position = 0,
 
-#ifdef X86_64
+                     .code = codePage,
+                     .codePos = 0,
+                     .data = dataPage,
+                     .dataPos = 0};
+
+#if defined(X86_64) && defined(WIN32)
     x86_64_inst4(&parser, 0x48, 0x83, 0xec, 0x38);  // sub rsp, 56
 #endif
 #ifdef ARM64
-    arm64_inst(&parser, 0xA9BF7BFD);  // stp fp, lr, [sp, -16]!
+    push_reg(&parser, lr);
 #endif
 
     ValueType returnType = parser_add(&parser);
@@ -669,19 +574,20 @@ ValueType parser(List *tokens, void *codePage, void *dataPage) {
     }
 #endif
 #ifdef X86_64
+#ifdef WIN32
     x86_64_inst4(&parser, 0x48, 0x83, 0xc4, 0x38);  // add rsp, 56
-    x86_64_inst1(&parser, 0xc3);                    // ret
+#endif
+    x86_64_inst1(&parser, 0xc3);  // ret
 #endif
 #ifdef ARM64
-    arm64_inst(&parser, 0xA8C17BFD);  // ldp fp, lr, [sp], 16
+    pop_reg(&parser, lr);
     arm64_inst(&parser, 0xD65F03C0);  // ret
 #endif
-
     return returnType;
 }
 
-#define current() ((Token *)list_get(parser->tokens, parser->position))
-#define next(pos) ((Token *)list_get(parser->tokens, parser->position + 1 + pos))
+#define current() ((Token *)&parser->tokens[parser->position])
+#define next(pos) ((Token *)&parser->tokens[parser->position + 1 + pos])
 
 void parser_eat(Parser *parser, TokenType type) {
     if (current()->type == type) {
@@ -1111,12 +1017,14 @@ int main(int argc, char **argv) {
     char *text = argv[1];
     printf("Command: %s\n", text);
 
-    List *tokens = lexer(text);
+    size_t tokensSize;
+    Token *tokens = lexer(text, &tokensSize);
+
     size_t PAGE_SIZE = 4096;
     Page *codePage = page_new(PAGE_SIZE);
     Page *dataPage = page_new(PAGE_SIZE);
 
-    ValueType returnType = parser(tokens, codePage->data, dataPage->data);
+    ValueType returnType = parser(tokens, tokensSize, codePage->data, dataPage->data);
     page_make_executable(codePage);
 
     if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT) {
@@ -1132,8 +1040,14 @@ int main(int argc, char **argv) {
         printf("Result: (string) %s\n", func());
     }
 
-    list_free(tokens, (ListFreeFunc *)token_free);
     page_free(codePage);
     page_free(dataPage);
+
+    for (size_t i = 0; i < tokensSize; i++) {
+        if (tokens[i].type == TOKEN_STRING || tokens[i].type == TOKEN_KEYWORD) {
+            free(tokens[i].string);
+        }
+    }
+    free(tokens);
     return EXIT_SUCCESS;
 }
