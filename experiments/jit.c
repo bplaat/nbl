@@ -12,7 +12,9 @@
 
 // Custom windows headers because why not :)
 #ifdef _WIN32
+#ifndef WIN32
 #define WIN32
+#endif
 
 #define MEM_COMMIT 0x00001000
 #define MEM_RESERVE 0x00002000
