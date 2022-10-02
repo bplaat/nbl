@@ -1,14 +1,20 @@
 // New Bastiaan Language Interpreter
 #include "nbl.h"
 
-// Utils
+// Polyfills
 char *strdup(const char *str) {
-    char *copy = malloc(strlen(str) + 1);
+    return strndup(str, strlen(str));
+}
+
+char *strndup(const char *str, size_t size) {
+    char *copy = malloc(size + 1);
     if (copy == NULL) return NULL;
-    strcpy(copy, str);
+    memcpy(copy, str, size);
+    copy[size] = '\0';
     return copy;
 }
 
+// Utils
 char *file_read(char *path) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) return NULL;
@@ -188,17 +194,12 @@ Source *source_new(char *path, char *text) {
     source->path = strdup(path);
     source->text = strdup(text);
 
+    // Reverse loop over path to find basename
     char *c = path + strlen(path);
     while (*c != '/' && c != path) c--;
     source->basename = c + 1;
 
-    c = path;
-    while (c != source->basename) c++;
-    size_t dirnameSize = c - path - 1;
-    char *dirname = malloc(dirnameSize + 1);
-    memcpy(dirname, path, dirnameSize);
-    dirname[dirnameSize] = '\0';
-    source->dirname = dirname;
+    source->dirname = strndup(path, source->basename - 1 - path);
     return source;
 }
 
@@ -542,10 +543,7 @@ List *lexer(char *path, char *text) {
                 }
             }
             if (!found) {
-                char *string = malloc(size + 1);
-                memcpy(string, ptr, size);
-                string[size] = '\0';
-                list_add(tokens, token_new_string(TOKEN_KEYWORD, source, line, column, string));
+                list_add(tokens, token_new_string(TOKEN_KEYWORD, source, line, column, strndup(ptr, size)));
             }
             continue;
         }

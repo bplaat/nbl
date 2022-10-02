@@ -12,12 +12,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Utils header
+// Polyfills header
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 char *strdup(const char *str);
 
+char *strndup(const char *str, size_t size);
+
+// Utils header
 char *file_read(char *path);
 
 typedef struct Token Token;  // Forward define
@@ -87,7 +90,6 @@ typedef void MapFreeFunc(void *item);
 void map_free(Map *map, MapFreeFunc *freeFunc);
 
 // Lexer header
-
 typedef struct Source {
     int32_t refs;
     char *path;
