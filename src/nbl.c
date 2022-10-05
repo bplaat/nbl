@@ -195,11 +195,11 @@ Source *source_new(char *path, char *text) {
     source->text = strdup(text);
 
     // Reverse loop over path to find basename
-    char *c = path + strlen(path);
-    while (*c != '/' && c != path) c--;
+    char *c = source->path + strlen(source->path);
+    while (*c != '/' && c != source->path) c--;
     source->basename = c + 1;
 
-    source->dirname = strndup(path, source->basename - 1 - path);
+    source->dirname = strndup(source->path, source->basename - 1 - source->path);
     return source;
 }
 
