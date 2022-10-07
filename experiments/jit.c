@@ -1,6 +1,7 @@
 // New Bastiaan Language JIT Experiment
 // Works on: Win32 & Posix with x86_64 & ARM64
-// gcc jit.c -lm -o jit && ./jit "(10 - 2) * 5"
+// gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 jit.c -lm -o jit && ./jit "(10 - 2) * 5"
+
 #include <ctype.h>
 #include <inttypes.h>
 #include <math.h>
@@ -63,6 +64,8 @@ typedef enum TokenType {
 
 typedef struct Token {
     TokenType type;
+    int32_t line;
+    int32_t column;
     union {
         char character;
         int64_t integer;
@@ -114,7 +117,9 @@ Token *lexer(char *text, size_t *tokensSize) {
     int32_t line = 1;
     char *lineStart = c;
     for (;;) {
-        int32_t column = c - lineStart + 1;
+        tokens[size].line = line;
+        tokens[size].column = c - lineStart + 1;
+
         if (size == capacity) {
             capacity *= 2;
             tokens = realloc(tokens, capacity * sizeof(Token));
@@ -1030,15 +1035,15 @@ int main(int argc, char **argv) {
     page_make_executable(codePage);
 
     if (returnType == VALUE_NULL || returnType == VALUE_BOOL || returnType == VALUE_INT) {
-        JitIntFunc func = codePage->data;
+        JitIntFunc func = (JitIntFunc)codePage->data;
         printf("Result: (int) %" PRIi64 "\n", func());
     }
     if (returnType == VALUE_FLOAT) {
-        JitFloatFunc func = codePage->data;
+        JitFloatFunc func = (JitFloatFunc)codePage->data;
         printf("Result: (float) %g\n", func());
     }
     if (returnType == VALUE_STRING) {
-        JitStringFunc func = codePage->data;
+        JitStringFunc func = (JitStringFunc)codePage->data;
         printf("Result: (string) %s\n", func());
     }
 
