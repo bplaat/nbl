@@ -1,4 +1,4 @@
-// New Bastiaan Language AST Interpreter
+// New Bastiaan Language AST NblInterpreter
 // Made by Bastiaan van der Plaat
 #ifndef NBL_HEADER
 #define NBL_HEADER
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Custom windows headers because TokenType name conflict :(
+// Custom windows headers because NblTokenType name conflict :(
 #ifdef _WIN32
 
 typedef struct _SYSTEMTIME {
@@ -89,17 +89,17 @@ int64_t time_ms(void);
 
 char *file_read(char *path);
 
-typedef struct Token Token;  // Forward define
+typedef struct NblToken NblToken;  // Forward define
 
-void print_error(Token *token, char *fmt, ...);
+void print_error(NblToken *token, char *fmt, ...);
 
-// List header
-typedef struct List {
+// NblList header
+typedef struct NblList {
     int32_t refs;
     void **items;
     size_t capacity;
     size_t size;
-} List;
+} NblList;
 
 #define list_foreach(list, item, block)                   \
     for (size_t index = 0; index < list->size; index++) { \
@@ -107,32 +107,32 @@ typedef struct List {
         block                                             \
     }
 
-List *list_new(void);
+NblList *list_new(void);
 
-List *list_new_with_capacity(size_t capacity);
+NblList *list_new_with_capacity(size_t capacity);
 
-List *list_ref(List *list);
+NblList *list_ref(NblList *list);
 
-void *list_get(List *list, size_t index);
+void *list_get(NblList *list, size_t index);
 
-void list_set(List *list, size_t index, void *item);
+void list_set(NblList *list, size_t index, void *item);
 
-void list_add(List *list, void *item);
+void list_add(NblList *list, void *item);
 
-char *list_to_string(List *list);
+char *list_to_string(NblList *list);
 
-typedef void ListFreeFunc(void *item);
+typedef void NblListFreeFunc(void *item);
 
-void list_free(List *list, ListFreeFunc *freeFunc);
+void list_free(NblList *list, NblListFreeFunc *freeFunc);
 
-// Map header
-typedef struct Map {
+// NblMap header
+typedef struct NblMap {
     int32_t refs;
     char **keys;
     void **values;
     size_t capacity;
     size_t size;
-} Map;
+} NblMap;
 
 #define map_foreach(map, key, value, block)              \
     for (size_t index = 0; index < map->size; index++) { \
@@ -141,36 +141,36 @@ typedef struct Map {
         block                                            \
     }
 
-Map *map_new(void);
+NblMap *map_new(void);
 
-Map *map_new_with_capacity(size_t capacity);
+NblMap *map_new_with_capacity(size_t capacity);
 
-Map *map_ref(Map *map);
+NblMap *map_ref(NblMap *map);
 
-void *map_get(Map *map, char *key);
+void *map_get(NblMap *map, char *key);
 
-void map_set(Map *map, char *key, void *item);
+void map_set(NblMap *map, char *key, void *item);
 
-typedef void MapFreeFunc(void *item);
+typedef void NblMapFreeFunc(void *item);
 
-void map_free(Map *map, MapFreeFunc *freeFunc);
+void map_free(NblMap *map, NblMapFreeFunc *freeFunc);
 
 // Lexer header
-typedef struct Source {
+typedef struct NblSource {
     int32_t refs;
     char *path;
     char *basename;
     char *dirname;
     char *text;
-} Source;
+} NblSource;
 
-Source *source_new(char *path, char *text);
+NblSource *source_new(char *path, char *text);
 
-Source *source_ref(Source *source);
+NblSource *source_ref(NblSource *source);
 
-void source_free(Source *source);
+void source_free(NblSource *source);
 
-typedef enum TokenType {
+typedef enum NblTokenType {
     TOKEN_EOF,
     TOKEN_UNKNOWN,
     TOKEN_LPAREN,
@@ -262,12 +262,12 @@ typedef enum TokenType {
     TOKEN_CATCH,
     TOKEN_FINALLY,
     TOKEN_INCLUDE
-} TokenType;
+} NblTokenType;
 
-struct Token {
+struct NblToken {
     int32_t refs;
-    TokenType type;
-    Source *source;
+    NblTokenType type;
+    NblSource *source;
     int32_t line;
     int32_t column;
     union {
@@ -277,38 +277,38 @@ struct Token {
     };
 };
 
-Token *token_new(TokenType type, Source *source, int32_t line, int32_t column);
+NblToken *token_new(NblTokenType type, NblSource *source, int32_t line, int32_t column);
 
-Token *token_new_int(TokenType type, Source *source, int32_t line, int32_t column, int64_t integer);
+NblToken *token_new_int(NblTokenType type, NblSource *source, int32_t line, int32_t column, int64_t integer);
 
-Token *token_new_float(Source *source, int32_t line, int32_t column, double floating);
+NblToken *token_new_float(NblSource *source, int32_t line, int32_t column, double floating);
 
-Token *token_new_string(TokenType type, Source *source, int32_t line, int32_t column, char *string);
+NblToken *token_new_string(NblTokenType type, NblSource *source, int32_t line, int32_t column, char *string);
 
-Token *token_ref(Token *token);
+NblToken *token_ref(NblToken *token);
 
-bool token_type_is_type(TokenType type);
+bool token_type_is_type(NblTokenType type);
 
-char *token_type_to_string(TokenType type);
+char *token_type_to_string(NblTokenType type);
 
-void token_free(Token *token);
+void token_free(NblToken *token);
 
 int64_t string_to_int(char *string);
 
 double string_to_float(char *string);
 
-typedef struct Keyword {
+typedef struct NblKeyword {
     char *keyword;
-    TokenType type;
-} Keyword;
+    NblTokenType type;
+} NblKeyword;
 
-List *lexer(char *path, char *text);
+NblList *lexer(char *path, char *text);
 
-// Value
-typedef struct Node Node;                              // Forward define
-typedef struct InterpreterContext InterpreterContext;  // Forward define
+// NblValue
+typedef struct NblNode NblNode;                              // Forward define
+typedef struct NblInterpreterContext NblInterpreterContext;  // Forward define
 
-typedef enum ValueType {
+typedef enum NblValueType {
     VALUE_ANY,
     VALUE_NULL,
     VALUE_BOOL,
@@ -321,94 +321,95 @@ typedef enum ValueType {
     VALUE_INSTANCE,
     VALUE_FUNCTION,
     VALUE_NATIVE_FUNCTION
-} ValueType;
+} NblValueType;
 
-typedef struct Argument {
+typedef struct NblArgument {
     char *name;
-    ValueType type;
-    Node *defaultNode;
-} Argument;
+    NblValueType type;
+    NblNode *defaultNode;
+} NblArgument;
 
-Argument *argument_new(char *name, ValueType type, Node *defaultNode);
+NblArgument *argument_new(char *name, NblValueType type, NblNode *defaultNode);
 
-void argument_free(Argument *argument);
+void argument_free(NblArgument *argument);
 
-typedef struct Value Value;
+typedef struct NblValue NblValue;
 
-struct Value {
+struct NblValue {
     int32_t refs;
-    ValueType type;
+    NblValueType type;
     union {
         bool boolean;
         int64_t integer;
         double floating;
         char *string;
-        List *array;
+        NblList *array;
         struct {
-            Map *object;
+            NblMap *object;
             union {
-                Value *parentClass;
-                Value *instanceClass;
+                NblValue *parentClass;
+                NblValue *instanceClass;
             };
             bool abstract;
         };
         struct {
-            List *arguments;
-            ValueType returnType;
+            NblList *arguments;
+            NblValueType returnType;
             union {
-                Node *functionNode;
-                Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values);
+                NblNode *functionNode;
+                NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values);
             };
         };
     };
 };
 
-Value *value_new(ValueType type);
+NblValue *value_new(NblValueType type);
 
-Value *value_new_null(void);
+NblValue *value_new_null(void);
 
-Value *value_new_bool(bool boolean);
+NblValue *value_new_bool(bool boolean);
 
-Value *value_new_int(int64_t integer);
+NblValue *value_new_int(int64_t integer);
 
-Value *value_new_float(double integer);
+NblValue *value_new_float(double integer);
 
-Value *value_new_string(char *string);
+NblValue *value_new_string(char *string);
 
-Value *value_new_string_format(char *format, ...);
+NblValue *value_new_string_format(char *format, ...);
 
-Value *value_new_array(List *array);
+NblValue *value_new_array(NblList *array);
 
-Value *value_new_object(Map *object);
+NblValue *value_new_object(NblMap *object);
 
-Value *value_new_class(Map *object, Value *parentClass, bool abstract);
+NblValue *value_new_class(NblMap *object, NblValue *parentClass, bool abstract);
 
-Value *value_new_instance(Map *object, Value *instanceClass);
+NblValue *value_new_instance(NblMap *object, NblValue *instanceClass);
 
-Value *value_new_function(List *args, ValueType returnType, Node *node);
+NblValue *value_new_function(NblList *args, NblValueType returnType, NblNode *node);
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values));
+NblValue *value_new_native_function(NblList *args, NblValueType returnType,
+                                    NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values));
 
-char *value_type_to_string(ValueType type);
+char *value_type_to_string(NblValueType type);
 
-ValueType token_type_to_value_type(TokenType type);
+NblValueType token_type_to_value_type(NblTokenType type);
 
-char *value_to_string(Value *value);
+char *value_to_string(NblValue *value);
 
-Value *value_class_get(Value *instance, char *key);
+NblValue *value_class_get(NblValue *instance, char *key);
 
-bool value_class_instanceof(Value *instance, Value *class);
+bool value_class_instanceof(NblValue *instance, NblValue *class);
 
-Value *value_ref(Value *value);
+NblValue *value_ref(NblValue *value);
 
-Value *value_retrieve(Value *value);
+NblValue *value_retrieve(NblValue *value);
 
-void value_clear(Value *value);
+void value_clear(NblValue *value);
 
-void value_free(Value *value);
+void value_free(NblValue *value);
 
-// Parser
-typedef enum NodeType {
+// NblParser
+typedef enum NblNodeType {
     NODE_PROGRAM,
     NODE_NODES,
     NODE_BLOCK,
@@ -466,170 +467,170 @@ typedef enum NodeType {
     NODE_GTEQ,
     NODE_LOGICAL_AND,
     NODE_LOGICAL_OR
-} NodeType;
+} NblNodeType;
 
-struct Node {
+struct NblNode {
     int32_t refs;
-    NodeType type;
-    Token *token;
+    NblNodeType type;
+    NblToken *token;
     union {
-        Value *value;
+        NblValue *value;
         char *string;
-        List *array;
+        NblList *array;
         struct {
-            Map *object;
-            Node *parentClass;
+            NblMap *object;
+            NblNode *parentClass;
             bool abstract;
         };
         struct {
-            ValueType castType;
-            Node *unary;
+            NblValueType castType;
+            NblNode *unary;
         };
         struct {
-            ValueType declarationType;
-            Node *lhs;
-            Node *rhs;
+            NblValueType declarationType;
+            NblNode *lhs;
+            NblNode *rhs;
         };
         struct {
             union {
-                Node *condition;
-                Node *iterator;
-                Node *catchVariable;
+                NblNode *condition;
+                NblNode *iterator;
+                NblNode *catchVariable;
             };
             union {
-                Node *thenBlock;
-                Node *tryBlock;
+                NblNode *thenBlock;
+                NblNode *tryBlock;
             };
             union {
-                Node *elseBlock;
-                Node *incrementBlock;
-                Node *forinVariable;
-                Node *catchBlock;
+                NblNode *elseBlock;
+                NblNode *incrementBlock;
+                NblNode *forinVariable;
+                NblNode *catchBlock;
             };
-            Node *finallyBlock;
+            NblNode *finallyBlock;
         };
         struct {
-            Node *function;
-            List *keys;
-            List *nodes;
+            NblNode *function;
+            NblList *keys;
+            NblList *nodes;
         };
     };
 };
 
-Node *node_new(NodeType type, Token *token);
+NblNode *node_new(NblNodeType type, NblToken *token);
 
-Node *node_new_value(Token *token, Value *value);
+NblNode *node_new_value(NblToken *token, NblValue *value);
 
-Node *node_new_string(NodeType type, Token *token, char *string);
+NblNode *node_new_string(NblNodeType type, NblToken *token, char *string);
 
-Node *node_new_unary(NodeType type, Token *token, Node *unary);
+NblNode *node_new_unary(NblNodeType type, NblToken *token, NblNode *unary);
 
-Node *node_new_cast(Token *token, ValueType castType, Node *unary);
+NblNode *node_new_cast(NblToken *token, NblValueType castType, NblNode *unary);
 
-Node *node_new_operation(NodeType type, Token *token, Node *lhs, Node *rhs);
+NblNode *node_new_operation(NblNodeType type, NblToken *token, NblNode *lhs, NblNode *rhs);
 
-Node *node_new_multiple(NodeType type, Token *token);
+NblNode *node_new_multiple(NblNodeType type, NblToken *token);
 
-Node *node_ref(Node *node);
+NblNode *node_ref(NblNode *node);
 
-void node_free(Node *node);
+void node_free(NblNode *node);
 
-typedef struct Parser {
-    List *tokens;
+typedef struct NblParser {
+    NblList *tokens;
     int32_t position;
-} Parser;
+} NblParser;
 
-Node *parser(List *tokens, bool included);
+NblNode *parser(NblList *tokens, bool included);
 
-void parser_eat(Parser *parser, TokenType type);
+void parser_eat(NblParser *parser, NblTokenType type);
 
-ValueType parser_eat_type(Parser *parser);
+NblValueType parser_eat_type(NblParser *parser);
 
-Node *parser_program(Parser *parser, bool included);
-Node *parser_block(Parser *parser);
-Node *parser_statement(Parser *parser);
-Node *parser_declarations(Parser *parser);
-Node *parser_assigns(Parser *parser);
-Node *parser_assign(Parser *parser);
-Node *parser_tenary(Parser *parser);
-Node *parser_logical(Parser *parser);
-Node *parser_equality(Parser *parser);
-Node *parser_relational(Parser *parser);
-Node *parser_instanceof(Parser *parser);
-Node *parser_bitwise(Parser *parser);
-Node *parser_shift(Parser *parser);
-Node *parser_add(Parser *parser);
-Node *parser_mul(Parser *parser);
-Node *parser_unary(Parser *parser);
-Node *parser_primary(Parser *parser);
-Node *parser_primary_suffix(Parser *parser, Node *node);
-Node *parser_function(Parser *parser, Token *token);
-Node *parser_class(Parser *parser, Token *token, bool abstract);
-Argument *parser_argument(Parser *parser);
+NblNode *parser_program(NblParser *parser, bool included);
+NblNode *parser_block(NblParser *parser);
+NblNode *parser_statement(NblParser *parser);
+NblNode *parser_declarations(NblParser *parser);
+NblNode *parser_assigns(NblParser *parser);
+NblNode *parser_assign(NblParser *parser);
+NblNode *parser_tenary(NblParser *parser);
+NblNode *parser_logical(NblParser *parser);
+NblNode *parser_equality(NblParser *parser);
+NblNode *parser_relational(NblParser *parser);
+NblNode *parser_instanceof(NblParser *parser);
+NblNode *parser_bitwise(NblParser *parser);
+NblNode *parser_shift(NblParser *parser);
+NblNode *parser_add(NblParser *parser);
+NblNode *parser_mul(NblParser *parser);
+NblNode *parser_unary(NblParser *parser);
+NblNode *parser_primary(NblParser *parser);
+NblNode *parser_primary_suffix(NblParser *parser, NblNode *node);
+NblNode *parser_function(NblParser *parser, NblToken *token);
+NblNode *parser_class(NblParser *parser, NblToken *token, bool abstract);
+NblArgument *parser_argument(NblParser *parser);
 
 // Standard library
-Map *std_env(void);
+NblMap *std_env(void);
 
-// Interpreter
-typedef struct Variable {
-    ValueType type;
+// NblInterpreter
+typedef struct NblVariable {
+    NblValueType type;
     bool mutable;
-    Value *value;
-} Variable;
+    NblValue *value;
+} NblVariable;
 
-Variable *variable_new(ValueType type, bool mutable, Value *value);
+NblVariable *variable_new(NblValueType type, bool mutable, NblValue *value);
 
-void variable_free(Variable *variable);
+void variable_free(NblVariable *variable);
 
-typedef struct ExceptionScope {
-    Value *exceptionValue;
-} ExceptionScope;
+typedef struct NblExceptionScope {
+    NblValue *exceptionValue;
+} NblExceptionScope;
 
-typedef struct FunctionScope {
-    Value *returnValue;
-} FunctionScope;
+typedef struct NblFunctionScope {
+    NblValue *returnValue;
+} NblFunctionScope;
 
-typedef struct LoopScope {
+typedef struct NblLoopScope {
     bool inLoop;
     bool isContinuing;
     bool isBreaking;
-} LoopScope;
+} NblLoopScope;
 
-typedef struct BlockScope BlockScope;
+typedef struct NblBlockScope NblBlockScope;
 
-struct BlockScope {
-    BlockScope *parentBlock;
-    Map *env;
+struct NblBlockScope {
+    NblBlockScope *parentBlock;
+    NblMap *env;
 };
 
-typedef struct Scope {
-    ExceptionScope *exception;
-    FunctionScope *function;
-    LoopScope *loop;
-    BlockScope *block;
-} Scope;
+typedef struct NblScope {
+    NblExceptionScope *exception;
+    NblFunctionScope *function;
+    NblLoopScope *loop;
+    NblBlockScope *block;
+} NblScope;
 
-typedef struct Interpreter {
-    Map *env;
-} Interpreter;
+typedef struct NblInterpreter {
+    NblMap *env;
+} NblInterpreter;
 
-struct InterpreterContext {
-    Map *env;
-    Scope *scope;
-    Node *node;
+struct NblInterpreterContext {
+    NblMap *env;
+    NblScope *scope;
+    NblNode *node;
 };
 
-Variable *block_scope_get(BlockScope *block, char *key);
+NblVariable *block_scope_get(NblBlockScope *block, char *key);
 
-Value *interpreter(Map *env, Node *node);
+NblValue *interpreter(NblMap *env, NblNode *node);
 
-Value *type_error_exception(ValueType expected, ValueType got);
+NblValue *type_error_exception(NblValueType expected, NblValueType got);
 
-Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *this, List *arguments);
+NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, NblValue *this, NblList *arguments);
 
-Value *interpreter_throw(InterpreterContext *context, Value *exception);
+NblValue *interpreter_throw(NblInterpreterContext *context, NblValue *exception);
 
-Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node);
+NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode *node);
 
 #endif
 
@@ -687,7 +688,7 @@ char *file_read(char *path) {
     return buffer;
 }
 
-void print_error(Token *token, char *fmt, ...) {
+void print_error(NblToken *token, char *fmt, ...) {
     fprintf(stderr, "%s:%d:%d ERROR: ", token->source->path, token->line, token->column);
     va_list args;
     va_start(args, fmt);
@@ -712,11 +713,11 @@ void print_error(Token *token, char *fmt, ...) {
     fprintf(stderr, "^\n");
 }
 
-// List
-List *list_new(void) { return list_new_with_capacity(8); }
+// NblList
+NblList *list_new(void) { return list_new_with_capacity(8); }
 
-List *list_new_with_capacity(size_t capacity) {
-    List *list = malloc(sizeof(List));
+NblList *list_new_with_capacity(size_t capacity) {
+    NblList *list = malloc(sizeof(NblList));
     list->refs = 1;
     list->items = malloc(sizeof(void *) * capacity);
     list->capacity = capacity;
@@ -724,19 +725,19 @@ List *list_new_with_capacity(size_t capacity) {
     return list;
 }
 
-List *list_ref(List *list) {
+NblList *list_ref(NblList *list) {
     list->refs++;
     return list;
 }
 
-void *list_get(List *list, size_t index) {
+void *list_get(NblList *list, size_t index) {
     if (index < list->size) {
         return list->items[index];
     }
     return NULL;
 }
 
-void list_set(List *list, size_t index, void *item) {
+void list_set(NblList *list, size_t index, void *item) {
     if (index > list->capacity) {
         while (index > list->capacity) list->capacity *= 2;
         list->items = realloc(list->items, sizeof(void *) * list->capacity);
@@ -750,7 +751,7 @@ void list_set(List *list, size_t index, void *item) {
     list->items[index] = item;
 }
 
-void list_add(List *list, void *item) {
+void list_add(NblList *list, void *item) {
     if (list->size == list->capacity) {
         list->capacity *= 2;
         list->items = realloc(list->items, sizeof(void *) * list->capacity);
@@ -758,7 +759,7 @@ void list_add(List *list, void *item) {
     list->items[list->size++] = item;
 }
 
-char *list_to_string(List *list) {
+char *list_to_string(NblList *list) {
     size_t size = 0;
     for (size_t i = 0; i < list->size; i++) {
         size += strlen(list_get(list, i));
@@ -771,7 +772,7 @@ char *list_to_string(List *list) {
     return string;
 }
 
-void list_free(List *list, ListFreeFunc *freeFunc) {
+void list_free(NblList *list, NblListFreeFunc *freeFunc) {
     list->refs--;
     if (list->refs > 0) return;
 
@@ -786,11 +787,11 @@ void list_free(List *list, ListFreeFunc *freeFunc) {
     free(list);
 }
 
-// Map
-Map *map_new(void) { return map_new_with_capacity(8); }
+// NblMap
+NblMap *map_new(void) { return map_new_with_capacity(8); }
 
-Map *map_new_with_capacity(size_t capacity) {
-    Map *map = malloc(sizeof(Map));
+NblMap *map_new_with_capacity(size_t capacity) {
+    NblMap *map = malloc(sizeof(NblMap));
     map->refs = 1;
     map->keys = malloc(sizeof(char *) * capacity);
     map->values = malloc(sizeof(void *) * capacity);
@@ -799,12 +800,12 @@ Map *map_new_with_capacity(size_t capacity) {
     return map;
 }
 
-Map *map_ref(Map *map) {
+NblMap *map_ref(NblMap *map) {
     map->refs++;
     return map;
 }
 
-void *map_get(Map *map, char *key) {
+void *map_get(NblMap *map, char *key) {
     for (size_t i = 0; i < map->size; i++) {
         if (!strcmp(map->keys[i], key)) {
             return map->values[i];
@@ -813,7 +814,7 @@ void *map_get(Map *map, char *key) {
     return NULL;
 }
 
-void map_set(Map *map, char *key, void *item) {
+void map_set(NblMap *map, char *key, void *item) {
     for (size_t i = 0; i < map->size; i++) {
         if (!strcmp(map->keys[i], key)) {
             map->values[i] = item;
@@ -831,7 +832,7 @@ void map_set(Map *map, char *key, void *item) {
     map->size++;
 }
 
-void map_free(Map *map, MapFreeFunc *freeFunc) {
+void map_free(NblMap *map, NblMapFreeFunc *freeFunc) {
     map->refs--;
     if (map->refs > 0) return;
 
@@ -847,8 +848,8 @@ void map_free(Map *map, MapFreeFunc *freeFunc) {
 }
 
 // Lexer
-Source *source_new(char *path, char *text) {
-    Source *source = malloc(sizeof(Source));
+NblSource *source_new(char *path, char *text) {
+    NblSource *source = malloc(sizeof(NblSource));
     source->refs = 1;
     source->path = strdup(path);
     source->text = strdup(text);
@@ -862,12 +863,12 @@ Source *source_new(char *path, char *text) {
     return source;
 }
 
-Source *source_ref(Source *source) {
+NblSource *source_ref(NblSource *source) {
     source->refs++;
     return source;
 }
 
-void source_free(Source *source) {
+void source_free(NblSource *source) {
     source->refs--;
     if (source->refs > 0) return;
 
@@ -877,8 +878,8 @@ void source_free(Source *source) {
     free(source);
 }
 
-Token *token_new(TokenType type, Source *source, int32_t line, int32_t column) {
-    Token *token = malloc(sizeof(Token));
+NblToken *token_new(NblTokenType type, NblSource *source, int32_t line, int32_t column) {
+    NblToken *token = malloc(sizeof(NblToken));
     token->refs = 1;
     token->source = source_ref(source);
     token->type = type;
@@ -887,36 +888,36 @@ Token *token_new(TokenType type, Source *source, int32_t line, int32_t column) {
     return token;
 }
 
-Token *token_new_int(TokenType type, Source *source, int32_t line, int32_t column, int64_t integer) {
-    Token *token = token_new(type, source, line, column);
+NblToken *token_new_int(NblTokenType type, NblSource *source, int32_t line, int32_t column, int64_t integer) {
+    NblToken *token = token_new(type, source, line, column);
     token->integer = integer;
     return token;
 }
 
-Token *token_new_float(Source *source, int32_t line, int32_t column, double floating) {
-    Token *token = token_new(TOKEN_FLOAT, source, line, column);
+NblToken *token_new_float(NblSource *source, int32_t line, int32_t column, double floating) {
+    NblToken *token = token_new(TOKEN_FLOAT, source, line, column);
     token->floating = floating;
     return token;
 }
 
-Token *token_new_string(TokenType type, Source *source, int32_t line, int32_t column, char *string) {
-    Token *token = token_new(type, source, line, column);
+NblToken *token_new_string(NblTokenType type, NblSource *source, int32_t line, int32_t column, char *string) {
+    NblToken *token = token_new(type, source, line, column);
     token->string = string;
     return token;
 }
 
-Token *token_ref(Token *token) {
+NblToken *token_ref(NblToken *token) {
     token->refs++;
     return token;
 }
 
-bool token_type_is_type(TokenType type) {
+bool token_type_is_type(NblTokenType type) {
     return type == TOKEN_TYPE_ANY || type == TOKEN_NULL || type == TOKEN_TYPE_BOOL || type == TOKEN_TYPE_INT || type == TOKEN_TYPE_FLOAT ||
            type == TOKEN_TYPE_STRING || type == TOKEN_TYPE_ARRAY || type == TOKEN_TYPE_OBJECT || type == TOKEN_TYPE_FUNCTION || type == TOKEN_CLASS ||
            type == TOKEN_TYPE_INSTANCE;
 }
 
-char *token_type_to_string(TokenType type) {
+char *token_type_to_string(NblTokenType type) {
     if (type == TOKEN_EOF) return "EOF";
     if (type == TOKEN_UNKNOWN) return "Unknown character";
     if (type == TOKEN_LPAREN) return "(";
@@ -1011,7 +1012,7 @@ char *token_type_to_string(TokenType type) {
     return NULL;
 }
 
-void token_free(Token *token) {
+void token_free(NblToken *token) {
     token->refs--;
     if (token->refs > 0) return;
 
@@ -1039,45 +1040,45 @@ int64_t string_to_int(char *string) {
 
 double string_to_float(char *string) { return strtod(string, NULL); }
 
-List *lexer(char *path, char *text) {
-    Keyword keywords[] = {{"instanceof", TOKEN_INSTANCEOF},
-                          {"any", TOKEN_TYPE_ANY},
-                          {"null", TOKEN_NULL},
-                          {"bool", TOKEN_TYPE_BOOL},
-                          {"true", TOKEN_TRUE},
-                          {"false", TOKEN_FALSE},
-                          {"int", TOKEN_TYPE_INT},
-                          {"float", TOKEN_TYPE_FLOAT},
-                          {"string", TOKEN_TYPE_STRING},
-                          {"array", TOKEN_TYPE_ARRAY},
-                          {"object", TOKEN_TYPE_OBJECT},
-                          {"class", TOKEN_CLASS},
-                          {"extends", TOKEN_EXTENDS},
-                          {"abstract", TOKEN_ABSTRACT},
-                          {"instance", TOKEN_TYPE_INSTANCE},
-                          {"function", TOKEN_TYPE_FUNCTION},
-                          {"fn", TOKEN_FUNCTION},
+NblList *lexer(char *path, char *text) {
+    NblKeyword keywords[] = {{"instanceof", TOKEN_INSTANCEOF},
+                             {"any", TOKEN_TYPE_ANY},
+                             {"null", TOKEN_NULL},
+                             {"bool", TOKEN_TYPE_BOOL},
+                             {"true", TOKEN_TRUE},
+                             {"false", TOKEN_FALSE},
+                             {"int", TOKEN_TYPE_INT},
+                             {"float", TOKEN_TYPE_FLOAT},
+                             {"string", TOKEN_TYPE_STRING},
+                             {"array", TOKEN_TYPE_ARRAY},
+                             {"object", TOKEN_TYPE_OBJECT},
+                             {"class", TOKEN_CLASS},
+                             {"extends", TOKEN_EXTENDS},
+                             {"abstract", TOKEN_ABSTRACT},
+                             {"instance", TOKEN_TYPE_INSTANCE},
+                             {"function", TOKEN_TYPE_FUNCTION},
+                             {"fn", TOKEN_FUNCTION},
 
-                          {"const", TOKEN_CONST},
-                          {"let", TOKEN_LET},
-                          {"if", TOKEN_IF},
-                          {"else", TOKEN_ELSE},
-                          {"loop", TOKEN_LOOP},
-                          {"while", TOKEN_WHILE},
-                          {"do", TOKEN_DO},
-                          {"for", TOKEN_FOR},
-                          {"in", TOKEN_IN},
-                          {"continue", TOKEN_CONTINUE},
-                          {"break", TOKEN_BREAK},
-                          {"return", TOKEN_RETURN},
-                          {"throw", TOKEN_THROW},
-                          {"try", TOKEN_TRY},
-                          {"catch", TOKEN_CATCH},
-                          {"finally", TOKEN_FINALLY},
-                          {"include", TOKEN_INCLUDE}};
+                             {"const", TOKEN_CONST},
+                             {"let", TOKEN_LET},
+                             {"if", TOKEN_IF},
+                             {"else", TOKEN_ELSE},
+                             {"loop", TOKEN_LOOP},
+                             {"while", TOKEN_WHILE},
+                             {"do", TOKEN_DO},
+                             {"for", TOKEN_FOR},
+                             {"in", TOKEN_IN},
+                             {"continue", TOKEN_CONTINUE},
+                             {"break", TOKEN_BREAK},
+                             {"return", TOKEN_RETURN},
+                             {"throw", TOKEN_THROW},
+                             {"try", TOKEN_TRY},
+                             {"catch", TOKEN_CATCH},
+                             {"finally", TOKEN_FINALLY},
+                             {"include", TOKEN_INCLUDE}};
 
-    Source *source = source_new(path, text);
-    List *tokens = list_new_with_capacity(512);
+    NblSource *source = source_new(path, text);
+    NblList *tokens = list_new_with_capacity(512);
     char *c = text;
     int32_t line = 1;
     char *lineStart = c;
@@ -1192,8 +1193,8 @@ List *lexer(char *path, char *text) {
             size_t size = c - ptr;
 
             bool found = false;
-            for (size_t i = 0; i < sizeof(keywords) / sizeof(Keyword); i++) {
-                Keyword *keyword = &keywords[i];
+            for (size_t i = 0; i < sizeof(keywords) / sizeof(NblKeyword); i++) {
+                NblKeyword *keyword = &keywords[i];
                 size_t keywordSize = strlen(keyword->keyword);
                 if (!memcmp(ptr, keyword->keyword, keywordSize) && size == keywordSize) {
                     list_add(tokens, token_new(keyword->type, source, line, column));
@@ -1467,16 +1468,16 @@ List *lexer(char *path, char *text) {
     return tokens;
 }
 
-// Value
-Argument *argument_new(char *name, ValueType type, Node *defaultNode) {
-    Argument *argument = malloc(sizeof(Argument));
+// NblValue
+NblArgument *argument_new(char *name, NblValueType type, NblNode *defaultNode) {
+    NblArgument *argument = malloc(sizeof(NblArgument));
     argument->name = strdup(name);
     argument->type = type;
     argument->defaultNode = defaultNode;
     return argument;
 }
 
-void argument_free(Argument *argument) {
+void argument_free(NblArgument *argument) {
     free(argument->name);
     if (argument->defaultNode != NULL) {
         node_free(argument->defaultNode);
@@ -1484,40 +1485,40 @@ void argument_free(Argument *argument) {
     free(argument);
 }
 
-Value *value_new(ValueType type) {
-    Value *value = malloc(sizeof(Value));
+NblValue *value_new(NblValueType type) {
+    NblValue *value = malloc(sizeof(NblValue));
     value->refs = 1;
     value->type = type;
     return value;
 }
 
-Value *value_new_null(void) { return value_new(VALUE_NULL); }
+NblValue *value_new_null(void) { return value_new(VALUE_NULL); }
 
-Value *value_new_bool(bool boolean) {
-    Value *value = value_new(VALUE_BOOL);
+NblValue *value_new_bool(bool boolean) {
+    NblValue *value = value_new(VALUE_BOOL);
     value->boolean = boolean;
     return value;
 }
 
-Value *value_new_int(int64_t integer) {
-    Value *value = value_new(VALUE_INT);
+NblValue *value_new_int(int64_t integer) {
+    NblValue *value = value_new(VALUE_INT);
     value->integer = integer;
     return value;
 }
 
-Value *value_new_float(double floating) {
-    Value *value = value_new(VALUE_FLOAT);
+NblValue *value_new_float(double floating) {
+    NblValue *value = value_new(VALUE_FLOAT);
     value->floating = floating;
     return value;
 }
 
-Value *value_new_string(char *string) {
-    Value *value = value_new(VALUE_STRING);
+NblValue *value_new_string(char *string) {
+    NblValue *value = value_new(VALUE_STRING);
     value->string = strdup(string);
     return value;
 }
 
-Value *value_new_string_format(char *format, ...) {
+NblValue *value_new_string_format(char *format, ...) {
     char buffer[1024];
     va_list args;
     va_start(args, format);
@@ -1526,50 +1527,51 @@ Value *value_new_string_format(char *format, ...) {
     return value_new_string(buffer);
 }
 
-Value *value_new_array(List *array) {
-    Value *value = value_new(VALUE_ARRAY);
+NblValue *value_new_array(NblList *array) {
+    NblValue *value = value_new(VALUE_ARRAY);
     value->array = array;
     return value;
 }
 
-Value *value_new_object(Map *object) {
-    Value *value = value_new(VALUE_OBJECT);
+NblValue *value_new_object(NblMap *object) {
+    NblValue *value = value_new(VALUE_OBJECT);
     value->object = object;
     return value;
 }
 
-Value *value_new_class(Map *object, Value *parentClass, bool abstract) {
-    Value *value = value_new(VALUE_CLASS);
+NblValue *value_new_class(NblMap *object, NblValue *parentClass, bool abstract) {
+    NblValue *value = value_new(VALUE_CLASS);
     value->object = object;
     value->parentClass = parentClass;
     value->abstract = abstract;
     return value;
 }
 
-Value *value_new_instance(Map *object, Value *instanceClass) {
-    Value *value = value_new(VALUE_INSTANCE);
+NblValue *value_new_instance(NblMap *object, NblValue *instanceClass) {
+    NblValue *value = value_new(VALUE_INSTANCE);
     value->object = object;
     value->instanceClass = instanceClass;
     return value;
 }
 
-Value *value_new_function(List *args, ValueType returnType, Node *functionNode) {
-    Value *value = value_new(VALUE_FUNCTION);
+NblValue *value_new_function(NblList *args, NblValueType returnType, NblNode *functionNode) {
+    NblValue *value = value_new(VALUE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
     value->functionNode = functionNode;
     return value;
 }
 
-Value *value_new_native_function(List *args, ValueType returnType, Value *(*nativeFunc)(InterpreterContext *context, Value *this, List *values)) {
-    Value *value = value_new(VALUE_NATIVE_FUNCTION);
+NblValue *value_new_native_function(NblList *args, NblValueType returnType,
+                                    NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values)) {
+    NblValue *value = value_new(VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
     value->nativeFunc = nativeFunc;
     return value;
 }
 
-char *value_type_to_string(ValueType type) {
+char *value_type_to_string(NblValueType type) {
     if (type == VALUE_ANY) return "any";
     if (type == VALUE_NULL) return "null";
     if (type == VALUE_BOOL) return "bool";
@@ -1584,7 +1586,7 @@ char *value_type_to_string(ValueType type) {
     return NULL;
 }
 
-char *value_to_string(Value *value) {
+char *value_to_string(NblValue *value) {
     if (value->type == VALUE_NULL) {
         return strdup("null");
     }
@@ -1605,11 +1607,11 @@ char *value_to_string(Value *value) {
         return strdup(value->string);
     }
     if (value->type == VALUE_ARRAY) {
-        List *sb = list_new();
+        NblList *sb = list_new();
         list_add(sb, strdup("["));
         if (value->array->size > 0) list_add(sb, strdup(" "));
         for (size_t i = 0; i < value->array->size; i++) {
-            Value *item = list_get(value->array, i);
+            NblValue *item = list_get(value->array, i);
             list_add(sb, item != NULL ? value_to_string(item) : strdup("null"));
             if (i != value->array->size - 1) list_add(sb, strdup(", "));
         }
@@ -1620,7 +1622,7 @@ char *value_to_string(Value *value) {
         return string;
     }
     if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
-        List *sb = list_new();
+        NblList *sb = list_new();
         list_add(sb, strdup("{"));
         if (value->object->size > 0) list_add(sb, strdup(" "));
         for (size_t i = 0; i < value->object->size; i++) {
@@ -1636,10 +1638,10 @@ char *value_to_string(Value *value) {
         return string;
     }
     if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
-        List *sb = list_new();
+        NblList *sb = list_new();
         list_add(sb, "fn (");
         for (size_t i = 0; i < value->arguments->size; i++) {
-            Argument *argument = list_get(value->arguments, i);
+            NblArgument *argument = list_get(value->arguments, i);
             list_add(sb, argument->name);
             if (argument->type != VALUE_ANY) {
                 list_add(sb, ": ");
@@ -1659,7 +1661,7 @@ char *value_to_string(Value *value) {
     return NULL;
 }
 
-ValueType token_type_to_value_type(TokenType type) {
+NblValueType token_type_to_value_type(NblTokenType type) {
     if (type == TOKEN_TYPE_ANY) return VALUE_ANY;
     if (type == TOKEN_NULL) return VALUE_NULL;
     if (type == TOKEN_TYPE_BOOL) return VALUE_BOOL;
@@ -1674,8 +1676,8 @@ ValueType token_type_to_value_type(TokenType type) {
     return 0;
 }
 
-Value *value_class_get(Value *instance, char *key) {
-    Value *value = map_get(instance->object, key);
+NblValue *value_class_get(NblValue *instance, char *key) {
+    NblValue *value = map_get(instance->object, key);
     if (value != NULL) {
         return value;
     }
@@ -1685,7 +1687,7 @@ Value *value_class_get(Value *instance, char *key) {
     return NULL;
 }
 
-bool value_class_instanceof(Value *instance, Value *class) {
+bool value_class_instanceof(NblValue *instance, NblValue *class) {
     bool result = instance->instanceClass == class;
     if (result) {
         return true;
@@ -1696,12 +1698,12 @@ bool value_class_instanceof(Value *instance, Value *class) {
     return false;
 }
 
-Value *value_ref(Value *value) {
+NblValue *value_ref(NblValue *value) {
     value->refs++;
     return value;
 }
 
-Value *value_retrieve(Value *value) {
+NblValue *value_retrieve(NblValue *value) {
     if (value->type == VALUE_NULL) return value_new_null();
     if (value->type == VALUE_BOOL) return value_new_bool(value->boolean);
     if (value->type == VALUE_INT) return value_new_int(value->integer);
@@ -1710,37 +1712,37 @@ Value *value_retrieve(Value *value) {
     return value_ref(value);
 }
 
-void value_clear(Value *value) {
+void value_clear(NblValue *value) {
     if (value->type == VALUE_STRING) {
         free(value->string);
     }
     if (value->type == VALUE_ARRAY) {
-        list_free(value->array, (ListFreeFunc *)value_free);
+        list_free(value->array, (NblListFreeFunc *)value_free);
     }
     if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
-        map_free(value->object, (MapFreeFunc *)value_free);
+        map_free(value->object, (NblMapFreeFunc *)value_free);
         if ((value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) && value->parentClass != NULL) {
             value_free(value->parentClass);
         }
     }
     if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
-        list_free(value->arguments, (ListFreeFunc *)argument_free);
+        list_free(value->arguments, (NblListFreeFunc *)argument_free);
     }
     if (value->type == VALUE_FUNCTION) {
         node_free(value->functionNode);
     }
 }
 
-void value_free(Value *value) {
+void value_free(NblValue *value) {
     value->refs--;
     if (value->refs > 0) return;
     value_clear(value);
     free(value);
 }
 
-// Parser
-Node *node_new(NodeType type, Token *token) {
-    Node *node = malloc(sizeof(Node));
+// NblParser
+NblNode *node_new(NblNodeType type, NblToken *token) {
+    NblNode *node = malloc(sizeof(NblNode));
     node->refs = 1;
     node->type = type;
     if (token != NULL) {
@@ -1749,50 +1751,50 @@ Node *node_new(NodeType type, Token *token) {
     return node;
 }
 
-Node *node_new_value(Token *token, Value *value) {
-    Node *node = node_new(NODE_VALUE, token);
+NblNode *node_new_value(NblToken *token, NblValue *value) {
+    NblNode *node = node_new(NODE_VALUE, token);
     node->value = value;
     return node;
 }
 
-Node *node_new_string(NodeType type, Token *token, char *string) {
-    Node *node = node_new(type, token);
+NblNode *node_new_string(NblNodeType type, NblToken *token, char *string) {
+    NblNode *node = node_new(type, token);
     node->string = strdup(string);
     return node;
 }
 
-Node *node_new_unary(NodeType type, Token *token, Node *unary) {
-    Node *node = node_new(type, token);
+NblNode *node_new_unary(NblNodeType type, NblToken *token, NblNode *unary) {
+    NblNode *node = node_new(type, token);
     node->unary = unary;
     return node;
 }
 
-Node *node_new_cast(Token *token, ValueType castType, Node *unary) {
-    Node *node = node_new(NODE_CAST, token);
+NblNode *node_new_cast(NblToken *token, NblValueType castType, NblNode *unary) {
+    NblNode *node = node_new(NODE_CAST, token);
     node->castType = castType;
     node->unary = unary;
     return node;
 }
 
-Node *node_new_operation(NodeType type, Token *token, Node *lhs, Node *rhs) {
-    Node *node = node_new(type, token);
+NblNode *node_new_operation(NblNodeType type, NblToken *token, NblNode *lhs, NblNode *rhs) {
+    NblNode *node = node_new(type, token);
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
 }
 
-Node *node_new_multiple(NodeType type, Token *token) {
-    Node *node = node_new(type, token);
+NblNode *node_new_multiple(NblNodeType type, NblToken *token) {
+    NblNode *node = node_new(type, token);
     node->nodes = list_new();
     return node;
 }
 
-Node *node_ref(Node *node) {
+NblNode *node_ref(NblNode *node) {
     node->refs++;
     return node;
 }
 
-void node_free(Node *node) {
+void node_free(NblNode *node) {
     node->refs--;
     if (node->refs > 0) return;
 
@@ -1806,10 +1808,10 @@ void node_free(Node *node) {
         free(node->string);
     }
     if (node->type == NODE_ARRAY) {
-        list_free(node->array, (ListFreeFunc *)node_free);
+        list_free(node->array, (NblListFreeFunc *)node_free);
     }
     if (node->type == NODE_OBJECT || node->type == NODE_CLASS) {
-        map_free(node->object, (MapFreeFunc *)node_free);
+        map_free(node->object, (NblMapFreeFunc *)node_free);
         if (node->type == NODE_CLASS && node->parentClass != NULL) {
             node_free(node->parentClass);
         }
@@ -1829,20 +1831,20 @@ void node_free(Node *node) {
     }
     if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || node->type == NODE_CALL) {
         if (node->type == NODE_CALL) node_free(node->function);
-        list_free(node->nodes, (ListFreeFunc *)node_free);
+        list_free(node->nodes, (NblListFreeFunc *)node_free);
     }
     free(node);
 }
 
-Node *parser(List *tokens, bool included) {
-    Parser parser = {.tokens = tokens, .position = 0};
+NblNode *parser(NblList *tokens, bool included) {
+    NblParser parser = {.tokens = tokens, .position = 0};
     return parser_program(&parser, included);
 }
 
-#define current() ((Token *)list_get(parser->tokens, parser->position))
-#define next(pos) ((Token *)list_get(parser->tokens, parser->position + 1 + pos))
+#define current() ((NblToken *)list_get(parser->tokens, parser->position))
+#define next(pos) ((NblToken *)list_get(parser->tokens, parser->position + 1 + pos))
 
-void parser_eat(Parser *parser, TokenType type) {
+void parser_eat(NblParser *parser, NblTokenType type) {
     if (current()->type == type) {
         parser->position++;
     } else {
@@ -1851,9 +1853,9 @@ void parser_eat(Parser *parser, TokenType type) {
     }
 }
 
-ValueType parser_eat_type(Parser *parser) {
+NblValueType parser_eat_type(NblParser *parser) {
     if (token_type_is_type(current()->type)) {
-        ValueType type = token_type_to_value_type(current()->type);
+        NblValueType type = token_type_to_value_type(current()->type);
         parser->position++;
         return type;
     }
@@ -1862,32 +1864,32 @@ ValueType parser_eat_type(Parser *parser) {
     return VALUE_ANY;
 }
 
-Node *parser_program(Parser *parser, bool included) {
-    Node *programNode = node_new_multiple(included ? NODE_NODES : NODE_PROGRAM, current());
+NblNode *parser_program(NblParser *parser, bool included) {
+    NblNode *programNode = node_new_multiple(included ? NODE_NODES : NODE_PROGRAM, current());
     while (current()->type != TOKEN_EOF) {
-        Node *node = parser_statement(parser);
+        NblNode *node = parser_statement(parser);
         if (node != NULL) list_add(programNode->nodes, node);
     }
     return programNode;
 }
 
-Node *parser_block(Parser *parser) {
-    Node *blockNode = node_new_multiple(NODE_BLOCK, current());
+NblNode *parser_block(NblParser *parser) {
+    NblNode *blockNode = node_new_multiple(NODE_BLOCK, current());
     if (current()->type == TOKEN_LCURLY) {
         parser_eat(parser, TOKEN_LCURLY);
         while (current()->type != TOKEN_RCURLY) {
-            Node *node = parser_statement(parser);
+            NblNode *node = parser_statement(parser);
             if (node != NULL) list_add(blockNode->nodes, node);
         }
         parser_eat(parser, TOKEN_RCURLY);
     } else {
-        Node *node = parser_statement(parser);
+        NblNode *node = parser_statement(parser);
         if (node != NULL) list_add(blockNode->nodes, node);
     }
     return blockNode;
 }
 
-Node *parser_statement(Parser *parser) {
+NblNode *parser_statement(NblParser *parser) {
     if (current()->type == TOKEN_SEMICOLON) {
         parser_eat(parser, TOKEN_SEMICOLON);
         return NULL;
@@ -1898,7 +1900,7 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_IF) {
-        Node *node = node_new(NODE_IF, current());
+        NblNode *node = node_new(NODE_IF, current());
         parser_eat(parser, TOKEN_IF);
         parser_eat(parser, TOKEN_LPAREN);
         node->condition = parser_assigns(parser);
@@ -1914,13 +1916,13 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_TRY) {
-        Node *node = node_new(NODE_TRY, current());
+        NblNode *node = node_new(NODE_TRY, current());
         parser_eat(parser, TOKEN_TRY);
         node->tryBlock = parser_block(parser);
 
         parser_eat(parser, TOKEN_CATCH);
         parser_eat(parser, TOKEN_LPAREN);
-        Node *declarations = parser_declarations(parser);
+        NblNode *declarations = parser_declarations(parser);
         if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
             print_error(declarations->token, "You can only declare one variable in a catch block");
             exit(EXIT_FAILURE);
@@ -1939,7 +1941,7 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_LOOP) {
-        Node *node = node_new(NODE_LOOP, current());
+        NblNode *node = node_new(NODE_LOOP, current());
         node->elseBlock = NULL;
         parser_eat(parser, TOKEN_LOOP);
         node->condition = NULL;
@@ -1948,7 +1950,7 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_WHILE) {
-        Node *node = node_new(NODE_WHILE, current());
+        NblNode *node = node_new(NODE_WHILE, current());
         node->elseBlock = NULL;
         parser_eat(parser, TOKEN_WHILE);
         parser_eat(parser, TOKEN_LPAREN);
@@ -1959,7 +1961,7 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_DO) {
-        Node *node = node_new(NODE_DOWHILE, current());
+        NblNode *node = node_new(NODE_DOWHILE, current());
         node->elseBlock = NULL;
         parser_eat(parser, TOKEN_DO);
         node->thenBlock = parser_block(parser);
@@ -1972,16 +1974,16 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_FOR) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_FOR);
         parser_eat(parser, TOKEN_LPAREN);
-        Node *declarations;
+        NblNode *declarations;
         if (current()->type != TOKEN_SEMICOLON) {
             declarations = parser_declarations(parser);
         }
 
         if (current()->type == TOKEN_IN) {
-            Node *node = node_new(NODE_FORIN, token);
+            NblNode *node = node_new(NODE_FORIN, token);
             if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
                 print_error(declarations->token, "You can only declare one variable in a for in loop");
                 exit(EXIT_FAILURE);
@@ -1994,10 +1996,10 @@ Node *parser_statement(Parser *parser) {
             return node;
         }
 
-        Node *blockNode = node_new_multiple(NODE_BLOCK, token);
+        NblNode *blockNode = node_new_multiple(NODE_BLOCK, token);
         list_add(blockNode->nodes, declarations);
 
-        Node *node = node_new(NODE_FOR, token);
+        NblNode *node = node_new(NODE_FOR, token);
         parser_eat(parser, TOKEN_SEMICOLON);
         if (current()->type != TOKEN_SEMICOLON) {
             node->condition = parser_tenary(parser);
@@ -2019,76 +2021,76 @@ Node *parser_statement(Parser *parser) {
     }
 
     if (current()->type == TOKEN_CONTINUE) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_CONTINUE);
         parser_eat(parser, TOKEN_SEMICOLON);
         return node_new(NODE_CONTINUE, token);
     }
     if (current()->type == TOKEN_BREAK) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_BREAK);
         parser_eat(parser, TOKEN_SEMICOLON);
         return node_new(NODE_BREAK, token);
     }
     if (current()->type == TOKEN_RETURN) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_RETURN);
-        Node *node = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
+        NblNode *node = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
         parser_eat(parser, TOKEN_SEMICOLON);
         return node;
     }
     if (current()->type == TOKEN_THROW) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_THROW);
-        Node *node = node_new_unary(NODE_THROW, token, parser_tenary(parser));
+        NblNode *node = node_new_unary(NODE_THROW, token, parser_tenary(parser));
         parser_eat(parser, TOKEN_SEMICOLON);
         return node;
     }
     if (current()->type == TOKEN_INCLUDE) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_INCLUDE);
-        Node *node = node_new_unary(NODE_INCLUDE, token, parser_tenary(parser));
+        NblNode *node = node_new_unary(NODE_INCLUDE, token, parser_tenary(parser));
         parser_eat(parser, TOKEN_SEMICOLON);
         return node;
     }
 
     if (current()->type == TOKEN_FUNCTION) {
-        Token *functionToken = current();
+        NblToken *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
-        Token *nameToken = current();
+        NblToken *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-        Node *node =
+        NblNode *node =
             node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_function(parser, functionToken));
         node->declarationType = VALUE_FUNCTION;
         return node;
     }
     if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
-        Token *classToken = current();
+        NblToken *classToken = current();
         bool abstract = false;
         if (current()->type == TOKEN_ABSTRACT) {
             abstract = true;
             parser_eat(parser, TOKEN_ABSTRACT);
         }
         parser_eat(parser, TOKEN_CLASS);
-        Token *nameToken = current();
+        NblToken *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
-        Node *node =
+        NblNode *node =
             node_new_operation(NODE_CONST_ASSIGN, classToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_class(parser, classToken, abstract));
         node->declarationType = VALUE_CLASS;
         return node;
     }
 
-    Node *node = parser_declarations(parser);
+    NblNode *node = parser_declarations(parser);
     parser_eat(parser, TOKEN_SEMICOLON);
     return node;
 }
 
-Node *parser_declarations(Parser *parser) {
+NblNode *parser_declarations(NblParser *parser) {
     if (current()->type == TOKEN_CONST || current()->type == TOKEN_LET) {
-        List *nodes = list_new();
-        NodeType assignType;
+        NblList *nodes = list_new();
+        NblNodeType assignType;
         if (current()->type == TOKEN_CONST) {
             assignType = NODE_CONST_ASSIGN;
             parser_eat(parser, TOKEN_CONST);
@@ -2101,17 +2103,17 @@ Node *parser_declarations(Parser *parser) {
         for (;;) {
             char *name = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
-            Node *variable = node_new_string(NODE_VARIABLE, current(), name);
+            NblNode *variable = node_new_string(NODE_VARIABLE, current(), name);
 
-            ValueType declarationType = VALUE_ANY;
+            NblValueType declarationType = VALUE_ANY;
             if (current()->type == TOKEN_COLON) {
                 parser_eat(parser, TOKEN_COLON);
                 declarationType = parser_eat_type(parser);
             }
 
-            Node *node;
+            NblNode *node;
             if (current()->type == TOKEN_ASSIGN) {
-                Token *token = current();
+                NblToken *token = current();
                 parser_eat(parser, TOKEN_ASSIGN);
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));
             } else {
@@ -2131,21 +2133,21 @@ Node *parser_declarations(Parser *parser) {
             return NULL;
         }
         if (nodes->size == 1) {
-            Node *firstNode = list_get(nodes, 0);
+            NblNode *firstNode = list_get(nodes, 0);
             list_free(nodes, NULL);
             return firstNode;
         }
-        Node *nodesNode = node_new(NODE_NODES, current());
+        NblNode *nodesNode = node_new(NODE_NODES, current());
         nodesNode->nodes = nodes;
         return nodesNode;
     }
     return parser_assigns(parser);
 }
 
-Node *parser_assigns(Parser *parser) {
-    List *nodes = list_new();
+NblNode *parser_assigns(NblParser *parser) {
+    NblList *nodes = list_new();
     for (;;) {
-        Node *node = parser_assign(parser);
+        NblNode *node = parser_assign(parser);
         list_add(nodes, node);
         if (current()->type == TOKEN_COMMA) {
             parser_eat(parser, TOKEN_COMMA);
@@ -2158,79 +2160,79 @@ Node *parser_assigns(Parser *parser) {
         return NULL;
     }
     if (nodes->size == 1) {
-        Node *firstNode = list_get(nodes, 0);
+        NblNode *firstNode = list_get(nodes, 0);
         list_free(nodes, NULL);
         return firstNode;
     }
-    Node *nodesNode = node_new(NODE_NODES, current());
+    NblNode *nodesNode = node_new(NODE_NODES, current());
     nodesNode->nodes = nodes;
     return nodesNode;
 }
 
-Node *parser_assign(Parser *parser) {
-    Node *lhs = parser_tenary(parser);  // TODO
+NblNode *parser_assign(NblParser *parser) {
+    NblNode *lhs = parser_tenary(parser);  // TODO
     if (current()->type == TOKEN_ASSIGN) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN);
         return node_new_operation(NODE_ASSIGN, token, lhs, parser_assign(parser));
     }
     if (current()->type == TOKEN_ASSIGN_ADD) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_ADD);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_ADD, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SUB) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SUB);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SUB, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_MUL) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_MUL);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MUL, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_EXP) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_EXP);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_EXP, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_MOD) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_MOD);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MOD, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_AND) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_AND);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_AND, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_XOR) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_XOR);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_XOR, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_OR) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_OR);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_OR, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SHL) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SHL);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHL, token, node_ref(lhs), parser_assign(parser)));
     }
     if (current()->type == TOKEN_ASSIGN_SHR) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_ASSIGN_SHR);
         return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, node_ref(lhs), parser_assign(parser)));
     }
     return lhs;
 }
 
-Node *parser_tenary(Parser *parser) {
-    Node *node = parser_logical(parser);
+NblNode *parser_tenary(NblParser *parser) {
+    NblNode *node = parser_logical(parser);
     if (current()->type == TOKEN_QUESTION) {
-        Node *tenaryNode = node_new(NODE_TENARY, current());
+        NblNode *tenaryNode = node_new(NODE_TENARY, current());
         parser_eat(parser, TOKEN_QUESTION);
         tenaryNode->condition = node;
         tenaryNode->thenBlock = parser_tenary(parser);
@@ -2241,16 +2243,16 @@ Node *parser_tenary(Parser *parser) {
     return node;
 }
 
-Node *parser_logical(Parser *parser) {
-    Node *node = parser_equality(parser);
+NblNode *parser_logical(NblParser *parser) {
+    NblNode *node = parser_equality(parser);
     while (current()->type == TOKEN_LOGICAL_AND || current()->type == TOKEN_LOGICAL_OR) {
         if (current()->type == TOKEN_LOGICAL_AND) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_LOGICAL_AND);
             node = node_new_operation(NODE_LOGICAL_AND, token, node, parser_equality(parser));
         }
         if (current()->type == TOKEN_LOGICAL_OR) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_LOGICAL_OR);
             node = node_new_operation(NODE_LOGICAL_OR, token, node, parser_equality(parser));
         }
@@ -2258,16 +2260,16 @@ Node *parser_logical(Parser *parser) {
     return node;
 }
 
-Node *parser_equality(Parser *parser) {
-    Node *node = parser_relational(parser);
+NblNode *parser_equality(NblParser *parser) {
+    NblNode *node = parser_relational(parser);
     while (current()->type == TOKEN_EQ || current()->type == TOKEN_NEQ) {
         if (current()->type == TOKEN_EQ) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_EQ);
             node = node_new_operation(NODE_EQ, token, node, parser_relational(parser));
         }
         if (current()->type == TOKEN_NEQ) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_NEQ);
             node = node_new_operation(NODE_NEQ, token, node, parser_relational(parser));
         }
@@ -2275,26 +2277,26 @@ Node *parser_equality(Parser *parser) {
     return node;
 }
 
-Node *parser_relational(Parser *parser) {
-    Node *node = parser_instanceof(parser);
+NblNode *parser_relational(NblParser *parser) {
+    NblNode *node = parser_instanceof(parser);
     while (current()->type == TOKEN_LT || current()->type == TOKEN_LTEQ || current()->type == TOKEN_GT || current()->type == TOKEN_GTEQ) {
         if (current()->type == TOKEN_LT) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_LT);
             node = node_new_operation(NODE_LT, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_LTEQ) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_LTEQ);
             node = node_new_operation(NODE_LTEQ, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_GT) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_GT);
             node = node_new_operation(NODE_GT, token, node, parser_instanceof(parser));
         }
         if (current()->type == TOKEN_GTEQ) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_GTEQ);
             node = node_new_operation(NODE_GTEQ, token, node, parser_instanceof(parser));
         }
@@ -2302,31 +2304,31 @@ Node *parser_relational(Parser *parser) {
     return node;
 }
 
-Node *parser_instanceof(Parser *parser) {
-    Node *node = parser_bitwise(parser);
+NblNode *parser_instanceof(NblParser *parser) {
+    NblNode *node = parser_bitwise(parser);
     while (current()->type == TOKEN_INSTANCEOF) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_INSTANCEOF);
         node = node_new_operation(NODE_INSTANCEOF, token, node, parser_bitwise(parser));
     }
     return node;
 }
 
-Node *parser_bitwise(Parser *parser) {
-    Node *node = parser_shift(parser);
+NblNode *parser_bitwise(NblParser *parser) {
+    NblNode *node = parser_shift(parser);
     while (current()->type == TOKEN_AND || current()->type == TOKEN_XOR || current()->type == TOKEN_OR) {
         if (current()->type == TOKEN_AND) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_AND);
             node = node_new_operation(NODE_AND, token, node, parser_shift(parser));
         }
         if (current()->type == TOKEN_XOR) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_XOR);
             node = node_new_operation(NODE_XOR, token, node, parser_shift(parser));
         }
         if (current()->type == TOKEN_OR) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_OR);
             node = node_new_operation(NODE_OR, token, node, parser_shift(parser));
         }
@@ -2334,17 +2336,17 @@ Node *parser_bitwise(Parser *parser) {
     return node;
 }
 
-Node *parser_shift(Parser *parser) {
-    Node *node = parser_add(parser);
+NblNode *parser_shift(NblParser *parser) {
+    NblNode *node = parser_add(parser);
     while (current()->type == TOKEN_SHL || current()->type == TOKEN_SHR) {
         if (current()->type == TOKEN_SHL) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_SHL);
             node = node_new_operation(NODE_SHL, token, node, parser_add(parser));
         }
 
         if (current()->type == TOKEN_SHR) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_SHR);
             node = node_new_operation(NODE_SHR, token, node, parser_add(parser));
         }
@@ -2352,17 +2354,17 @@ Node *parser_shift(Parser *parser) {
     return node;
 }
 
-Node *parser_add(Parser *parser) {
-    Node *node = parser_mul(parser);
+NblNode *parser_add(NblParser *parser) {
+    NblNode *node = parser_mul(parser);
     while (current()->type == TOKEN_ADD || current()->type == TOKEN_SUB) {
         if (current()->type == TOKEN_ADD) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_ADD);
             node = node_new_operation(NODE_ADD, token, node, parser_mul(parser));
         }
 
         if (current()->type == TOKEN_SUB) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_SUB);
             node = node_new_operation(NODE_SUB, token, node, parser_mul(parser));
         }
@@ -2370,26 +2372,26 @@ Node *parser_add(Parser *parser) {
     return node;
 }
 
-Node *parser_mul(Parser *parser) {
-    Node *node = parser_unary(parser);
+NblNode *parser_mul(NblParser *parser) {
+    NblNode *node = parser_unary(parser);
     while (current()->type == TOKEN_MUL || current()->type == TOKEN_EXP || current()->type == TOKEN_DIV || current()->type == TOKEN_MOD) {
         if (current()->type == TOKEN_MUL) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_MUL);
             node = node_new_operation(NODE_MUL, token, node, parser_unary(parser));
         }
         if (current()->type == TOKEN_EXP) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_EXP);
             node = node_new_operation(NODE_EXP, token, node, parser_unary(parser));
         }
         if (current()->type == TOKEN_DIV) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_DIV);
             node = node_new_operation(NODE_DIV, token, node, parser_unary(parser));
         }
         if (current()->type == TOKEN_MOD) {
-            Token *token = current();
+            NblToken *token = current();
             parser_eat(parser, TOKEN_MOD);
             node = node_new_operation(NODE_MOD, token, node, parser_unary(parser));
         }
@@ -2397,91 +2399,91 @@ Node *parser_mul(Parser *parser) {
     return node;
 }
 
-Node *parser_unary(Parser *parser) {
+NblNode *parser_unary(NblParser *parser) {
     if (current()->type == TOKEN_ADD) {
         parser_eat(parser, TOKEN_ADD);
         return parser_unary(parser);
     }
     if (current()->type == TOKEN_SUB) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_SUB);
         return node_new_unary(NODE_NEG, token, parser_unary(parser));
     }
     if (current()->type == TOKEN_INC) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_INC);
         return node_new_unary(NODE_INC_PRE, token, parser_unary(parser));
     }
     if (current()->type == TOKEN_DEC) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_DEC);
         return node_new_unary(NODE_DEC_PRE, token, parser_unary(parser));
     }
     if (current()->type == TOKEN_NOT) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_NOT);
         return node_new_unary(NODE_NOT, token, parser_unary(parser));
     }
     if (current()->type == TOKEN_LOGICAL_NOT) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_LOGICAL_NOT);
         return node_new_unary(NODE_LOGICAL_NOT, token, parser_unary(parser));
     }
     if (current()->type == TOKEN_LPAREN && token_type_is_type(next(0)->type) && next(1)->type == TOKEN_RPAREN) {
-        Token *token = current();
+        NblToken *token = current();
         parser_eat(parser, TOKEN_LPAREN);
-        ValueType castType = parser_eat_type(parser);
+        NblValueType castType = parser_eat_type(parser);
         parser_eat(parser, TOKEN_RPAREN);
         return node_new_cast(token, castType, parser_unary(parser));
     }
     return parser_primary(parser);
 }
 
-Node *parser_primary(Parser *parser) {
+NblNode *parser_primary(NblParser *parser) {
     if (current()->type == TOKEN_LPAREN) {
         parser_eat(parser, TOKEN_LPAREN);
-        Node *node = parser_tenary(parser);
+        NblNode *node = parser_tenary(parser);
         parser_eat(parser, TOKEN_RPAREN);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_NULL) {
-        Node *node = node_new_value(current(), value_new(VALUE_NULL));
+        NblNode *node = node_new_value(current(), value_new(VALUE_NULL));
         parser_eat(parser, TOKEN_NULL);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_TRUE) {
-        Node *node = node_new_value(current(), value_new_bool(true));
+        NblNode *node = node_new_value(current(), value_new_bool(true));
         parser_eat(parser, TOKEN_TRUE);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FALSE) {
-        Node *node = node_new_value(current(), value_new_bool(false));
+        NblNode *node = node_new_value(current(), value_new_bool(false));
         parser_eat(parser, TOKEN_FALSE);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_INT) {
-        Node *node = node_new_value(current(), value_new_int(current()->integer));
+        NblNode *node = node_new_value(current(), value_new_int(current()->integer));
         parser_eat(parser, TOKEN_INT);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FLOAT) {
-        Node *node = node_new_value(current(), value_new_float(current()->floating));
+        NblNode *node = node_new_value(current(), value_new_float(current()->floating));
         parser_eat(parser, TOKEN_FLOAT);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_STRING) {
-        Node *node = node_new_value(current(), value_new_string(current()->string));
+        NblNode *node = node_new_value(current(), value_new_string(current()->string));
         parser_eat(parser, TOKEN_STRING);
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_KEYWORD) {
-        Token *nameToken = current();
+        NblToken *nameToken = current();
         char *name = current()->string;
         parser_eat(parser, TOKEN_KEYWORD);
         return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, nameToken, name));
     }
     if (current()->type == TOKEN_LBRACKET) {
-        Node *node = node_new(NODE_ARRAY, current());
+        NblNode *node = node_new(NODE_ARRAY, current());
         node->array = list_new();
         parser_eat(parser, TOKEN_LBRACKET);
         while (current()->type != TOKEN_RBRACKET) {
@@ -2496,12 +2498,12 @@ Node *parser_primary(Parser *parser) {
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_LCURLY) {
-        Node *node = node_new(NODE_OBJECT, current());
+        NblNode *node = node_new(NODE_OBJECT, current());
         node->object = map_new();
         parser_eat(parser, TOKEN_LCURLY);
         while (current()->type != TOKEN_RCURLY) {
             if (current()->type == TOKEN_FUNCTION) {
-                Token *functionToken = current();
+                NblToken *functionToken = current();
                 parser_eat(parser, TOKEN_FUNCTION);
                 char *keyName = current()->string;
                 parser_eat(parser, TOKEN_KEYWORD);
@@ -2509,7 +2511,7 @@ Node *parser_primary(Parser *parser) {
                 continue;
             }
 
-            Token *keyToken = current();
+            NblToken *keyToken = current();
             char *keyName = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
             if (current()->type == TOKEN_ASSIGN) {
@@ -2528,12 +2530,12 @@ Node *parser_primary(Parser *parser) {
         return parser_primary_suffix(parser, node);
     }
     if (current()->type == TOKEN_FUNCTION) {
-        Token *functionToken = current();
+        NblToken *functionToken = current();
         parser_eat(parser, TOKEN_FUNCTION);
         return parser_primary_suffix(parser, parser_function(parser, functionToken));
     }
     if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
-        Token *classToken = current();
+        NblToken *classToken = current();
         bool abstract = false;
         if (current()->type == TOKEN_ABSTRACT) {
             abstract = true;
@@ -2548,25 +2550,25 @@ Node *parser_primary(Parser *parser) {
     return NULL;
 }
 
-Node *parser_primary_suffix(Parser *parser, Node *node) {
+NblNode *parser_primary_suffix(NblParser *parser, NblNode *node) {
     while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT || current()->type == TOKEN_LPAREN || current()->type == TOKEN_INC ||
            current()->type == TOKEN_DEC) {
-        Token *token = current();
+        NblToken *token = current();
         if (current()->type == TOKEN_LBRACKET) {
             parser_eat(parser, TOKEN_LBRACKET);
-            Node *indexOrKey = parser_assign(parser);
+            NblNode *indexOrKey = parser_assign(parser);
             parser_eat(parser, TOKEN_RBRACKET);
             node = node_new_operation(NODE_GET, token, node, indexOrKey);
         }
         if (current()->type == TOKEN_POINT) {
             parser_eat(parser, TOKEN_POINT);
-            Token *keyToken = current();
+            NblToken *keyToken = current();
             char *key = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
             node = node_new_operation(NODE_GET, token, node, node_new_value(keyToken, value_new_string(key)));
         }
         if (current()->type == TOKEN_LPAREN) {
-            Node *callNode = node_new_multiple(NODE_CALL, current());
+            NblNode *callNode = node_new_multiple(NODE_CALL, current());
             callNode->function = node;
             parser_eat(parser, TOKEN_LPAREN);
             while (current()->type != TOKEN_RPAREN) {
@@ -2592,8 +2594,8 @@ Node *parser_primary_suffix(Parser *parser, Node *node) {
     return node;
 }
 
-Node *parser_function(Parser *parser, Token *token) {
-    List *arguments = list_new();
+NblNode *parser_function(NblParser *parser, NblToken *token) {
+    NblList *arguments = list_new();
     parser_eat(parser, TOKEN_LPAREN);
     while (current()->type != TOKEN_RPAREN) {
         list_add(arguments, parser_argument(parser));
@@ -2605,32 +2607,32 @@ Node *parser_function(Parser *parser, Token *token) {
     }
     parser_eat(parser, TOKEN_RPAREN);
 
-    ValueType returnType = VALUE_ANY;
+    NblValueType returnType = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
         parser_eat(parser, TOKEN_COLON);
         returnType = parser_eat_type(parser);
     }
 
     if (current()->type == TOKEN_FAT_ARROW) {
-        Token *fatArrowToken = current();
+        NblToken *fatArrowToken = current();
         parser_eat(parser, TOKEN_FAT_ARROW);
         return node_new_value(token, value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, fatArrowToken, parser_tenary(parser))));
     }
     return node_new_value(token, value_new_function(arguments, returnType, parser_block(parser)));
 }
 
-Node *parser_class(Parser *parser, Token *token, bool abstract) {
-    Node *parentClass = NULL;
+NblNode *parser_class(NblParser *parser, NblToken *token, bool abstract) {
+    NblNode *parentClass = NULL;
     if (current()->type == TOKEN_EXTENDS) {
         parser_eat(parser, TOKEN_EXTENDS);
         parentClass = parser_tenary(parser);
     }
 
-    Map *object = map_new();
+    NblMap *object = map_new();
     parser_eat(parser, TOKEN_LCURLY);
     while (current()->type != TOKEN_RCURLY) {
         if (current()->type == TOKEN_FUNCTION) {
-            Token *functionToken = current();
+            NblToken *functionToken = current();
             parser_eat(parser, TOKEN_FUNCTION);
             char *keyName = current()->string;
             parser_eat(parser, TOKEN_KEYWORD);
@@ -2651,22 +2653,22 @@ Node *parser_class(Parser *parser, Token *token, bool abstract) {
     }
     parser_eat(parser, TOKEN_RCURLY);
 
-    Node *classNode = node_new(NODE_CLASS, token);
+    NblNode *classNode = node_new(NODE_CLASS, token);
     classNode->object = object;
     classNode->parentClass = parentClass;
     classNode->abstract = abstract;
     return classNode;
 }
 
-Argument *parser_argument(Parser *parser) {
+NblArgument *parser_argument(NblParser *parser) {
     char *name = current()->string;
     parser_eat(parser, TOKEN_KEYWORD);
-    ValueType type = VALUE_ANY;
+    NblValueType type = VALUE_ANY;
     if (current()->type == TOKEN_COLON) {
         parser_eat(parser, TOKEN_COLON);
         type = parser_eat_type(parser);
     }
-    Node *defaultNode = NULL;
+    NblNode *defaultNode = NULL;
     if (current()->type == TOKEN_ASSIGN) {
         parser_eat(parser, TOKEN_ASSIGN);
         defaultNode = parser_tenary(parser);
@@ -2677,10 +2679,10 @@ Argument *parser_argument(Parser *parser) {
 // Standard library
 
 // Math
-static Value *env_math_abs(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_abs(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     if (x->type == VALUE_INT) {
         return value_new_int(x->integer < 0 ? -x->integer : x->integer);
     }
@@ -2689,84 +2691,84 @@ static Value *env_math_abs(InterpreterContext *context, Value *this, List *value
     }
     return value_new_null();
 }
-static Value *env_math_sin(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_sin(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(sin(x->floating));
 }
-static Value *env_math_cos(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_cos(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(cos(x->floating));
 }
-static Value *env_math_tan(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_tan(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(tan(x->floating));
 }
-static Value *env_math_asin(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_asin(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(asin(x->floating));
 }
-static Value *env_math_acos(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_acos(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(acos(x->floating));
 }
-static Value *env_math_atan(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_atan(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(atan(x->floating));
 }
-static Value *env_math_atan2(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_atan2(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *y = list_get(values, 0);
-    Value *x = list_get(values, 1);
+    NblValue *y = list_get(values, 0);
+    NblValue *x = list_get(values, 1);
     return value_new_float(atan2(y->floating, x->floating));
 }
-static Value *env_math_pow(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_pow(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
-    Value *y = list_get(values, 1);
+    NblValue *x = list_get(values, 0);
+    NblValue *y = list_get(values, 1);
     return value_new_float(pow(x->floating, y->floating));
 }
-static Value *env_math_sqrt(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_sqrt(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(sqrt(x->floating));
 }
-static Value *env_math_floor(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_floor(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(floor(x->floating));
 }
-static Value *env_math_ceil(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_ceil(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(ceil(x->floating));
 }
-static Value *env_math_round(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_round(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(round(x->floating));
 }
-static Value *env_math_min(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_min(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *first = list_get(values, 0);
+    NblValue *first = list_get(values, 0);
     int64_t minInteger;
     double minFloating;
     if (first->type == VALUE_INT) {
@@ -2779,7 +2781,7 @@ static Value *env_math_min(InterpreterContext *context, Value *this, List *value
     }
 
     bool onlyInteger = true;
-    list_foreach(values, Value * value, {
+    list_foreach(values, NblValue * value, {
         if (value->type != VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
             if (value->type == VALUE_INT) {
@@ -2798,10 +2800,10 @@ static Value *env_math_min(InterpreterContext *context, Value *this, List *value
     });
     return onlyInteger ? value_new_int(minInteger) : value_new_float(minFloating);
 }
-static Value *env_math_max(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_max(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *first = list_get(values, 0);
+    NblValue *first = list_get(values, 0);
     int64_t maxInteger;
     double maxFloating;
     if (first->type == VALUE_INT) {
@@ -2814,7 +2816,7 @@ static Value *env_math_max(InterpreterContext *context, Value *this, List *value
     }
 
     bool onlyInteger = true;
-    list_foreach(values, Value * value, {
+    list_foreach(values, NblValue * value, {
         if (value->type != VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
             if (value->type == VALUE_INT) {
@@ -2833,19 +2835,19 @@ static Value *env_math_max(InterpreterContext *context, Value *this, List *value
     });
     return onlyInteger ? value_new_int(maxInteger) : value_new_float(maxFloating);
 }
-static Value *env_math_exp(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_exp(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(exp(x->floating));
 }
-static Value *env_math_log(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_log(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *x = list_get(values, 0);
+    NblValue *x = list_get(values, 0);
     return value_new_float(log(x->floating));
 }
-static Value *env_math_random(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_math_random(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     (void)values;
@@ -2853,8 +2855,8 @@ static Value *env_math_random(InterpreterContext *context, Value *this, List *va
 }
 
 // Exception
-static Value *env_exception_constructor(InterpreterContext *context, Value *this, List *values) {
-    Value *error = list_get(values, 0);
+static NblValue *env_exception_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *error = list_get(values, 0);
     map_set(this->object, "error", value_retrieve(error));
     map_set(this->object, "path", value_new_string(context->node->token->source->path));
     map_set(this->object, "text", value_new_string(context->node->token->source->text));
@@ -2864,75 +2866,75 @@ static Value *env_exception_constructor(InterpreterContext *context, Value *this
 }
 
 // String
-static Value *env_string_constructor(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_string_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *first = list_get(values, 0);
+    NblValue *first = list_get(values, 0);
     char *string = value_to_string(first);
-    Value *value = value_new_string(string);
+    NblValue *value = value_new_string(string);
     free(string);
     return value;
 }
-static Value *env_string_length(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_string_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return value_new_int(strlen(this->string));
 }
 
 // Array
-static Value *env_array_constructor(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_array_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *first = list_get(values, 0);
+    NblValue *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_ARRAY) {
         return value_ref(first);
     }
     return value_new_array(list_new());
 }
-static Value *env_array_length(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_array_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return value_new_int(this->array->size);
 }
-static Value *env_array_push(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_array_push(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
-    list_foreach(values, Value * value, { list_add(this->array, value_retrieve(value)); });
+    list_foreach(values, NblValue * value, { list_add(this->array, value_retrieve(value)); });
     return value_new_int(this->array->size);
 }
-static Value *env_array_foreach(InterpreterContext *context, Value *this, List *values) {
-    Value *function = list_get(values, 0);
-    list_foreach(this->array, Value * value, {
-        List *arguments = list_new();
+static NblValue *env_array_foreach(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *function = list_get(values, 0);
+    list_foreach(this->array, NblValue * value, {
+        NblList *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
         interpreter_call(context, function, NULL, arguments);
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
     });
     return value_new_null();
 }
-static Value *env_array_map(InterpreterContext *context, Value *this, List *values) {
-    Value *function = list_get(values, 0);
-    List *items = list_new();
-    list_foreach(this->array, Value * value, {
-        List *arguments = list_new();
+static NblValue *env_array_map(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *function = list_get(values, 0);
+    NblList *items = list_new();
+    list_foreach(this->array, NblValue * value, {
+        NblList *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
         list_add(items, interpreter_call(context, function, NULL, arguments));
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
     });
     return value_new_array(items);
 }
-static Value *env_array_filter(InterpreterContext *context, Value *this, List *values) {
-    Value *function = list_get(values, 0);
-    List *items = list_new();
-    list_foreach(this->array, Value * value, {
-        List *arguments = list_new();
+static NblValue *env_array_filter(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *function = list_get(values, 0);
+    NblList *items = list_new();
+    list_foreach(this->array, NblValue * value, {
+        NblList *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        Value *returnValue = interpreter_call(context, function, NULL, arguments);
+        NblValue *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
             return interpreter_throw(context,
                                      value_new_string_format("Array filter condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
@@ -2941,61 +2943,61 @@ static Value *env_array_filter(InterpreterContext *context, Value *this, List *v
             list_add(items, value);
         }
         value_free(returnValue);
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
     });
     return value_new_array(items);
 }
-static Value *env_array_find(InterpreterContext *context, Value *this, List *values) {
-    Value *function = list_get(values, 0);
-    list_foreach(this->array, Value * value, {
-        List *arguments = list_new();
+static NblValue *env_array_find(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *function = list_get(values, 0);
+    list_foreach(this->array, NblValue * value, {
+        NblList *arguments = list_new();
         list_add(arguments, value_retrieve(value));
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
-        Value *returnValue = interpreter_call(context, function, NULL, arguments);
+        NblValue *returnValue = interpreter_call(context, function, NULL, arguments);
         if (returnValue->type != VALUE_BOOL) {
             return interpreter_throw(context,
                                      value_new_string_format("Array find condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
         if (returnValue->boolean) {
             value_free(returnValue);
-            list_free(arguments, (ListFreeFunc *)value_free);
+            list_free(arguments, (NblListFreeFunc *)value_free);
             return value_retrieve(value);
         }
         value_free(returnValue);
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
     });
     return value_new_null();
 }
 
 // Object
-static Value *env_object_constructor(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_object_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *first = list_get(values, 0);
+    NblValue *first = list_get(values, 0);
     if (first != NULL && first->type == VALUE_OBJECT) {
         return value_ref(first);
     }
     return value_new_object(map_new());
 }
-static Value *env_object_length(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_object_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return value_new_int(this->object->size);
 }
-static Value *env_object_keys(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_object_keys(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
-    List *items = list_new_with_capacity(this->object->capacity);
+    NblList *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
         list_add(items, value_new_string(this->object->keys[i]));
     }
     return value_new_array(items);
 }
-static Value *env_object_values(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_object_values(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
-    List *items = list_new_with_capacity(this->object->capacity);
+    NblList *items = list_new_with_capacity(this->object->capacity);
     for (size_t i = 0; i < this->object->size; i++) {
         list_add(items, value_retrieve(this->object->values[i]));
     }
@@ -3003,7 +3005,7 @@ static Value *env_object_values(InterpreterContext *context, Value *this, List *
 }
 
 // Date
-static Value *env_date_now(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_date_now(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     (void)values;
@@ -3011,30 +3013,30 @@ static Value *env_date_now(InterpreterContext *context, Value *this, List *value
 }
 
 // Root
-static Value *env_type(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_type(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *value = list_get(values, 0);
+    NblValue *value = list_get(values, 0);
     return value_new_string(value_type_to_string(value->type));
 }
 
-static Value *env_assert(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_assert(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *assertion = list_get(values, 0);
+    NblValue *assertion = list_get(values, 0);
     if (!assertion->boolean) {
         return interpreter_throw(context, value_new_string("Assertion failed"));
     }
     return value_new_null();
 }
 
-Map *std_env(void) {
-    Map *env = map_new();
+NblMap *std_env(void) {
+    NblMap *env = map_new();
 
-    List *empty_args = list_new();
+    NblList *empty_args = list_new();
 
     // Math
-    Map *math = map_new();
+    NblMap *math = map_new();
     map_set(env, "Math", variable_new(VALUE_OBJECT, false, value_new_object(math)));
     map_set(math, "E", value_new_float(M_E));
     map_set(math, "LN2", value_new_float(M_LN2));
@@ -3045,12 +3047,12 @@ Map *std_env(void) {
     map_set(math, "SQRT1_2", value_new_float(M_SQRT1_2));
     map_set(math, "SQRT2", value_new_float(M_SQRT2));
 
-    List *math_float_args = list_new();
+    NblList *math_float_args = list_new();
     list_add(math_float_args, argument_new("x", VALUE_FLOAT, NULL));
-    List *math_float_float_args = list_new();
+    NblList *math_float_float_args = list_new();
     list_add(math_float_float_args, argument_new("x", VALUE_FLOAT, NULL));
     list_add(math_float_float_args, argument_new("y", VALUE_FLOAT, NULL));
-    List *math_float_float_reverse_args = list_new();
+    NblList *math_float_float_reverse_args = list_new();
     list_add(math_float_float_reverse_args, argument_new("y", VALUE_FLOAT, NULL));
     list_add(math_float_float_reverse_args, argument_new("x", VALUE_FLOAT, NULL));
     map_set(math, "abs", value_new_native_function(math_float_args, VALUE_ANY, env_math_abs));
@@ -3074,21 +3076,21 @@ Map *std_env(void) {
     map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
 
     // Exception
-    Map *exception = map_new();
-    List *exception_constructor_args = list_new();
+    NblMap *exception = map_new();
+    NblList *exception_constructor_args = list_new();
     list_add(exception_constructor_args, argument_new("error", VALUE_STRING, NULL));
     map_set(env, "Exception", variable_new(VALUE_CLASS, false, value_new_class(exception, NULL, false)));
     map_set(exception, "constructor", value_new_native_function(exception_constructor_args, VALUE_ANY, env_exception_constructor));
 
     // String
-    Map *string = map_new();
+    NblMap *string = map_new();
     map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string, NULL, false)));
     map_set(string, "constructor", value_new_native_function(list_ref(empty_args), VALUE_STRING, env_string_constructor));
     map_set(string, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_string_length));
 
     // Array
-    Map *array = map_new();
-    List *array_function_args = list_new();
+    NblMap *array = map_new();
+    NblList *array_function_args = list_new();
     list_add(array_function_args, argument_new("function", VALUE_FUNCTION, NULL));
     map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array, NULL, false)));
     map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
@@ -3100,7 +3102,7 @@ Map *std_env(void) {
     map_set(array, "find", value_new_native_function(list_ref(array_function_args), VALUE_ANY, env_array_find));
 
     // Object
-    Map *object = map_new();
+    NblMap *object = map_new();
     map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object, NULL, false)));
     map_set(object, "constructor", value_new_native_function(list_ref(empty_args), VALUE_OBJECT, env_object_constructor));
     map_set(object, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_object_length));
@@ -3108,58 +3110,58 @@ Map *std_env(void) {
     map_set(object, "values", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_values));
 
     // Date
-    Map *date = map_new();
+    NblMap *date = map_new();
     map_set(env, "Date", variable_new(VALUE_CLASS, false, value_new_class(date, NULL, false)));
     map_set(date, "now", value_new_native_function(list_ref(empty_args), VALUE_INT, env_date_now));
 
     // Root
-    List *type_args = list_new();
+    NblList *type_args = list_new();
     list_add(type_args, argument_new("value", VALUE_ANY, NULL));
     map_set(env, "type", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(type_args, VALUE_ANY, env_type)));
 
-    List *assertion_args = list_new();
+    NblList *assertion_args = list_new();
     list_add(assertion_args, argument_new("assertion", VALUE_ANY, NULL));
     map_set(env, "assert", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(assertion_args, VALUE_NULL, env_assert)));
 
     return env;
 }
 
-// Interpreter
-Variable *variable_new(ValueType type, bool mutable, Value *value) {
-    Variable *variable = malloc(sizeof(Variable));
+// NblInterpreter
+NblVariable *variable_new(NblValueType type, bool mutable, NblValue *value) {
+    NblVariable *variable = malloc(sizeof(NblVariable));
     variable->type = type;
     variable->mutable = mutable;
     variable->value = value;
     return variable;
 }
 
-void variable_free(Variable *variable) {
+void variable_free(NblVariable *variable) {
     value_free(variable->value);
     free(variable);
 }
 
-Variable *block_scope_get(BlockScope *block, char *key) {
-    Variable *variable = map_get(block->env, key);
+NblVariable *block_scope_get(NblBlockScope *block, char *key) {
+    NblVariable *variable = map_get(block->env, key);
     if (variable == NULL && block->parentBlock != NULL) {
         return block_scope_get(block->parentBlock, key);
     }
     return variable;
 }
 
-Value *interpreter(Map *env, Node *node) {
-    Interpreter interpreter = {.env = env};
-    Scope scope = {.exception = &(ExceptionScope){.exceptionValue = NULL},
-                   .function = &(FunctionScope){.returnValue = NULL},
-                   .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                   .block = &(BlockScope){.parentBlock = NULL, .env = env}};
-    Value *returnValue = interpreter_node(&interpreter, &scope, node);
+NblValue *interpreter(NblMap *env, NblNode *node) {
+    NblInterpreter interpreter = {.env = env};
+    NblScope scope = {.exception = &(NblExceptionScope){.exceptionValue = NULL},
+                      .function = &(NblFunctionScope){.returnValue = NULL},
+                      .loop = &(NblLoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                      .block = &(NblBlockScope){.parentBlock = NULL, .env = env}};
+    NblValue *returnValue = interpreter_node(&interpreter, &scope, node);
     if (scope.exception->exceptionValue != NULL) {
-        Value *path = value_class_get(scope.exception->exceptionValue, "path");
-        Value *text = value_class_get(scope.exception->exceptionValue, "text");
-        Value *line = value_class_get(scope.exception->exceptionValue, "line");
-        Value *column = value_class_get(scope.exception->exceptionValue, "column");
-        Token *token = token_new(TOKEN_THROW, source_new(path->string, text->string), line->integer, column->integer);
-        Value *error = value_class_get(scope.exception->exceptionValue, "error");
+        NblValue *path = value_class_get(scope.exception->exceptionValue, "path");
+        NblValue *text = value_class_get(scope.exception->exceptionValue, "text");
+        NblValue *line = value_class_get(scope.exception->exceptionValue, "line");
+        NblValue *column = value_class_get(scope.exception->exceptionValue, "column");
+        NblToken *token = token_new(TOKEN_THROW, source_new(path->string, text->string), line->integer, column->integer);
+        NblValue *error = value_class_get(scope.exception->exceptionValue, "error");
         print_error(token, "Uncatched exception: %s", error->string);
         token_free(token);
     }
@@ -3173,18 +3175,18 @@ Value *interpreter(Map *env, Node *node) {
     }
 }
 
-Value *type_error_exception(ValueType expected, ValueType got) {
+NblValue *type_error_exception(NblValueType expected, NblValueType got) {
     return value_new_string_format("Unexpected type: '%s' expected '%s'", value_type_to_string(got), value_type_to_string(expected));
 }
 
-#define interpreter_statement_in_try(interpreter, scope, node, cleanup) \
-    {                                                                   \
-        Value *nodeValue = interpreter_node(interpreter, scope, node);  \
-        if (nodeValue != NULL) value_free(nodeValue);                   \
-        if ((scope)->function->returnValue != NULL) {                   \
-            cleanup;                                                    \
-            return NULL;                                                \
-        }                                                               \
+#define interpreter_statement_in_try(interpreter, scope, node, cleanup)   \
+    {                                                                     \
+        NblValue *nodeValue = interpreter_node(interpreter, scope, node); \
+        if (nodeValue != NULL) value_free(nodeValue);                     \
+        if ((scope)->function->returnValue != NULL) {                     \
+            cleanup;                                                      \
+            return NULL;                                                  \
+        }                                                                 \
     }
 
 #define interpreter_statement_in_loop(interpreter, scope, node, cleanup) \
@@ -3209,12 +3211,12 @@ Value *type_error_exception(ValueType expected, ValueType got) {
         }                                                             \
     }
 
-Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *this, List *arguments) {
+NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, NblValue *this, NblList *arguments) {
     if (callValue->type == VALUE_FUNCTION) {
-        Scope functionScope = {.exception = context->scope->exception,
-                               .function = &(FunctionScope){.returnValue = NULL},
-                               .loop = &(LoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
-                               .block = &(BlockScope){.parentBlock = context->scope->block, .env = map_new()}};
+        NblScope functionScope = {.exception = context->scope->exception,
+                                  .function = &(NblFunctionScope){.returnValue = NULL},
+                                  .loop = &(NblLoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
+                                  .block = &(NblBlockScope){.parentBlock = context->scope->block, .env = map_new()}};
         if (this != NULL) {
             if (this->instanceClass->parentClass != NULL) {
                 map_set(functionScope.block->env, "super",
@@ -3224,15 +3226,15 @@ Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *th
         }
         map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
         for (size_t i = 0; i < callValue->arguments->size; i++) {
-            Argument *argument = list_get(callValue->arguments, i);
+            NblArgument *argument = list_get(callValue->arguments, i);
             map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(arguments, i))));
         }
-        Interpreter interpreter = {.env = context->env};
+        NblInterpreter interpreter = {.env = context->env};
         interpreter_node(&interpreter, &functionScope, callValue->functionNode);
-        map_free(functionScope.block->env, (MapFreeFunc *)variable_free);
+        map_free(functionScope.block->env, (NblMapFreeFunc *)variable_free);
         if (callValue->returnType != VALUE_ANY && context->scope->exception->exceptionValue == NULL &&
             functionScope.function->returnValue->type != callValue->returnType) {
-            ValueType returnValueType = functionScope.function->returnValue->type;
+            NblValueType returnValueType = functionScope.function->returnValue->type;
             value_free(functionScope.function->returnValue);
             return interpreter_throw(context, type_error_exception(callValue->returnType, returnValueType));
         }
@@ -3244,7 +3246,7 @@ Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *th
     }
 
     if (callValue->type == VALUE_NATIVE_FUNCTION) {
-        Value *returnValue = callValue->nativeFunc(context, this, arguments);
+        NblValue *returnValue = callValue->nativeFunc(context, this, arguments);
         if (callValue->returnType != VALUE_ANY && context->scope->exception->exceptionValue == NULL && returnValue->type != callValue->returnType) {
             return interpreter_throw(context, type_error_exception(callValue->returnType, returnValue->type));
         }
@@ -3252,10 +3254,10 @@ Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *th
     }
 
     if (callValue->type == VALUE_CLASS) {
-        Value *instance = value_new_instance(map_new(), value_ref(callValue));
-        Value *constructorFunction = value_class_get(callValue, "constructor");
+        NblValue *instance = value_new_instance(map_new(), value_ref(callValue));
+        NblValue *constructorFunction = value_class_get(callValue, "constructor");
         if (constructorFunction != NULL) {
-            Value *newReturnValue = interpreter_call(context, constructorFunction, instance, arguments);
+            NblValue *newReturnValue = interpreter_call(context, constructorFunction, instance, arguments);
             if (newReturnValue->type == VALUE_NULL) {
                 value_free(newReturnValue);
             } else {
@@ -3268,13 +3270,13 @@ Value *interpreter_call(InterpreterContext *context, Value *callValue, Value *th
     return NULL;
 }
 
-Value *interpreter_throw(InterpreterContext *context, Value *exception) {
+NblValue *interpreter_throw(NblInterpreterContext *context, NblValue *exception) {
     if (exception->type == VALUE_STRING) {
-        Value *exceptionClass = ((Variable *)map_get(context->env, "Exception"))->value;
-        List *arguments = list_new();
+        NblValue *exceptionClass = ((NblVariable *)map_get(context->env, "Exception"))->value;
+        NblList *arguments = list_new();
         list_add(arguments, exception);
         exception = interpreter_call(context, exceptionClass, NULL, arguments);
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
     }
     if (exception->type != VALUE_INSTANCE) {
         return interpreter_throw(context, type_error_exception(VALUE_INSTANCE, exception->type));
@@ -3283,31 +3285,31 @@ Value *interpreter_throw(InterpreterContext *context, Value *exception) {
     return value_new_null();
 }
 
-Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
+NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode *node) {
     if (node->type == NODE_PROGRAM) {
-        list_foreach(node->nodes, Node * child, { interpreter_statement(interpreter, scope, child, {}); });
+        list_foreach(node->nodes, NblNode * child, { interpreter_statement(interpreter, scope, child, {}); });
         return NULL;
     }
     if (node->type == NODE_NODES) {
-        list_foreach(node->nodes, Node * child, { interpreter_statement(interpreter, scope, child, {}); });
+        list_foreach(node->nodes, NblNode * child, { interpreter_statement(interpreter, scope, child, {}); });
         return NULL;
     }
     if (node->type == NODE_BLOCK) {
-        Scope blockScope = {.exception = scope->exception,
-                            .function = scope->function,
-                            .loop = scope->loop,
-                            .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
-        list_foreach(node->nodes, Node * child,
-                     { interpreter_statement(interpreter, &blockScope, child, { map_free(blockScope.block->env, (MapFreeFunc *)variable_free); }); });
-        map_free(blockScope.block->env, (MapFreeFunc *)variable_free);
+        NblScope blockScope = {.exception = scope->exception,
+                               .function = scope->function,
+                               .loop = scope->loop,
+                               .block = &(NblBlockScope){.parentBlock = scope->block, .env = map_new()}};
+        list_foreach(node->nodes, NblNode * child,
+                     { interpreter_statement(interpreter, &blockScope, child, { map_free(blockScope.block->env, (NblMapFreeFunc *)variable_free); }); });
+        map_free(blockScope.block->env, (NblMapFreeFunc *)variable_free);
         return NULL;
     }
     if (node->type == NODE_IF) {
-        Value *condition = interpreter_node(interpreter, scope, node->condition);
+        NblValue *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
-            ValueType conditionType = condition->type;
+            NblValueType conditionType = condition->type;
             value_free(condition);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
             return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
@@ -3319,11 +3321,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_TENARY) {
-        Value *condition = interpreter_node(interpreter, scope, node->condition);
+        NblValue *condition = interpreter_node(interpreter, scope, node->condition);
         if (condition->type != VALUE_BOOL) {
-            ValueType conditionType = condition->type;
+            NblValueType conditionType = condition->type;
             value_free(condition);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
             return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
@@ -3334,18 +3336,19 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return interpreter_node(interpreter, scope, node->elseBlock);
     }
     if (node->type == NODE_TRY) {
-        Scope tryScope = {.exception = &(ExceptionScope){.exceptionValue = NULL}, .function = scope->function, .loop = scope->loop, .block = scope->block};
+        NblScope tryScope = {
+            .exception = &(NblExceptionScope){.exceptionValue = NULL}, .function = scope->function, .loop = scope->loop, .block = scope->block};
         interpreter_statement_in_try(interpreter, &tryScope, node->tryBlock, {});
         if (tryScope.exception->exceptionValue != NULL) {
-            Scope catchScope = {.exception = scope->exception,
-                                .function = scope->function,
-                                .loop = scope->loop,
-                                .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+            NblScope catchScope = {.exception = scope->exception,
+                                   .function = scope->function,
+                                   .loop = scope->loop,
+                                   .block = &(NblBlockScope){.parentBlock = scope->block, .env = map_new()}};
             map_set(catchScope.block->env, node->catchVariable->lhs->string,
                     variable_new(node->catchVariable->declarationType, node->catchVariable->type == NODE_LET_ASSIGN,
                                  value_ref(tryScope.exception->exceptionValue)));
-            interpreter_statement(interpreter, &catchScope, node->catchBlock, { map_free(catchScope.block->env, (MapFreeFunc *)variable_free); });
-            map_free(catchScope.block->env, (MapFreeFunc *)variable_free);
+            interpreter_statement(interpreter, &catchScope, node->catchBlock, { map_free(catchScope.block->env, (NblMapFreeFunc *)variable_free); });
+            map_free(catchScope.block->env, (NblMapFreeFunc *)variable_free);
             value_free(tryScope.exception->exceptionValue);
         }
         if (node->finallyBlock != NULL) {
@@ -3354,10 +3357,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_LOOP) {
-        Scope loopScope = {.exception = scope->exception,
-                           .function = scope->function,
-                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
-                           .block = scope->block};
+        NblScope loopScope = {.exception = scope->exception,
+                              .function = scope->function,
+                              .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                              .block = scope->block};
         for (;;) {
             interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
             if (loopScope.loop->isContinuing) {
@@ -3370,16 +3373,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_WHILE) {
-        Scope loopScope = {.exception = scope->exception,
-                           .function = scope->function,
-                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
-                           .block = scope->block};
+        NblScope loopScope = {.exception = scope->exception,
+                              .function = scope->function,
+                              .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                              .block = scope->block};
         for (;;) {
-            Value *condition = interpreter_node(interpreter, scope, node->condition);
+            NblValue *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                ValueType conditionType = condition->type;
+                NblValueType conditionType = condition->type;
                 value_free(condition);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3399,10 +3402,10 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_DOWHILE) {
-        Scope loopScope = {.exception = scope->exception,
-                           .function = scope->function,
-                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
-                           .block = scope->block};
+        NblScope loopScope = {.exception = scope->exception,
+                              .function = scope->function,
+                              .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                              .block = scope->block};
         for (;;) {
             interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
             if (loopScope.loop->isContinuing) {
@@ -3412,11 +3415,11 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 break;
             }
 
-            Value *condition = interpreter_node(interpreter, scope, node->condition);
+            NblValue *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                ValueType conditionType = condition->type;
+                NblValueType conditionType = condition->type;
                 value_free(condition);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3428,16 +3431,16 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_FOR) {
-        Scope loopScope = {.exception = scope->exception,
-                           .function = scope->function,
-                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
-                           .block = scope->block};
+        NblScope loopScope = {.exception = scope->exception,
+                              .function = scope->function,
+                              .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                              .block = scope->block};
         for (;;) {
-            Value *condition = interpreter_node(interpreter, scope, node->condition);
+            NblValue *condition = interpreter_node(interpreter, scope, node->condition);
             if (condition->type != VALUE_BOOL) {
-                ValueType conditionType = condition->type;
+                NblValueType conditionType = condition->type;
                 value_free(condition);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3459,20 +3462,20 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_FORIN) {
-        Value *iterator = interpreter_node(interpreter, scope, node->iterator);
+        NblValue *iterator = interpreter_node(interpreter, scope, node->iterator);
         if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT && iterator->type != VALUE_CLASS &&
             iterator->type != VALUE_INSTANCE) {
-            ValueType iteratorType = iterator->type;
+            NblValueType iteratorType = iterator->type;
             value_free(iterator);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
-            return interpreter_throw(
-                &context, value_new_string_format("Variable is not a string, array, object, class or instance it is: %s", value_type_to_string(iteratorType)));
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
+            return interpreter_throw(&context, value_new_string_format("NblVariable is not a string, array, object, class or instance it is: %s",
+                                                                       value_type_to_string(iteratorType)));
         }
 
-        Scope loopScope = {.exception = scope->exception,
-                           .function = scope->function,
-                           .loop = &(LoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
-                           .block = &(BlockScope){.parentBlock = scope->block, .env = map_new()}};
+        NblScope loopScope = {.exception = scope->exception,
+                              .function = scope->function,
+                              .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
+                              .block = &(NblBlockScope){.parentBlock = scope->block, .env = map_new()}};
         size_t size;
         if (iterator->type == VALUE_STRING) {
             size = strlen(iterator->string);
@@ -3485,19 +3488,19 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         for (size_t i = 0; i < size; i++) {
-            Value *iteratorValue;
+            NblValue *iteratorValue;
             if (iterator->type == VALUE_STRING) {
                 char character[] = {iterator->string[i], '\0'};
                 iteratorValue = value_new_string(character);
             }
             if (iterator->type == VALUE_ARRAY) {
-                Value *value = list_get(iterator->array, i);
+                NblValue *value = list_get(iterator->array, i);
                 iteratorValue = value != NULL ? value_retrieve(value) : value_new_null();
             }
             if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
             }
-            Variable *previousVariable = map_get(loopScope.block->env, node->forinVariable->lhs->string);
+            NblVariable *previousVariable = map_get(loopScope.block->env, node->forinVariable->lhs->string);
             if (previousVariable != NULL) {
                 value_free(previousVariable->value);
                 previousVariable->value = iteratorValue;
@@ -3514,13 +3517,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 break;
             }
         }
-        map_free(loopScope.block->env, (MapFreeFunc *)variable_free);
+        map_free(loopScope.block->env, (NblMapFreeFunc *)variable_free);
         value_free(iterator);
         return NULL;
     }
     if (node->type == NODE_CONTINUE) {
         if (!scope->loop->inLoop) {
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string("Continue not in a loop"));
         }
         scope->loop->isContinuing = true;
@@ -3528,7 +3531,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
     if (node->type == NODE_BREAK) {
         if (!scope->loop->inLoop) {
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string("Break not in a loop"));
         }
         scope->loop->isBreaking = true;
@@ -3539,15 +3542,15 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return NULL;
     }
     if (node->type == NODE_THROW) {
-        InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
         return interpreter_throw(&context, interpreter_node(interpreter, scope, node->unary));
     }
     if (node->type == NODE_INCLUDE) {
-        Value *pathValue = interpreter_node(interpreter, scope, node->unary);
+        NblValue *pathValue = interpreter_node(interpreter, scope, node->unary);
         if (pathValue->type != VALUE_STRING) {
-            ValueType pathValueType = pathValue->type;
+            NblValueType pathValueType = pathValue->type;
             value_free(pathValue);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
             return interpreter_throw(&context, type_error_exception(VALUE_STRING, pathValueType));
         }
         char includePath[255];
@@ -3559,19 +3562,19 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         value_free(pathValue);
         char *includeText = file_read(includePath);
         if (includeText == NULL) {
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
             return interpreter_throw(&context, value_new_string_format("Can't read file: %s", includePath));
         }
 
-        List *tokens = lexer(includePath, includeText);
-        Node *includeNode = parser(tokens, true);
+        NblList *tokens = lexer(includePath, includeText);
+        NblNode *includeNode = parser(tokens, true);
         interpreter_statement(interpreter, scope, includeNode, {
             node_free(includeNode);
-            list_free(tokens, (ListFreeFunc *)token_free);
+            list_free(tokens, (NblListFreeFunc *)token_free);
             free(includeText);
         });
         node_free(includeNode);
-        list_free(tokens, (ListFreeFunc *)token_free);
+        list_free(tokens, (NblListFreeFunc *)token_free);
         free(includeText);
         return NULL;
     }
@@ -3580,33 +3583,33 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return value_retrieve(node->value);
     }
     if (node->type == NODE_ARRAY) {
-        Value *arrayValue = value_new_array(list_new_with_capacity(node->array->capacity));
-        list_foreach(node->array, Node * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
+        NblValue *arrayValue = value_new_array(list_new_with_capacity(node->array->capacity));
+        list_foreach(node->array, NblNode * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
         return arrayValue;
     }
     if (node->type == NODE_OBJECT) {
-        Value *objectValue = value_new_object(map_new_with_capacity(node->object->capacity));
-        map_foreach(node->object, char *key, Node *value, { map_set(objectValue->object, key, interpreter_node(interpreter, scope, value)); });
+        NblValue *objectValue = value_new_object(map_new_with_capacity(node->object->capacity));
+        map_foreach(node->object, char *key, NblNode *value, { map_set(objectValue->object, key, interpreter_node(interpreter, scope, value)); });
         return objectValue;
     }
     if (node->type == NODE_CLASS) {
-        Value *classValue = value_new_class(map_new_with_capacity(node->object->capacity),
-                                            node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
-        map_foreach(node->object, char *key, Node *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
+        NblValue *classValue = value_new_class(map_new_with_capacity(node->object->capacity),
+                                               node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
+        map_foreach(node->object, char *key, NblNode *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
         return classValue;
     }
 
     if (node->type == NODE_CONST_ASSIGN || node->type == NODE_LET_ASSIGN) {
-        Value *rhs = interpreter_node(interpreter, scope, node->rhs);
+        NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't redeclare variable: '%s'", node->lhs->string));
         }
         if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
-            ValueType rhsType = rhs->type;
+            NblValueType rhsType = rhs->type;
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhsType),
                                                                        value_type_to_string(node->declarationType)));
         }
@@ -3614,43 +3617,43 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return rhs;
     }
     if (node->type == NODE_ASSIGN) {
-        Value *rhs = interpreter_node(interpreter, scope, node->rhs);
+        NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (node->lhs->type == NODE_GET) {
-            Value *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
+            NblValue *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
             if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT && containerValue->type != VALUE_CLASS &&
                 containerValue->type != VALUE_INSTANCE) {
-                ValueType containerValueType = containerValue->type;
+                NblValueType containerValueType = containerValue->type;
                 value_free(rhs);
                 value_free(containerValue);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-                return interpreter_throw(&context, value_new_string_format("Variable is not an array, object, class or instance it is: %s",
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                return interpreter_throw(&context, value_new_string_format("NblVariable is not an array, object, class or instance it is: %s",
                                                                            value_type_to_string(containerValueType)));
             }
 
-            Value *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
+            NblValue *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
             if (containerValue->type == VALUE_ARRAY) {
                 if (indexOrKey->type != VALUE_INT) {
-                    ValueType indexOrKeyType = indexOrKey->type;
+                    NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(rhs);
                     value_free(containerValue);
                     value_free(indexOrKey);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
-                Value *previousValue = list_get(containerValue->array, indexOrKey->integer);
+                NblValue *previousValue = list_get(containerValue->array, indexOrKey->integer);
                 if (previousValue != NULL) value_free(previousValue);
                 list_set(containerValue->array, indexOrKey->integer, value_retrieve(rhs));
             }
             if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
                 if (indexOrKey->type != VALUE_STRING) {
-                    ValueType indexOrKeyType = indexOrKey->type;
+                    NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(rhs);
                     value_free(containerValue);
                     value_free(indexOrKey);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
                 }
-                Value *previousValue = map_get(containerValue->object, indexOrKey->string);
+                NblValue *previousValue = map_get(containerValue->object, indexOrKey->string);
                 if (previousValue != NULL) value_free(previousValue);
                 map_set(containerValue->object, indexOrKey->string, value_retrieve(rhs));
             }
@@ -3661,24 +3664,24 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         if (node->lhs->type != NODE_VARIABLE) {
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Is not a variable"));
         }
-        Variable *variable = block_scope_get(scope->block, node->lhs->string);
+        NblVariable *variable = block_scope_get(scope->block, node->lhs->string);
         if (variable == NULL) {
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
-            return interpreter_throw(&context, value_new_string_format("Variable: '%s' is not declared", node->lhs->string));
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            return interpreter_throw(&context, value_new_string_format("NblVariable: '%s' is not declared", node->lhs->string));
         }
         if (!variable->mutable) {
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
         }
         if (variable->type != VALUE_ANY && variable->type != rhs->type) {
-            ValueType rhsType = rhs->type;
+            NblValueType rhsType = rhs->type;
             value_free(rhs);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, type_error_exception(variable->type, rhsType));
         }
         value_free(variable->value);
@@ -3687,38 +3690,38 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
     }
 
     if (node->type == NODE_VARIABLE) {
-        Variable *variable = block_scope_get(scope->block, node->string);
+        NblVariable *variable = block_scope_get(scope->block, node->string);
         if (variable == NULL) {
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string_format("Can't find variable: '%s'", node->string));
         }
         return value_retrieve(variable->value);
     }
     if (node->type == NODE_GET) {
-        Value *containerValue = interpreter_node(interpreter, scope, node->lhs);
+        NblValue *containerValue = interpreter_node(interpreter, scope, node->lhs);
         if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT &&
             containerValue->type != VALUE_CLASS && containerValue->type != VALUE_INSTANCE) {
-            ValueType containerValueType = containerValue->type;
+            NblValueType containerValueType = containerValue->type;
             value_free(containerValue);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-            return interpreter_throw(&context, value_new_string_format("Variable is not a string, array, object, class or instance it is: %s",
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            return interpreter_throw(&context, value_new_string_format("NblVariable is not a string, array, object, class or instance it is: %s",
                                                                        value_type_to_string(containerValueType)));
         }
 
-        Value *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
-        Value *returnValue = NULL;
+        NblValue *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
+        NblValue *returnValue = NULL;
         if (containerValue->type == VALUE_STRING) {
             if (indexOrKey->type == VALUE_STRING) {
-                Value *stringClass = ((Variable *)map_get(interpreter->env, "String"))->value;
-                Value *stringClassItem = map_get(stringClass->object, indexOrKey->string);
+                NblValue *stringClass = ((NblVariable *)map_get(interpreter->env, "String"))->value;
+                NblValue *stringClassItem = map_get(stringClass->object, indexOrKey->string);
                 if (stringClassItem != NULL) returnValue = value_retrieve(stringClassItem);
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
-                    ValueType indexOrKeyType = indexOrKey->type;
+                    NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
                 if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
@@ -3731,37 +3734,37 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
         if (containerValue->type == VALUE_ARRAY) {
             if (indexOrKey->type == VALUE_STRING) {
-                Value *arrayClass = ((Variable *)map_get(interpreter->env, "Array"))->value;
-                Value *arrayClassItem = map_get(arrayClass->object, indexOrKey->string);
+                NblValue *arrayClass = ((NblVariable *)map_get(interpreter->env, "Array"))->value;
+                NblValue *arrayClassItem = map_get(arrayClass->object, indexOrKey->string);
                 if (arrayClassItem != NULL) returnValue = value_retrieve(arrayClassItem);
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_INT) {
-                    ValueType indexOrKeyType = indexOrKey->type;
+                    NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
                 }
-                Value *value = list_get(containerValue->array, indexOrKey->integer);
+                NblValue *value = list_get(containerValue->array, indexOrKey->integer);
                 returnValue = value != NULL ? value_retrieve(value) : value_new_null();
             }
         }
         if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
             if (containerValue->type == VALUE_OBJECT && indexOrKey->type == VALUE_STRING) {
-                Value *objectClass = ((Variable *)map_get(interpreter->env, "Object"))->value;
-                Value *objectClassItem = map_get(objectClass->object, indexOrKey->string);
+                NblValue *objectClass = ((NblVariable *)map_get(interpreter->env, "Object"))->value;
+                NblValue *objectClassItem = map_get(objectClass->object, indexOrKey->string);
                 if (objectClassItem != NULL) returnValue = value_retrieve(objectClassItem);
             }
             if (returnValue == NULL) {
                 if (indexOrKey->type != VALUE_STRING) {
-                    ValueType indexOrKeyType = indexOrKey->type;
+                    NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
                 }
-                Value *value;
+                NblValue *value;
                 if (containerValue->type == VALUE_INSTANCE) {
                     value = value_class_get(containerValue, indexOrKey->string);
                 } else {
@@ -3771,8 +3774,8 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                     char *indexOrKeyString = strdup(indexOrKey->string);
                     value_free(indexOrKey);
                     value_free(containerValue);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-                    Value *exception = value_new_string_format("Can't find %s in object", indexOrKeyString);
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                    NblValue *exception = value_new_string_format("Can't find %s in object", indexOrKeyString);
                     free(indexOrKeyString);
                     return interpreter_throw(&context, exception);
                 }
@@ -3785,9 +3788,9 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         return returnValue;
     }
     if (node->type == NODE_CALL) {
-        Value *thisValue = NULL;
+        NblValue *thisValue = NULL;
         if (node->function->type == NODE_GET) {
-            Value *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
+            NblValue *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
             if (containerValue->type == VALUE_STRING || containerValue->type == VALUE_ARRAY || containerValue->type == VALUE_OBJECT ||
                 containerValue->type == VALUE_INSTANCE) {
                 thisValue = containerValue;
@@ -3795,81 +3798,82 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
                 value_free(containerValue);
             }
         }
-        Value *callValue = interpreter_node(interpreter, scope, node->function);
+        NblValue *callValue = interpreter_node(interpreter, scope, node->function);
         if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
-            ValueType callValueType = callValue->type;
+            NblValueType callValueType = callValue->type;
             value_free(callValue);
             if (thisValue != NULL) value_free(thisValue);
-            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
-            return interpreter_throw(&context, value_new_string_format("Variable is not a function or a class but: %s", value_type_to_string(callValueType)));
+            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
+            return interpreter_throw(&context,
+                                     value_new_string_format("NblVariable is not a function or a class but: %s", value_type_to_string(callValueType)));
         }
 
-        List *callArguments = NULL;
+        NblList *callArguments = NULL;
         if (callValue->type == VALUE_CLASS) {
             if (callValue->abstract) {
                 value_free(callValue);
                 if (thisValue != NULL) value_free(thisValue);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
                 return interpreter_throw(&context, value_new_string("Can't construct an abstract class"));
             }
-            Value *constructorFunction = value_class_get(callValue, "constructor");
+            NblValue *constructorFunction = value_class_get(callValue, "constructor");
             if (constructorFunction != NULL) callArguments = constructorFunction->arguments;
         } else {
             callArguments = callValue->arguments;
         }
-        List *arguments = list_new_with_capacity(node->nodes->capacity);
+        NblList *arguments = list_new_with_capacity(node->nodes->capacity);
         for (size_t i = 0; i < MAX(callArguments != NULL ? callArguments->size : 0, node->nodes->size); i++) {
-            Argument *argument = NULL;
+            NblArgument *argument = NULL;
             if (callArguments != NULL) {
                 argument = list_get(callArguments, i);
                 if (list_get(node->nodes, i) == NULL && argument != NULL) {
                     if (argument->defaultNode != NULL) {
-                        Value *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
+                        NblValue *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
                         if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
-                            ValueType defaultValueType = defaultValue->type;
+                            NblValueType defaultValueType = defaultValue->type;
                             value_free(defaultValue);
-                            list_free(arguments, (ListFreeFunc *)value_free);
+                            list_free(arguments, (NblListFreeFunc *)value_free);
                             value_free(callValue);
                             if (thisValue != NULL) value_free(thisValue);
-                            InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = argument->defaultNode};
+                            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = argument->defaultNode};
                             return interpreter_throw(&context, type_error_exception(argument->type, defaultValueType));
                         }
                         list_add(arguments, defaultValue);
                         continue;
                     }
 
-                    list_free(arguments, (ListFreeFunc *)value_free);
+                    list_free(arguments, (NblListFreeFunc *)value_free);
                     value_free(callValue);
                     if (thisValue != NULL) value_free(thisValue);
-                    InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
                     return interpreter_throw(&context, value_new_string("Not all function arguments are given"));
                 }
             }
 
-            Value *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
+            NblValue *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
             if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
-                ValueType nodeValueType = nodeValue->type;
+                NblValueType nodeValueType = nodeValue->type;
                 value_free(nodeValue);
-                list_free(arguments, (ListFreeFunc *)value_free);
+                list_free(arguments, (NblListFreeFunc *)value_free);
                 value_free(callValue);
                 if (thisValue != NULL) value_free(thisValue);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
                 return interpreter_throw(&context, type_error_exception(argument->type, nodeValueType));
             }
             list_add(arguments, nodeValue);
         }
 
-        InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
-        Value *returnValue = interpreter_call(&context, callValue, thisValue, arguments);
+        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblValue *returnValue = interpreter_call(&context, callValue, thisValue, arguments);
 
-        list_free(arguments, (ListFreeFunc *)value_free);
+        list_free(arguments, (NblListFreeFunc *)value_free);
         value_free(callValue);
         if (thisValue != NULL) value_free(thisValue);
         return returnValue;
     }
 
     if (node->type >= NODE_NEG && node->type <= NODE_CAST) {
-        Value *unary = interpreter_node(interpreter, scope, node->unary);
+        NblValue *unary = interpreter_node(interpreter, scope, node->unary);
         if (node->type == NODE_NEG) {
             if (unary->type == VALUE_INT) {
                 unary->integer = -unary->integer;
@@ -3883,13 +3887,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         if (node->type == NODE_INC_PRE || node->type == NODE_DEC_PRE || node->type == NODE_INC_POST || node->type == NODE_DEC_POST) {
             if (node->unary->type != NODE_VARIABLE) {
                 value_free(unary);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return interpreter_throw(&context, value_new_string_format("Is not a variable"));
             }
-            Variable *variable = block_scope_get(scope->block, node->lhs->string);
+            NblVariable *variable = block_scope_get(scope->block, node->lhs->string);
             if (!variable->mutable) {
                 value_free(unary);
-                InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
             }
             if (unary->type == VALUE_INT) {
@@ -4008,13 +4012,13 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
         }
 
         value_free(unary);
-        InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return interpreter_throw(&context, value_new_string("Type error"));
     }
 
     if (node->type >= NODE_ADD && node->type <= NODE_LOGICAL_OR) {
-        Value *lhs = interpreter_node(interpreter, scope, node->lhs);
-        Value *rhs = interpreter_node(interpreter, scope, node->rhs);
+        NblValue *lhs = interpreter_node(interpreter, scope, node->lhs);
+        NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
 
         if (node->type == NODE_ADD) {
             if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
@@ -4454,7 +4458,7 @@ Value *interpreter_node(Interpreter *interpreter, Scope *scope, Node *node) {
 
         value_free(lhs);
         value_free(rhs);
-        InterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return interpreter_throw(&context, value_new_string("Type error"));
     }
 

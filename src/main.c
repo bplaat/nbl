@@ -4,7 +4,7 @@
 #include "nbl.h"
 
 // Standard library
-static Value *env_print(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_print(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     for (size_t i = 0; i < values->size; i++) {
@@ -16,16 +16,16 @@ static Value *env_print(InterpreterContext *context, Value *this, List *values) 
     return value_new_null();
 }
 
-static Value *env_println(InterpreterContext *context, Value *this, List *values) {
-    Value *value = env_print(context, this, values);
+static NblValue *env_println(NblInterpreterContext *context, NblValue *this, NblList *values) {
+    NblValue *value = env_print(context, this, values);
     printf("\n");
     return value;
 }
 
-static Value *env_exit(InterpreterContext *context, Value *this, List *values) {
+static NblValue *env_exit(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    Value *exitCode = list_get(values, 0);
+    NblValue *exitCode = list_get(values, 0);
     if (exitCode->type == VALUE_INT) {
         exit(exitCode->integer);
     }
@@ -33,7 +33,7 @@ static Value *env_exit(InterpreterContext *context, Value *this, List *values) {
 }
 
 // Read execute print loop
-void repl(Map *env) {
+void repl(NblMap *env) {
     char *command = malloc(1024);
     for (;;) {
         // Read
@@ -47,15 +47,15 @@ void repl(Map *env) {
         command[realCommandSize + 1] = '\0';
 
         // Parse
-        List *tokens = lexer("text", command);
-        Parser parser = {.tokens = tokens, .position = 0};
-        Node *node = parser_statement(&parser);
+        NblList *tokens = lexer("text", command);
+        NblParser parser = {.tokens = tokens, .position = 0};
+        NblNode *node = parser_statement(&parser);
         if (node == NULL) {
             continue;
         }
 
         // Run
-        Value *returnValue = interpreter(env, node);
+        NblValue *returnValue = interpreter(env, node);
         if (returnValue != NULL) {
             char *string = value_to_string(returnValue);
             printf("%s\n", string);
@@ -65,22 +65,22 @@ void repl(Map *env) {
 
         // Cleanup
         node_free(node);
-        list_free(tokens, (ListFreeFunc *)token_free);
+        list_free(tokens, (NblListFreeFunc *)token_free);
     }
     free(command);
-    map_free(env, (MapFreeFunc *)variable_free);
+    map_free(env, (NblMapFreeFunc *)variable_free);
 }
 
 // Main
 int main(int argc, char **argv) {
     // Create env
-    Map *env = std_env();
+    NblMap *env = std_env();
 
-    List *empty_args = list_new();
+    NblList *empty_args = list_new();
     map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, VALUE_NULL, env_print)));
     map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_NULL, env_println)));
 
-    List *exit_args = list_new();
+    NblList *exit_args = list_new();
     list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
     map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
 
@@ -98,30 +98,30 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Can't read file: %s\n", path);
         return EXIT_FAILURE;
     }
-    List *tokens = lexer(path, text);
+    NblList *tokens = lexer(path, text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
     // printf("\n");
-    Node *node = parser(tokens, false);
+    NblNode *node = parser(tokens, false);
 
     // Run
-    List *arguments = list_new();
+    NblList *arguments = list_new();
     for (int i = 2; i < argc; i++) {
         list_add(arguments, value_new_string(argv[i]));
     }
     map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
 
-    Value *returnValue = interpreter(env, node);
+    NblValue *returnValue = interpreter(env, node);
     if (returnValue->type == VALUE_INT) {
         exit(returnValue->integer);
     }
     value_free(returnValue);
 
     // Cleanup
-    map_free(env, (MapFreeFunc *)variable_free);
+    map_free(env, (NblMapFreeFunc *)variable_free);
     node_free(node);
-    list_free(tokens, (ListFreeFunc *)token_free);
+    list_free(tokens, (NblListFreeFunc *)token_free);
     free(text);
     return EXIT_SUCCESS;
 }
