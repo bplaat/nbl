@@ -4,7 +4,7 @@
 #include "nbl.h"
 
 // Standard library
-static NblValue *env_print(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_print(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     for (size_t i = 0; i < values->size; i++) {
@@ -16,25 +16,23 @@ static NblValue *env_print(NblInterpreterContext *context, NblValue *this, NblLi
     return nbl_value_new_null();
 }
 
-static NblValue *env_println(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_println(NblContext *context, NblValue *this, NblList *values) {
     NblValue *value = env_print(context, this, values);
     printf("\n");
     return value;
 }
 
-static NblValue *env_exit(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_exit(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *exitCode = nbl_list_get(values, 0);
-    if (exitCode->type == NBL_VALUE_INT) {
-        exit(exitCode->integer);
-    }
-    return nbl_value_new_null();
+    exit(exitCode->integer);
+    return NULL;
 }
 
 // Read execute print loop
 void repl(NblMap *env) {
-    char *command = malloc(1024);
+    char command[1024];
     for (;;) {
         // Read
         printf("> ");
@@ -67,8 +65,6 @@ void repl(NblMap *env) {
         nbl_node_free(node);
         nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
     }
-    free(command);
-    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
 }
 
 // Main
@@ -88,6 +84,7 @@ int main(int argc, char **argv) {
     if (argc == 1) {
         printf("New Bastiaan Language Interpreter\n");
         repl(env);
+        nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
         return EXIT_SUCCESS;
     }
 
@@ -119,9 +116,9 @@ int main(int argc, char **argv) {
     nbl_value_free(returnValue);
 
     // Cleanup
-    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
     nbl_node_free(node);
     nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
     free(text);
+    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
     return EXIT_SUCCESS;
 }

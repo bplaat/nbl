@@ -277,7 +277,7 @@ NblList *nbl_lexer(char *path, char *text);
 
 // Value
 typedef struct NblNode NblNode;                              // Forward define
-typedef struct NblInterpreterContext NblInterpreterContext;  // Forward define
+typedef struct NblContext NblContext;  // Forward define
 
 typedef enum NblValueType {
     NBL_VALUE_ANY,
@@ -328,7 +328,7 @@ struct NblValue {
             NblValueType returnType;
             union {
                 NblNode *functionNode;
-                NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values);
+                NblValue *(*nativeFunc)(NblContext *context, NblValue *this, NblList *values);
             };
         };
     };
@@ -359,7 +359,7 @@ NblValue *nbl_value_new_instance(NblMap *object, NblValue *instanceClass);
 NblValue *nbl_value_new_function(NblList *args, NblValueType returnType, NblNode *node);
 
 NblValue *nbl_value_new_native_function(NblList *args, NblValueType returnType,
-                                    NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values));
+                                    NblValue *(*nativeFunc)(NblContext *context, NblValue *this, NblList *values));
 
 char *nbl_value_type_to_string(NblValueType type);
 
@@ -585,7 +585,7 @@ typedef struct NblInterpreter {
     NblMap *env;
 } NblInterpreter;
 
-struct NblInterpreterContext {
+struct NblContext {
     NblMap *env;
     NblScope *scope;
     NblNode *node;
@@ -597,9 +597,9 @@ NblValue *nbl_interpreter(NblMap *env, NblNode *node);
 
 NblValue *nbl_type_error_exception(NblValueType expected, NblValueType got);
 
-NblValue *nbl_interpreter_call(NblInterpreterContext *context, NblValue *callValue, NblValue *this, NblList *arguments);
+NblValue *nbl_interpreter_call(NblContext *context, NblValue *callValue, NblValue *this, NblList *arguments);
 
-NblValue *nbl_interpreter_throw(NblInterpreterContext *context, NblValue *exception);
+NblValue *nbl_interpreter_throw(NblContext *context, NblValue *exception);
 
 NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode *node);
 
@@ -1534,7 +1534,7 @@ NblValue *nbl_value_new_function(NblList *args, NblValueType returnType, NblNode
 }
 
 NblValue *nbl_value_new_native_function(NblList *args, NblValueType returnType,
-                                    NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values)) {
+                                    NblValue *(*nativeFunc)(NblContext *context, NblValue *this, NblList *values)) {
     NblValue *value = nbl_value_new(NBL_VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
@@ -2650,7 +2650,7 @@ NblArgument *nbl_parser_argument(NblParser *nbl_parser) {
 // Standard library
 
 // Math
-static NblValue *env_math_abs(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_abs(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
@@ -2662,81 +2662,81 @@ static NblValue *env_math_abs(NblInterpreterContext *context, NblValue *this, Nb
     }
     return nbl_value_new_null();
 }
-static NblValue *env_math_sin(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_sin(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(sin(x->floating));
 }
-static NblValue *env_math_cos(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_cos(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(cos(x->floating));
 }
-static NblValue *env_math_tan(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_tan(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(tan(x->floating));
 }
-static NblValue *env_math_asin(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_asin(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(asin(x->floating));
 }
-static NblValue *env_math_acos(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_acos(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(acos(x->floating));
 }
-static NblValue *env_math_atan(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_atan(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(atan(x->floating));
 }
-static NblValue *env_math_atan2(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_atan2(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *y = nbl_list_get(values, 0);
     NblValue *x = nbl_list_get(values, 1);
     return nbl_value_new_float(atan2(y->floating, x->floating));
 }
-static NblValue *env_math_pow(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_pow(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     NblValue *y = nbl_list_get(values, 1);
     return nbl_value_new_float(pow(x->floating, y->floating));
 }
-static NblValue *env_math_sqrt(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_sqrt(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(sqrt(x->floating));
 }
-static NblValue *env_math_floor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_floor(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(floor(x->floating));
 }
-static NblValue *env_math_ceil(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_ceil(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(ceil(x->floating));
 }
-static NblValue *env_math_round(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_round(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(round(x->floating));
 }
-static NblValue *env_math_min(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_min(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *first = nbl_list_get(values, 0);
@@ -2771,7 +2771,7 @@ static NblValue *env_math_min(NblInterpreterContext *context, NblValue *this, Nb
     });
     return onlyInteger ? nbl_value_new_int(minInteger) : nbl_value_new_float(minFloating);
 }
-static NblValue *env_math_max(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_max(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *first = nbl_list_get(values, 0);
@@ -2806,19 +2806,19 @@ static NblValue *env_math_max(NblInterpreterContext *context, NblValue *this, Nb
     });
     return onlyInteger ? nbl_value_new_int(maxInteger) : nbl_value_new_float(maxFloating);
 }
-static NblValue *env_math_exp(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_exp(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(exp(x->floating));
 }
-static NblValue *env_math_log(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_log(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *x = nbl_list_get(values, 0);
     return nbl_value_new_float(log(x->floating));
 }
-static NblValue *env_math_random(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_math_random(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     (void)values;
@@ -2826,7 +2826,7 @@ static NblValue *env_math_random(NblInterpreterContext *context, NblValue *this,
 }
 
 // Exception
-static NblValue *env_exception_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_exception_constructor(NblContext *context, NblValue *this, NblList *values) {
     NblValue *error = nbl_list_get(values, 0);
     nbl_map_set(this->object, "error", nbl_value_retrieve(error));
     nbl_map_set(this->object, "path", nbl_value_new_string(context->node->token->source->path));
@@ -2837,7 +2837,7 @@ static NblValue *env_exception_constructor(NblInterpreterContext *context, NblVa
 }
 
 // String
-static NblValue *env_string_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_string_constructor(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *first = nbl_list_get(values, 0);
@@ -2846,14 +2846,14 @@ static NblValue *env_string_constructor(NblInterpreterContext *context, NblValue
     free(string);
     return value;
 }
-static NblValue *env_string_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_string_length(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return nbl_value_new_int(strlen(this->string));
 }
 
 // Array
-static NblValue *env_array_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_constructor(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *first = nbl_list_get(values, 0);
@@ -2862,17 +2862,17 @@ static NblValue *env_array_constructor(NblInterpreterContext *context, NblValue 
     }
     return nbl_value_new_array(nbl_list_new());
 }
-static NblValue *env_array_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_length(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return nbl_value_new_int(this->array->size);
 }
-static NblValue *env_array_push(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_push(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     nbl_list_foreach(values, NblValue * value, { nbl_list_add(this->array, nbl_value_retrieve(value)); });
     return nbl_value_new_int(this->array->size);
 }
-static NblValue *env_array_foreach(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_foreach(NblContext *context, NblValue *this, NblList *values) {
     NblValue *function = nbl_list_get(values, 0);
     nbl_list_foreach(this->array, NblValue * value, {
         NblList *arguments = nbl_list_new();
@@ -2884,7 +2884,7 @@ static NblValue *env_array_foreach(NblInterpreterContext *context, NblValue *thi
     });
     return nbl_value_new_null();
 }
-static NblValue *env_array_map(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_map(NblContext *context, NblValue *this, NblList *values) {
     NblValue *function = nbl_list_get(values, 0);
     NblList *items = nbl_list_new();
     nbl_list_foreach(this->array, NblValue * value, {
@@ -2897,7 +2897,7 @@ static NblValue *env_array_map(NblInterpreterContext *context, NblValue *this, N
     });
     return nbl_value_new_array(items);
 }
-static NblValue *env_array_filter(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_filter(NblContext *context, NblValue *this, NblList *values) {
     NblValue *function = nbl_list_get(values, 0);
     NblList *items = nbl_list_new();
     nbl_list_foreach(this->array, NblValue * value, {
@@ -2918,7 +2918,7 @@ static NblValue *env_array_filter(NblInterpreterContext *context, NblValue *this
     });
     return nbl_value_new_array(items);
 }
-static NblValue *env_array_find(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_array_find(NblContext *context, NblValue *this, NblList *values) {
     NblValue *function = nbl_list_get(values, 0);
     nbl_list_foreach(this->array, NblValue * value, {
         NblList *arguments = nbl_list_new();
@@ -2942,7 +2942,7 @@ static NblValue *env_array_find(NblInterpreterContext *context, NblValue *this, 
 }
 
 // Object
-static NblValue *env_object_constructor(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_object_constructor(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *first = nbl_list_get(values, 0);
@@ -2951,12 +2951,12 @@ static NblValue *env_object_constructor(NblInterpreterContext *context, NblValue
     }
     return nbl_value_new_object(nbl_map_new());
 }
-static NblValue *env_object_length(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_object_length(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     return nbl_value_new_int(this->object->size);
 }
-static NblValue *env_object_keys(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_object_keys(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     NblList *items = nbl_list_new_with_capacity(this->object->capacity);
@@ -2965,7 +2965,7 @@ static NblValue *env_object_keys(NblInterpreterContext *context, NblValue *this,
     }
     return nbl_value_new_array(items);
 }
-static NblValue *env_object_values(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_object_values(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)values;
     NblList *items = nbl_list_new_with_capacity(this->object->capacity);
@@ -2976,7 +2976,7 @@ static NblValue *env_object_values(NblInterpreterContext *context, NblValue *thi
 }
 
 // Date
-static NblValue *env_date_now(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_date_now(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     (void)values;
@@ -2984,14 +2984,14 @@ static NblValue *env_date_now(NblInterpreterContext *context, NblValue *this, Nb
 }
 
 // Root
-static NblValue *env_type(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_type(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *value = nbl_list_get(values, 0);
     return nbl_value_new_string(nbl_value_type_to_string(value->type));
 }
 
-static NblValue *env_assert(NblInterpreterContext *context, NblValue *this, NblList *values) {
+static NblValue *env_assert(NblContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
     NblValue *assertion = nbl_list_get(values, 0);
@@ -3182,7 +3182,7 @@ NblValue *nbl_type_error_exception(NblValueType expected, NblValueType got) {
         }                                                             \
     }
 
-NblValue *nbl_interpreter_call(NblInterpreterContext *context, NblValue *callValue, NblValue *this, NblList *arguments) {
+NblValue *nbl_interpreter_call(NblContext *context, NblValue *callValue, NblValue *this, NblList *arguments) {
     if (callValue->type == NBL_VALUE_FUNCTION) {
         NblScope functionScope = {.exception = context->scope->exception,
                                   .function = &(NblFunctionScope){.returnValue = NULL},
@@ -3241,7 +3241,7 @@ NblValue *nbl_interpreter_call(NblInterpreterContext *context, NblValue *callVal
     return NULL;
 }
 
-NblValue *nbl_interpreter_throw(NblInterpreterContext *context, NblValue *exception) {
+NblValue *nbl_interpreter_throw(NblContext *context, NblValue *exception) {
     if (exception->type == NBL_VALUE_STRING) {
         NblValue *exceptionClass = ((NblVariable *)nbl_map_get(context->env, "Exception"))->value;
         NblList *arguments = nbl_list_new();
@@ -3280,7 +3280,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         if (condition->type != NBL_VALUE_BOOL) {
             NblValueType conditionType = condition->type;
             nbl_value_free(condition);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
             return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
@@ -3296,7 +3296,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         if (condition->type != NBL_VALUE_BOOL) {
             NblValueType conditionType = condition->type;
             nbl_value_free(condition);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
             return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
@@ -3353,7 +3353,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 nbl_value_free(condition);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3390,7 +3390,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 nbl_value_free(condition);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3411,7 +3411,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 nbl_value_free(condition);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
                 return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
@@ -3438,7 +3438,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             iterator->type != NBL_VALUE_CLASS && iterator->type != NBL_VALUE_INSTANCE) {
             NblValueType iteratorType = iterator->type;
             nbl_value_free(iterator);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("NblVariable is not a string, array, object, class or instance it is: %s",
                                                                        nbl_value_type_to_string(iteratorType)));
         }
@@ -3494,7 +3494,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
     }
     if (node->type == NBL_NODE_CONTINUE) {
         if (!scope->loop->inLoop) {
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return nbl_interpreter_throw(&context, nbl_value_new_string("Continue not in a loop"));
         }
         scope->loop->isContinuing = true;
@@ -3502,7 +3502,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
     }
     if (node->type == NBL_NODE_BREAK) {
         if (!scope->loop->inLoop) {
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return nbl_interpreter_throw(&context, nbl_value_new_string("Break not in a loop"));
         }
         scope->loop->isBreaking = true;
@@ -3513,7 +3513,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         return NULL;
     }
     if (node->type == NBL_NODE_THROW) {
-        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+        NblContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
         return nbl_interpreter_throw(&context, nbl_interpreter_node(interpreter, scope, node->unary));
     }
     if (node->type == NBL_NODE_INCLUDE) {
@@ -3521,7 +3521,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         if (pathValue->type != NBL_VALUE_STRING) {
             NblValueType pathValueType = pathValue->type;
             nbl_value_free(pathValue);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
             return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_STRING, pathValueType));
         }
         char includePath[255];
@@ -3533,7 +3533,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         nbl_value_free(pathValue);
         char *includeText = nbl_file_read(includePath);
         if (includeText == NULL) {
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Can't read file: %s", includePath));
         }
 
@@ -3574,13 +3574,13 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         NblValue *rhs = nbl_interpreter_node(interpreter, scope, node->rhs);
         if (nbl_map_get(scope->block->env, node->lhs->string) != NULL) {
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Can't redeclare variable: '%s'", node->lhs->string));
         }
         if (node->declarationType != NBL_VALUE_ANY && node->declarationType != rhs->type) {
             NblValueType rhsType = rhs->type;
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Unexpected variable type: '%s' needed '%s'", nbl_value_type_to_string(rhsType),
                                                                        nbl_value_type_to_string(node->declarationType)));
         }
@@ -3596,7 +3596,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                 NblValueType containerValueType = containerValue->type;
                 nbl_value_free(rhs);
                 nbl_value_free(containerValue);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
                 return nbl_interpreter_throw(&context, nbl_value_new_string_format("NblVariable is not an array, object, class or instance it is: %s",
                                                                            nbl_value_type_to_string(containerValueType)));
             }
@@ -3608,7 +3608,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     nbl_value_free(rhs);
                     nbl_value_free(containerValue);
                     nbl_value_free(indexOrKey);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 NblValue *previousValue = nbl_list_get(containerValue->array, indexOrKey->integer);
@@ -3621,7 +3621,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     nbl_value_free(rhs);
                     nbl_value_free(containerValue);
                     nbl_value_free(indexOrKey);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_STRING, indexOrKeyType));
                 }
                 NblValue *previousValue = nbl_map_get(containerValue->object, indexOrKey->string);
@@ -3635,24 +3635,24 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
 
         if (node->lhs->type != NBL_NODE_VARIABLE) {
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Is not a variable"));
         }
         NblVariable *variable = nbl_block_scope_get(scope->block, node->lhs->string);
         if (variable == NULL) {
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("NblVariable: '%s' is not declared", node->lhs->string));
         }
         if (!variable->mutable) {
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
         }
         if (variable->type != NBL_VALUE_ANY && variable->type != rhs->type) {
             NblValueType rhsType = rhs->type;
             nbl_value_free(rhs);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return nbl_interpreter_throw(&context, nbl_type_error_exception(variable->type, rhsType));
         }
         nbl_value_free(variable->value);
@@ -3663,7 +3663,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
     if (node->type == NBL_NODE_VARIABLE) {
         NblVariable *variable = nbl_block_scope_get(scope->block, node->string);
         if (variable == NULL) {
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("Can't find variable: '%s'", node->string));
         }
         return nbl_value_retrieve(variable->value);
@@ -3674,7 +3674,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             containerValue->type != NBL_VALUE_CLASS && containerValue->type != NBL_VALUE_INSTANCE) {
             NblValueType containerValueType = containerValue->type;
             nbl_value_free(containerValue);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return nbl_interpreter_throw(&context, nbl_value_new_string_format("NblVariable is not a string, array, object, class or instance it is: %s",
                                                                        nbl_value_type_to_string(containerValueType)));
         }
@@ -3692,7 +3692,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     NblValueType indexOrKeyType = indexOrKey->type;
                     nbl_value_free(indexOrKey);
                     nbl_value_free(containerValue);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
@@ -3714,7 +3714,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     NblValueType indexOrKeyType = indexOrKey->type;
                     nbl_value_free(indexOrKey);
                     nbl_value_free(containerValue);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 NblValue *value = nbl_list_get(containerValue->array, indexOrKey->integer);
@@ -3732,7 +3732,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     NblValueType indexOrKeyType = indexOrKey->type;
                     nbl_value_free(indexOrKey);
                     nbl_value_free(containerValue);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
                     return nbl_interpreter_throw(&context, nbl_type_error_exception(NBL_VALUE_STRING, indexOrKeyType));
                 }
                 NblValue *value;
@@ -3745,7 +3745,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     char *indexOrKeyString = strdup(indexOrKey->string);
                     nbl_value_free(indexOrKey);
                     nbl_value_free(containerValue);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
                     NblValue *exception = nbl_value_new_string_format("Can't find %s in object", indexOrKeyString);
                     free(indexOrKeyString);
                     return nbl_interpreter_throw(&context, exception);
@@ -3774,7 +3774,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             NblValueType callValueType = callValue->type;
             nbl_value_free(callValue);
             if (thisValue != NULL) nbl_value_free(thisValue);
-            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
+            NblContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
             return nbl_interpreter_throw(&context,
                                      nbl_value_new_string_format("NblVariable is not a function or a class but: %s", nbl_value_type_to_string(callValueType)));
         }
@@ -3784,7 +3784,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
             if (callValue->abstract) {
                 nbl_value_free(callValue);
                 if (thisValue != NULL) nbl_value_free(thisValue);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->function};
                 return nbl_interpreter_throw(&context, nbl_value_new_string("Can't construct an abstract class"));
             }
             NblValue *constructorFunction = nbl_value_class_get(callValue, "constructor");
@@ -3806,7 +3806,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                             nbl_list_free(arguments, (NblListFreeFunc *)nbl_value_free);
                             nbl_value_free(callValue);
                             if (thisValue != NULL) nbl_value_free(thisValue);
-                            NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = argument->defaultNode};
+                            NblContext context = {.env = interpreter->env, .scope = scope, .node = argument->defaultNode};
                             return nbl_interpreter_throw(&context, nbl_type_error_exception(argument->type, defaultValueType));
                         }
                         nbl_list_add(arguments, defaultValue);
@@ -3816,7 +3816,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                     nbl_list_free(arguments, (NblListFreeFunc *)nbl_value_free);
                     nbl_value_free(callValue);
                     if (thisValue != NULL) nbl_value_free(thisValue);
-                    NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                    NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
                     return nbl_interpreter_throw(&context, nbl_value_new_string("Not all function arguments are given"));
                 }
             }
@@ -3828,13 +3828,13 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
                 nbl_list_free(arguments, (NblListFreeFunc *)nbl_value_free);
                 nbl_value_free(callValue);
                 if (thisValue != NULL) nbl_value_free(thisValue);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
                 return nbl_interpreter_throw(&context, nbl_type_error_exception(argument->type, nodeValueType));
             }
             nbl_list_add(arguments, nodeValue);
         }
 
-        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
         NblValue *returnValue = nbl_interpreter_call(&context, callValue, thisValue, arguments);
 
         nbl_list_free(arguments, (NblListFreeFunc *)nbl_value_free);
@@ -3858,13 +3858,13 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         if (node->type == NBL_NODE_INC_PRE || node->type == NBL_NODE_DEC_PRE || node->type == NBL_NODE_INC_POST || node->type == NBL_NODE_DEC_POST) {
             if (node->unary->type != NBL_NODE_VARIABLE) {
                 nbl_value_free(unary);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return nbl_interpreter_throw(&context, nbl_value_new_string_format("Is not a variable"));
             }
             NblVariable *variable = nbl_block_scope_get(scope->block, node->lhs->string);
             if (!variable->mutable) {
                 nbl_value_free(unary);
-                NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
+                NblContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return nbl_interpreter_throw(&context, nbl_value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
             }
             if (unary->type == NBL_VALUE_INT) {
@@ -3983,7 +3983,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
         }
 
         nbl_value_free(unary);
-        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return nbl_interpreter_throw(&context, nbl_value_new_string("Type error"));
     }
 
@@ -4429,7 +4429,7 @@ NblValue *nbl_interpreter_node(NblInterpreter *interpreter, NblScope *scope, Nbl
 
         nbl_value_free(lhs);
         nbl_value_free(rhs);
-        NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
+        NblContext context = {.env = interpreter->env, .scope = scope, .node = node};
         return nbl_interpreter_throw(&context, nbl_value_new_string("Type error"));
     }
 
