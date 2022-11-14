@@ -8,12 +8,12 @@ static NblValue *env_print(NblInterpreterContext *context, NblValue *this, NblLi
     (void)context;
     (void)this;
     for (size_t i = 0; i < values->size; i++) {
-        char *string = value_to_string(list_get(values, i));
+        char *string = nbl_value_to_string(nbl_list_get(values, i));
         printf("%s", string);
         free(string);
         if (i != values->size - 1) printf(" ");
     }
-    return value_new_null();
+    return nbl_value_new_null();
 }
 
 static NblValue *env_println(NblInterpreterContext *context, NblValue *this, NblList *values) {
@@ -25,11 +25,11 @@ static NblValue *env_println(NblInterpreterContext *context, NblValue *this, Nbl
 static NblValue *env_exit(NblInterpreterContext *context, NblValue *this, NblList *values) {
     (void)context;
     (void)this;
-    NblValue *exitCode = list_get(values, 0);
+    NblValue *exitCode = nbl_list_get(values, 0);
     if (exitCode->type == NBL_VALUE_INT) {
         exit(exitCode->integer);
     }
-    return value_new_null();
+    return nbl_value_new_null();
 }
 
 // Read execute print loop
@@ -47,42 +47,42 @@ void repl(NblMap *env) {
         command[realCommandSize + 1] = '\0';
 
         // Parse
-        NblList *tokens = lexer("text", command);
+        NblList *tokens = nbl_lexer("text", command);
         NblParser parser = {.tokens = tokens, .position = 0};
-        NblNode *node = parser_statement(&parser);
+        NblNode *node = nbl_parser_statement(&parser);
         if (node == NULL) {
             continue;
         }
 
         // Run
-        NblValue *returnValue = interpreter(env, node);
+        NblValue *returnValue = nbl_interpreter(env, node);
         if (returnValue != NULL) {
-            char *string = value_to_string(returnValue);
+            char *string = nbl_value_to_string(returnValue);
             printf("%s\n", string);
             free(string);
-            value_free(returnValue);
+            nbl_value_free(returnValue);
         }
 
         // Cleanup
-        node_free(node);
-        list_free(tokens, (NblListFreeFunc *)token_free);
+        nbl_node_free(node);
+        nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
     }
     free(command);
-    map_free(env, (NblMapFreeFunc *)variable_free);
+    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
 }
 
 // Main
 int main(int argc, char **argv) {
     // Create env
-    NblMap *env = std_env();
+    NblMap *env = nbl_std_env();
 
-    NblList *empty_args = list_new();
-    map_set(env, "print", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, NBL_VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), NBL_VALUE_NULL, env_println)));
+    NblList *empty_args = nbl_list_new();
+    nbl_map_set(env, "print", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(empty_args, NBL_VALUE_NULL, env_print)));
+    nbl_map_set(env, "println", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(nbl_list_ref(empty_args), NBL_VALUE_NULL, env_println)));
 
-    NblList *exit_args = list_new();
-    list_add(exit_args, argument_new("exitCode", NBL_VALUE_INT, node_new_value(NULL, value_new_int(0))));
-    map_set(env, "exit", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, NBL_VALUE_NULL, env_exit)));
+    NblList *exit_args = nbl_list_new();
+    nbl_list_add(exit_args, nbl_argument_new("exitCode", NBL_VALUE_INT, nbl_node_new_value(NULL, nbl_value_new_int(0))));
+    nbl_map_set(env, "exit", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(exit_args, NBL_VALUE_NULL, env_exit)));
 
     // Run repl when no arguments are given
     if (argc == 1) {
@@ -93,35 +93,35 @@ int main(int argc, char **argv) {
 
     // Or else read file and execute
     char *path = argv[1];
-    char *text = file_read(path);
+    char *text = nbl_file_read(path);
     if (text == NULL) {
         fprintf(stderr, "Can't read file: %s\n", path);
         return EXIT_FAILURE;
     }
-    NblList *tokens = lexer(path, text);
+    NblList *tokens = nbl_lexer(path, text);
     // list_foreach(tokens, Token *token, {
     //     printf("%s ", token_type_to_string(token->type));
     // });
     // printf("\n");
-    NblNode *node = parser(tokens, false);
+    NblNode *node = nbl_parser(tokens, false);
 
     // Run
-    NblList *arguments = list_new();
+    NblList *arguments = nbl_list_new();
     for (int i = 2; i < argc; i++) {
-        list_add(arguments, value_new_string(argv[i]));
+        nbl_list_add(arguments, nbl_value_new_string(argv[i]));
     }
-    map_set(env, "arguments", variable_new(NBL_VALUE_ARRAY, false, value_new_array(arguments)));
+    nbl_map_set(env, "arguments", nbl_variable_new(NBL_VALUE_ARRAY, false, nbl_value_new_array(arguments)));
 
-    NblValue *returnValue = interpreter(env, node);
+    NblValue *returnValue = nbl_interpreter(env, node);
     if (returnValue->type == NBL_VALUE_INT) {
         exit(returnValue->integer);
     }
-    value_free(returnValue);
+    nbl_value_free(returnValue);
 
     // Cleanup
-    map_free(env, (NblMapFreeFunc *)variable_free);
-    node_free(node);
-    list_free(tokens, (NblListFreeFunc *)token_free);
+    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
+    nbl_node_free(node);
+    nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
     free(text);
     return EXIT_SUCCESS;
 }
