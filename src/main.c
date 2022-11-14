@@ -26,7 +26,7 @@ static NblValue *env_exit(NblInterpreterContext *context, NblValue *this, NblLis
     (void)context;
     (void)this;
     NblValue *exitCode = list_get(values, 0);
-    if (exitCode->type == VALUE_INT) {
+    if (exitCode->type == NBL_VALUE_INT) {
         exit(exitCode->integer);
     }
     return value_new_null();
@@ -77,12 +77,12 @@ int main(int argc, char **argv) {
     NblMap *env = std_env();
 
     NblList *empty_args = list_new();
-    map_set(env, "print", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, VALUE_NULL, env_print)));
-    map_set(env, "println", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), VALUE_NULL, env_println)));
+    map_set(env, "print", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(empty_args, NBL_VALUE_NULL, env_print)));
+    map_set(env, "println", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(list_ref(empty_args), NBL_VALUE_NULL, env_println)));
 
     NblList *exit_args = list_new();
-    list_add(exit_args, argument_new("exitCode", VALUE_INT, node_new_value(NULL, value_new_int(0))));
-    map_set(env, "exit", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, VALUE_NULL, env_exit)));
+    list_add(exit_args, argument_new("exitCode", NBL_VALUE_INT, node_new_value(NULL, value_new_int(0))));
+    map_set(env, "exit", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(exit_args, NBL_VALUE_NULL, env_exit)));
 
     // Run repl when no arguments are given
     if (argc == 1) {
@@ -110,10 +110,10 @@ int main(int argc, char **argv) {
     for (int i = 2; i < argc; i++) {
         list_add(arguments, value_new_string(argv[i]));
     }
-    map_set(env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(arguments)));
+    map_set(env, "arguments", variable_new(NBL_VALUE_ARRAY, false, value_new_array(arguments)));
 
     NblValue *returnValue = interpreter(env, node);
-    if (returnValue->type == VALUE_INT) {
+    if (returnValue->type == NBL_VALUE_INT) {
         exit(returnValue->integer);
     }
     value_free(returnValue);

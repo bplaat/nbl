@@ -1,4 +1,4 @@
-// New Bastiaan Language AST NblInterpreter
+// New Bastiaan Language AST Interpreter
 // Made by Bastiaan van der Plaat
 #ifndef NBL_HEADER
 #define NBL_HEADER
@@ -12,37 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// Custom windows headers because NblTokenType name conflict :(
 #ifdef _WIN32
-
-typedef struct _SYSTEMTIME {
-    uint16_t wYear;
-    uint16_t wMonth;
-    uint16_t wDayOfWeek;
-    uint16_t wDay;
-    uint16_t wHour;
-    uint16_t wMinute;
-    uint16_t wSecond;
-    uint16_t wMilliseconds;
-} SYSTEMTIME;
-
-typedef struct _FILETIME {
-    uint32_t dwLowDateTime;
-    uint32_t dwHighDateTime;
-} FILETIME;
-
-typedef union _LARGE_INTEGER {
-    struct {
-        uint32_t LowPart;
-        uint32_t HighPart;
-    };
-    uint64_t QuadPart;
-} LARGE_INTEGER;
-
-extern void GetLocalTime(SYSTEMTIME *lpSystemTime);
-extern bool SystemTimeToFileTime(const SYSTEMTIME *lpSystemTime, FILETIME *lpFileTime);
-
+#include <windows.h>
 #else
 #include <sys/time.h>
 #endif
@@ -93,7 +64,7 @@ typedef struct NblToken NblToken;  // Forward define
 
 void print_error(NblToken *token, char *fmt, ...);
 
-// NblList header
+// List header
 typedef struct NblList {
     int32_t refs;
     void **items;
@@ -125,7 +96,7 @@ typedef void NblListFreeFunc(void *item);
 
 void list_free(NblList *list, NblListFreeFunc *freeFunc);
 
-// NblMap header
+// Map header
 typedef struct NblMap {
     int32_t refs;
     char **keys;
@@ -171,97 +142,97 @@ NblSource *source_ref(NblSource *source);
 void source_free(NblSource *source);
 
 typedef enum NblTokenType {
-    TOKEN_EOF,
-    TOKEN_UNKNOWN,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_LCURLY,
-    TOKEN_RCURLY,
-    TOKEN_LBRACKET,
-    TOKEN_RBRACKET,
-    TOKEN_QUESTION,
-    TOKEN_SEMICOLON,
-    TOKEN_COLON,
-    TOKEN_COMMA,
-    TOKEN_POINT,
-    TOKEN_FAT_ARROW,
+    NBL_TOKEN_EOF,
+    NBL_TOKEN_UNKNOWN,
+    NBL_TOKEN_LPAREN,
+    NBL_TOKEN_RPAREN,
+    NBL_TOKEN_LCURLY,
+    NBL_TOKEN_RCURLY,
+    NBL_TOKEN_LBRACKET,
+    NBL_TOKEN_RBRACKET,
+    NBL_TOKEN_QUESTION,
+    NBL_TOKEN_SEMICOLON,
+    NBL_TOKEN_COLON,
+    NBL_TOKEN_COMMA,
+    NBL_TOKEN_POINT,
+    NBL_TOKEN_FAT_ARROW,
 
-    TOKEN_KEYWORD,
-    TOKEN_INT,
-    TOKEN_FLOAT,
-    TOKEN_STRING,
+    NBL_TOKEN_KEYWORD,
+    NBL_TOKEN_INT,
+    NBL_TOKEN_FLOAT,
+    NBL_TOKEN_STRING,
 
-    TOKEN_ASSIGN,
-    TOKEN_ADD,
-    TOKEN_ASSIGN_ADD,
-    TOKEN_INC,
-    TOKEN_SUB,
-    TOKEN_ASSIGN_SUB,
-    TOKEN_DEC,
-    TOKEN_MUL,
-    TOKEN_ASSIGN_MUL,
-    TOKEN_EXP,
-    TOKEN_ASSIGN_EXP,
-    TOKEN_DIV,
-    TOKEN_ASSIGN_DIV,
-    TOKEN_MOD,
-    TOKEN_ASSIGN_MOD,
-    TOKEN_AND,
-    TOKEN_ASSIGN_AND,
-    TOKEN_XOR,
-    TOKEN_ASSIGN_XOR,
-    TOKEN_OR,
-    TOKEN_ASSIGN_OR,
-    TOKEN_NOT,
-    TOKEN_SHL,
-    TOKEN_ASSIGN_SHL,
-    TOKEN_SHR,
-    TOKEN_ASSIGN_SHR,
-    TOKEN_INSTANCEOF,
-    TOKEN_EQ,
-    TOKEN_NEQ,
-    TOKEN_LT,
-    TOKEN_LTEQ,
-    TOKEN_GT,
-    TOKEN_GTEQ,
-    TOKEN_LOGICAL_AND,
-    TOKEN_LOGICAL_OR,
-    TOKEN_LOGICAL_NOT,
+    NBL_TOKEN_ASSIGN,
+    NBL_TOKEN_ADD,
+    NBL_TOKEN_ASSIGN_ADD,
+    NBL_TOKEN_INC,
+    NBL_TOKEN_SUB,
+    NBL_TOKEN_ASSIGN_SUB,
+    NBL_TOKEN_DEC,
+    NBL_TOKEN_MUL,
+    NBL_TOKEN_ASSIGN_MUL,
+    NBL_TOKEN_EXP,
+    NBL_TOKEN_ASSIGN_EXP,
+    NBL_TOKEN_DIV,
+    NBL_TOKEN_ASSIGN_DIV,
+    NBL_TOKEN_MOD,
+    NBL_TOKEN_ASSIGN_MOD,
+    NBL_TOKEN_AND,
+    NBL_TOKEN_ASSIGN_AND,
+    NBL_TOKEN_XOR,
+    NBL_TOKEN_ASSIGN_XOR,
+    NBL_TOKEN_OR,
+    NBL_TOKEN_ASSIGN_OR,
+    NBL_TOKEN_NOT,
+    NBL_TOKEN_SHL,
+    NBL_TOKEN_ASSIGN_SHL,
+    NBL_TOKEN_SHR,
+    NBL_TOKEN_ASSIGN_SHR,
+    NBL_TOKEN_INSTANCEOF,
+    NBL_TOKEN_EQ,
+    NBL_TOKEN_NEQ,
+    NBL_TOKEN_LT,
+    NBL_TOKEN_LTEQ,
+    NBL_TOKEN_GT,
+    NBL_TOKEN_GTEQ,
+    NBL_TOKEN_LOGICAL_AND,
+    NBL_TOKEN_LOGICAL_OR,
+    NBL_TOKEN_LOGICAL_NOT,
 
-    TOKEN_TYPE_ANY,
-    TOKEN_NULL,
-    TOKEN_TYPE_BOOL,
-    TOKEN_TRUE,
-    TOKEN_FALSE,
-    TOKEN_TYPE_INT,
-    TOKEN_TYPE_FLOAT,
-    TOKEN_TYPE_STRING,
-    TOKEN_TYPE_ARRAY,
-    TOKEN_TYPE_OBJECT,
-    TOKEN_CLASS,
-    TOKEN_EXTENDS,
-    TOKEN_ABSTRACT,
-    TOKEN_TYPE_INSTANCE,
-    TOKEN_TYPE_FUNCTION,
-    TOKEN_FUNCTION,
+    NBL_TOKEN_TYPE_ANY,
+    NBL_TOKEN_NULL,
+    NBL_TOKEN_TYPE_BOOL,
+    NBL_TOKEN_TRUE,
+    NBL_TOKEN_FALSE,
+    NBL_TOKEN_TYPE_INT,
+    NBL_TOKEN_TYPE_FLOAT,
+    NBL_TOKEN_TYPE_STRING,
+    NBL_TOKEN_TYPE_ARRAY,
+    NBL_TOKEN_TYPE_OBJECT,
+    NBL_TOKEN_CLASS,
+    NBL_TOKEN_EXTENDS,
+    NBL_TOKEN_ABSTRACT,
+    NBL_TOKEN_TYPE_INSTANCE,
+    NBL_TOKEN_TYPE_FUNCTION,
+    NBL_TOKEN_FUNCTION,
 
-    TOKEN_CONST,
-    TOKEN_LET,
-    TOKEN_IF,
-    TOKEN_ELSE,
-    TOKEN_LOOP,
-    TOKEN_WHILE,
-    TOKEN_DO,
-    TOKEN_FOR,
-    TOKEN_IN,
-    TOKEN_CONTINUE,
-    TOKEN_BREAK,
-    TOKEN_RETURN,
-    TOKEN_THROW,
-    TOKEN_TRY,
-    TOKEN_CATCH,
-    TOKEN_FINALLY,
-    TOKEN_INCLUDE
+    NBL_TOKEN_CONST,
+    NBL_TOKEN_LET,
+    NBL_TOKEN_IF,
+    NBL_TOKEN_ELSE,
+    NBL_TOKEN_LOOP,
+    NBL_TOKEN_WHILE,
+    NBL_TOKEN_DO,
+    NBL_TOKEN_FOR,
+    NBL_TOKEN_IN,
+    NBL_TOKEN_CONTINUE,
+    NBL_TOKEN_BREAK,
+    NBL_TOKEN_RETURN,
+    NBL_TOKEN_THROW,
+    NBL_TOKEN_TRY,
+    NBL_TOKEN_CATCH,
+    NBL_TOKEN_FINALLY,
+    NBL_TOKEN_INCLUDE
 } NblTokenType;
 
 struct NblToken {
@@ -304,23 +275,23 @@ typedef struct NblKeyword {
 
 NblList *lexer(char *path, char *text);
 
-// NblValue
+// Value
 typedef struct NblNode NblNode;                              // Forward define
 typedef struct NblInterpreterContext NblInterpreterContext;  // Forward define
 
 typedef enum NblValueType {
-    VALUE_ANY,
-    VALUE_NULL,
-    VALUE_BOOL,
-    VALUE_INT,
-    VALUE_FLOAT,
-    VALUE_STRING,
-    VALUE_ARRAY,
-    VALUE_OBJECT,
-    VALUE_CLASS,
-    VALUE_INSTANCE,
-    VALUE_FUNCTION,
-    VALUE_NATIVE_FUNCTION
+    NBL_VALUE_ANY,
+    NBL_VALUE_NULL,
+    NBL_VALUE_BOOL,
+    NBL_VALUE_INT,
+    NBL_VALUE_FLOAT,
+    NBL_VALUE_STRING,
+    NBL_VALUE_ARRAY,
+    NBL_VALUE_OBJECT,
+    NBL_VALUE_CLASS,
+    NBL_VALUE_INSTANCE,
+    NBL_VALUE_FUNCTION,
+    NBL_VALUE_NATIVE_FUNCTION
 } NblValueType;
 
 typedef struct NblArgument {
@@ -408,65 +379,65 @@ void value_clear(NblValue *value);
 
 void value_free(NblValue *value);
 
-// NblParser
+// Parser
 typedef enum NblNodeType {
-    NODE_PROGRAM,
-    NODE_NODES,
-    NODE_BLOCK,
-    NODE_IF,
-    NODE_TRY,
-    NODE_TENARY,
-    NODE_LOOP,
-    NODE_WHILE,
-    NODE_DOWHILE,
-    NODE_FOR,
-    NODE_FORIN,
-    NODE_CONTINUE,
-    NODE_BREAK,
-    NODE_RETURN,
-    NODE_THROW,
-    NODE_INCLUDE,
+    NBL_NODE_PROGRAM,
+    NBL_NODE_NODES,
+    NBL_NODE_BLOCK,
+    NBL_NODE_IF,
+    NBL_NODE_TRY,
+    NBL_NODE_TENARY,
+    NBL_NODE_LOOP,
+    NBL_NODE_WHILE,
+    NBL_NODE_DOWHILE,
+    NBL_NODE_FOR,
+    NBL_NODE_FORIN,
+    NBL_NODE_CONTINUE,
+    NBL_NODE_BREAK,
+    NBL_NODE_RETURN,
+    NBL_NODE_THROW,
+    NBL_NODE_INCLUDE,
 
-    NODE_VALUE,
-    NODE_ARRAY,
-    NODE_OBJECT,
-    NODE_CLASS,
-    NODE_CALL,
+    NBL_NODE_VALUE,
+    NBL_NODE_ARRAY,
+    NBL_NODE_OBJECT,
+    NBL_NODE_CLASS,
+    NBL_NODE_CALL,
 
-    NODE_NEG,
-    NODE_INC_PRE,
-    NODE_DEC_PRE,
-    NODE_INC_POST,
-    NODE_DEC_POST,
-    NODE_NOT,
-    NODE_LOGICAL_NOT,
-    NODE_CAST,
+    NBL_NODE_NEG,
+    NBL_NODE_INC_PRE,
+    NBL_NODE_DEC_PRE,
+    NBL_NODE_INC_POST,
+    NBL_NODE_DEC_POST,
+    NBL_NODE_NOT,
+    NBL_NODE_LOGICAL_NOT,
+    NBL_NODE_CAST,
 
-    NODE_VARIABLE,
-    NODE_CONST_ASSIGN,
-    NODE_LET_ASSIGN,
-    NODE_ASSIGN,
-    NODE_GET,
-    NODE_ADD,
-    NODE_SUB,
-    NODE_MUL,
-    NODE_EXP,
-    NODE_DIV,
-    NODE_MOD,
-    NODE_AND,
-    NODE_XOR,
-    NODE_OR,
-    NODE_SHL,
-    NODE_SHR,
-    NODE_INSTANCEOF,
-    NODE_EQ,
-    NODE_NEQ,
-    NODE_LT,
-    NODE_LTEQ,
-    NODE_GT,
-    NODE_GTEQ,
-    NODE_LOGICAL_AND,
-    NODE_LOGICAL_OR
+    NBL_NODE_VARIABLE,
+    NBL_NODE_CONST_ASSIGN,
+    NBL_NODE_LET_ASSIGN,
+    NBL_NODE_ASSIGN,
+    NBL_NODE_GET,
+    NBL_NODE_ADD,
+    NBL_NODE_SUB,
+    NBL_NODE_MUL,
+    NBL_NODE_EXP,
+    NBL_NODE_DIV,
+    NBL_NODE_MOD,
+    NBL_NODE_AND,
+    NBL_NODE_XOR,
+    NBL_NODE_OR,
+    NBL_NODE_SHL,
+    NBL_NODE_SHR,
+    NBL_NODE_INSTANCEOF,
+    NBL_NODE_EQ,
+    NBL_NODE_NEQ,
+    NBL_NODE_LT,
+    NBL_NODE_LTEQ,
+    NBL_NODE_GT,
+    NBL_NODE_GTEQ,
+    NBL_NODE_LOGICAL_AND,
+    NBL_NODE_LOGICAL_OR
 } NblNodeType;
 
 struct NblNode {
@@ -571,7 +542,7 @@ NblArgument *parser_argument(NblParser *parser);
 // Standard library
 NblMap *std_env(void);
 
-// NblInterpreter
+// Interpreter
 typedef struct NblVariable {
     NblValueType type;
     bool mutable;
@@ -713,7 +684,7 @@ void print_error(NblToken *token, char *fmt, ...) {
     fprintf(stderr, "^\n");
 }
 
-// NblList
+// List
 NblList *list_new(void) { return list_new_with_capacity(8); }
 
 NblList *list_new_with_capacity(size_t capacity) {
@@ -787,7 +758,7 @@ void list_free(NblList *list, NblListFreeFunc *freeFunc) {
     free(list);
 }
 
-// NblMap
+// Map
 NblMap *map_new(void) { return map_new_with_capacity(8); }
 
 NblMap *map_new_with_capacity(size_t capacity) {
@@ -895,7 +866,7 @@ NblToken *token_new_int(NblTokenType type, NblSource *source, int32_t line, int3
 }
 
 NblToken *token_new_float(NblSource *source, int32_t line, int32_t column, double floating) {
-    NblToken *token = token_new(TOKEN_FLOAT, source, line, column);
+    NblToken *token = token_new(NBL_TOKEN_FLOAT, source, line, column);
     token->floating = floating;
     return token;
 }
@@ -912,103 +883,103 @@ NblToken *token_ref(NblToken *token) {
 }
 
 bool token_type_is_type(NblTokenType type) {
-    return type == TOKEN_TYPE_ANY || type == TOKEN_NULL || type == TOKEN_TYPE_BOOL || type == TOKEN_TYPE_INT || type == TOKEN_TYPE_FLOAT ||
-           type == TOKEN_TYPE_STRING || type == TOKEN_TYPE_ARRAY || type == TOKEN_TYPE_OBJECT || type == TOKEN_TYPE_FUNCTION || type == TOKEN_CLASS ||
-           type == TOKEN_TYPE_INSTANCE;
+    return type == NBL_TOKEN_TYPE_ANY || type == NBL_TOKEN_NULL || type == NBL_TOKEN_TYPE_BOOL || type == NBL_TOKEN_TYPE_INT || type == NBL_TOKEN_TYPE_FLOAT ||
+           type == NBL_TOKEN_TYPE_STRING || type == NBL_TOKEN_TYPE_ARRAY || type == NBL_TOKEN_TYPE_OBJECT || type == NBL_TOKEN_TYPE_FUNCTION ||
+           type == NBL_TOKEN_CLASS || type == NBL_TOKEN_TYPE_INSTANCE;
 }
 
 char *token_type_to_string(NblTokenType type) {
-    if (type == TOKEN_EOF) return "EOF";
-    if (type == TOKEN_UNKNOWN) return "Unknown character";
-    if (type == TOKEN_LPAREN) return "(";
-    if (type == TOKEN_RPAREN) return ")";
-    if (type == TOKEN_LCURLY) return "{";
-    if (type == TOKEN_RCURLY) return "}";
-    if (type == TOKEN_LBRACKET) return "[";
-    if (type == TOKEN_RBRACKET) return "]";
-    if (type == TOKEN_QUESTION) return "?";
-    if (type == TOKEN_SEMICOLON) return ";";
-    if (type == TOKEN_COLON) return ":";
-    if (type == TOKEN_COMMA) return ",";
-    if (type == TOKEN_POINT) return ".";
-    if (type == TOKEN_FAT_ARROW) return "=>";
+    if (type == NBL_TOKEN_EOF) return "EOF";
+    if (type == NBL_TOKEN_UNKNOWN) return "Unknown character";
+    if (type == NBL_TOKEN_LPAREN) return "(";
+    if (type == NBL_TOKEN_RPAREN) return ")";
+    if (type == NBL_TOKEN_LCURLY) return "{";
+    if (type == NBL_TOKEN_RCURLY) return "}";
+    if (type == NBL_TOKEN_LBRACKET) return "[";
+    if (type == NBL_TOKEN_RBRACKET) return "]";
+    if (type == NBL_TOKEN_QUESTION) return "?";
+    if (type == NBL_TOKEN_SEMICOLON) return ";";
+    if (type == NBL_TOKEN_COLON) return ":";
+    if (type == NBL_TOKEN_COMMA) return ",";
+    if (type == NBL_TOKEN_POINT) return ".";
+    if (type == NBL_TOKEN_FAT_ARROW) return "=>";
 
-    if (type == TOKEN_KEYWORD) return "keyword";
-    if (type == TOKEN_INT) return "int";
-    if (type == TOKEN_FLOAT) return "float";
-    if (type == TOKEN_STRING) return "string";
+    if (type == NBL_TOKEN_KEYWORD) return "keyword";
+    if (type == NBL_TOKEN_INT) return "int";
+    if (type == NBL_TOKEN_FLOAT) return "float";
+    if (type == NBL_TOKEN_STRING) return "string";
 
-    if (type == TOKEN_ASSIGN) return "=";
-    if (type == TOKEN_ADD) return "+";
-    if (type == TOKEN_INC) return "++";
-    if (type == TOKEN_ASSIGN_ADD) return "+=";
-    if (type == TOKEN_SUB) return "-";
-    if (type == TOKEN_DEC) return "--";
-    if (type == TOKEN_ASSIGN_SUB) return "-=";
-    if (type == TOKEN_MUL) return "*";
-    if (type == TOKEN_ASSIGN_MUL) return "*=";
-    if (type == TOKEN_EXP) return "**";
-    if (type == TOKEN_ASSIGN_EXP) return "**=";
-    if (type == TOKEN_DIV) return "/";
-    if (type == TOKEN_ASSIGN_DIV) return "/=";
-    if (type == TOKEN_MOD) return "%";
-    if (type == TOKEN_ASSIGN_MOD) return "%=";
-    if (type == TOKEN_AND) return "&";
-    if (type == TOKEN_ASSIGN_AND) return "&=";
-    if (type == TOKEN_XOR) return "^";
-    if (type == TOKEN_ASSIGN_XOR) return "^=";
-    if (type == TOKEN_OR) return "|";
-    if (type == TOKEN_ASSIGN_OR) return "|=";
-    if (type == TOKEN_NOT) return "~";
-    if (type == TOKEN_SHL) return "<<";
-    if (type == TOKEN_ASSIGN_SHL) return "<<=";
-    if (type == TOKEN_SHR) return ">>";
-    if (type == TOKEN_ASSIGN_SHR) return ">>=";
-    if (type == TOKEN_EQ) return "==";
-    if (type == TOKEN_NEQ) return "!=";
-    if (type == TOKEN_LT) return "<";
-    if (type == TOKEN_LTEQ) return "<=";
-    if (type == TOKEN_GT) return ">";
-    if (type == TOKEN_GTEQ) return ">=";
-    if (type == TOKEN_LOGICAL_OR) return "||";
-    if (type == TOKEN_LOGICAL_AND) return "&&";
-    if (type == TOKEN_LOGICAL_NOT) return "!";
-    if (type == TOKEN_INSTANCEOF) return "instanceof";
+    if (type == NBL_TOKEN_ASSIGN) return "=";
+    if (type == NBL_TOKEN_ADD) return "+";
+    if (type == NBL_TOKEN_INC) return "++";
+    if (type == NBL_TOKEN_ASSIGN_ADD) return "+=";
+    if (type == NBL_TOKEN_SUB) return "-";
+    if (type == NBL_TOKEN_DEC) return "--";
+    if (type == NBL_TOKEN_ASSIGN_SUB) return "-=";
+    if (type == NBL_TOKEN_MUL) return "*";
+    if (type == NBL_TOKEN_ASSIGN_MUL) return "*=";
+    if (type == NBL_TOKEN_EXP) return "**";
+    if (type == NBL_TOKEN_ASSIGN_EXP) return "**=";
+    if (type == NBL_TOKEN_DIV) return "/";
+    if (type == NBL_TOKEN_ASSIGN_DIV) return "/=";
+    if (type == NBL_TOKEN_MOD) return "%";
+    if (type == NBL_TOKEN_ASSIGN_MOD) return "%=";
+    if (type == NBL_TOKEN_AND) return "&";
+    if (type == NBL_TOKEN_ASSIGN_AND) return "&=";
+    if (type == NBL_TOKEN_XOR) return "^";
+    if (type == NBL_TOKEN_ASSIGN_XOR) return "^=";
+    if (type == NBL_TOKEN_OR) return "|";
+    if (type == NBL_TOKEN_ASSIGN_OR) return "|=";
+    if (type == NBL_TOKEN_NOT) return "~";
+    if (type == NBL_TOKEN_SHL) return "<<";
+    if (type == NBL_TOKEN_ASSIGN_SHL) return "<<=";
+    if (type == NBL_TOKEN_SHR) return ">>";
+    if (type == NBL_TOKEN_ASSIGN_SHR) return ">>=";
+    if (type == NBL_TOKEN_EQ) return "==";
+    if (type == NBL_TOKEN_NEQ) return "!=";
+    if (type == NBL_TOKEN_LT) return "<";
+    if (type == NBL_TOKEN_LTEQ) return "<=";
+    if (type == NBL_TOKEN_GT) return ">";
+    if (type == NBL_TOKEN_GTEQ) return ">=";
+    if (type == NBL_TOKEN_LOGICAL_OR) return "||";
+    if (type == NBL_TOKEN_LOGICAL_AND) return "&&";
+    if (type == NBL_TOKEN_LOGICAL_NOT) return "!";
+    if (type == NBL_TOKEN_INSTANCEOF) return "instanceof";
 
-    if (type == TOKEN_TYPE_ANY) return "any";
-    if (type == TOKEN_NULL) return "null";
-    if (type == TOKEN_TYPE_BOOL) return "bool";
-    if (type == TOKEN_TRUE) return "true";
-    if (type == TOKEN_FALSE) return "false";
-    if (type == TOKEN_TYPE_INT) return "int";
-    if (type == TOKEN_TYPE_FLOAT) return "float";
-    if (type == TOKEN_TYPE_STRING) return "string";
-    if (type == TOKEN_TYPE_ARRAY) return "array";
-    if (type == TOKEN_TYPE_OBJECT) return "object";
-    if (type == TOKEN_CLASS) return "class";
-    if (type == TOKEN_EXTENDS) return "extends";
-    if (type == TOKEN_ABSTRACT) return "abstract";
-    if (type == TOKEN_TYPE_INSTANCE) return "instance";
-    if (type == TOKEN_TYPE_FUNCTION) return "function";
-    if (type == TOKEN_FUNCTION) return "fn";
+    if (type == NBL_TOKEN_TYPE_ANY) return "any";
+    if (type == NBL_TOKEN_NULL) return "null";
+    if (type == NBL_TOKEN_TYPE_BOOL) return "bool";
+    if (type == NBL_TOKEN_TRUE) return "true";
+    if (type == NBL_TOKEN_FALSE) return "false";
+    if (type == NBL_TOKEN_TYPE_INT) return "int";
+    if (type == NBL_TOKEN_TYPE_FLOAT) return "float";
+    if (type == NBL_TOKEN_TYPE_STRING) return "string";
+    if (type == NBL_TOKEN_TYPE_ARRAY) return "array";
+    if (type == NBL_TOKEN_TYPE_OBJECT) return "object";
+    if (type == NBL_TOKEN_CLASS) return "class";
+    if (type == NBL_TOKEN_EXTENDS) return "extends";
+    if (type == NBL_TOKEN_ABSTRACT) return "abstract";
+    if (type == NBL_TOKEN_TYPE_INSTANCE) return "instance";
+    if (type == NBL_TOKEN_TYPE_FUNCTION) return "function";
+    if (type == NBL_TOKEN_FUNCTION) return "fn";
 
-    if (type == TOKEN_CONST) return "const";
-    if (type == TOKEN_LET) return "let";
-    if (type == TOKEN_IF) return "if";
-    if (type == TOKEN_ELSE) return "else";
-    if (type == TOKEN_LOOP) return "loop";
-    if (type == TOKEN_WHILE) return "while";
-    if (type == TOKEN_DO) return "do";
-    if (type == TOKEN_FOR) return "for";
-    if (type == TOKEN_IN) return "in";
-    if (type == TOKEN_CONTINUE) return "continue";
-    if (type == TOKEN_BREAK) return "break";
-    if (type == TOKEN_RETURN) return "return";
-    if (type == TOKEN_THROW) return "throw";
-    if (type == TOKEN_TRY) return "try";
-    if (type == TOKEN_CATCH) return "catch";
-    if (type == TOKEN_FINALLY) return "finally";
-    if (type == TOKEN_INCLUDE) return "include";
+    if (type == NBL_TOKEN_CONST) return "const";
+    if (type == NBL_TOKEN_LET) return "let";
+    if (type == NBL_TOKEN_IF) return "if";
+    if (type == NBL_TOKEN_ELSE) return "else";
+    if (type == NBL_TOKEN_LOOP) return "loop";
+    if (type == NBL_TOKEN_WHILE) return "while";
+    if (type == NBL_TOKEN_DO) return "do";
+    if (type == NBL_TOKEN_FOR) return "for";
+    if (type == NBL_TOKEN_IN) return "in";
+    if (type == NBL_TOKEN_CONTINUE) return "continue";
+    if (type == NBL_TOKEN_BREAK) return "break";
+    if (type == NBL_TOKEN_RETURN) return "return";
+    if (type == NBL_TOKEN_THROW) return "throw";
+    if (type == NBL_TOKEN_TRY) return "try";
+    if (type == NBL_TOKEN_CATCH) return "catch";
+    if (type == NBL_TOKEN_FINALLY) return "finally";
+    if (type == NBL_TOKEN_INCLUDE) return "include";
     return NULL;
 }
 
@@ -1017,7 +988,7 @@ void token_free(NblToken *token) {
     if (token->refs > 0) return;
 
     source_free(token->source);
-    if (token->type == TOKEN_KEYWORD || token->type == TOKEN_STRING) free(token->string);
+    if (token->type == NBL_TOKEN_KEYWORD || token->type == NBL_TOKEN_STRING) free(token->string);
     free(token);
 }
 
@@ -1041,41 +1012,41 @@ int64_t string_to_int(char *string) {
 double string_to_float(char *string) { return strtod(string, NULL); }
 
 NblList *lexer(char *path, char *text) {
-    NblKeyword keywords[] = {{"instanceof", TOKEN_INSTANCEOF},
-                             {"any", TOKEN_TYPE_ANY},
-                             {"null", TOKEN_NULL},
-                             {"bool", TOKEN_TYPE_BOOL},
-                             {"true", TOKEN_TRUE},
-                             {"false", TOKEN_FALSE},
-                             {"int", TOKEN_TYPE_INT},
-                             {"float", TOKEN_TYPE_FLOAT},
-                             {"string", TOKEN_TYPE_STRING},
-                             {"array", TOKEN_TYPE_ARRAY},
-                             {"object", TOKEN_TYPE_OBJECT},
-                             {"class", TOKEN_CLASS},
-                             {"extends", TOKEN_EXTENDS},
-                             {"abstract", TOKEN_ABSTRACT},
-                             {"instance", TOKEN_TYPE_INSTANCE},
-                             {"function", TOKEN_TYPE_FUNCTION},
-                             {"fn", TOKEN_FUNCTION},
+    NblKeyword keywords[] = {{"instanceof", NBL_TOKEN_INSTANCEOF},
+                             {"any", NBL_TOKEN_TYPE_ANY},
+                             {"null", NBL_TOKEN_NULL},
+                             {"bool", NBL_TOKEN_TYPE_BOOL},
+                             {"true", NBL_TOKEN_TRUE},
+                             {"false", NBL_TOKEN_FALSE},
+                             {"int", NBL_TOKEN_TYPE_INT},
+                             {"float", NBL_TOKEN_TYPE_FLOAT},
+                             {"string", NBL_TOKEN_TYPE_STRING},
+                             {"array", NBL_TOKEN_TYPE_ARRAY},
+                             {"object", NBL_TOKEN_TYPE_OBJECT},
+                             {"class", NBL_TOKEN_CLASS},
+                             {"extends", NBL_TOKEN_EXTENDS},
+                             {"abstract", NBL_TOKEN_ABSTRACT},
+                             {"instance", NBL_TOKEN_TYPE_INSTANCE},
+                             {"function", NBL_TOKEN_TYPE_FUNCTION},
+                             {"fn", NBL_TOKEN_FUNCTION},
 
-                             {"const", TOKEN_CONST},
-                             {"let", TOKEN_LET},
-                             {"if", TOKEN_IF},
-                             {"else", TOKEN_ELSE},
-                             {"loop", TOKEN_LOOP},
-                             {"while", TOKEN_WHILE},
-                             {"do", TOKEN_DO},
-                             {"for", TOKEN_FOR},
-                             {"in", TOKEN_IN},
-                             {"continue", TOKEN_CONTINUE},
-                             {"break", TOKEN_BREAK},
-                             {"return", TOKEN_RETURN},
-                             {"throw", TOKEN_THROW},
-                             {"try", TOKEN_TRY},
-                             {"catch", TOKEN_CATCH},
-                             {"finally", TOKEN_FINALLY},
-                             {"include", TOKEN_INCLUDE}};
+                             {"const", NBL_TOKEN_CONST},
+                             {"let", NBL_TOKEN_LET},
+                             {"if", NBL_TOKEN_IF},
+                             {"else", NBL_TOKEN_ELSE},
+                             {"loop", NBL_TOKEN_LOOP},
+                             {"while", NBL_TOKEN_WHILE},
+                             {"do", NBL_TOKEN_DO},
+                             {"for", NBL_TOKEN_FOR},
+                             {"in", NBL_TOKEN_IN},
+                             {"continue", NBL_TOKEN_CONTINUE},
+                             {"break", NBL_TOKEN_BREAK},
+                             {"return", NBL_TOKEN_RETURN},
+                             {"throw", NBL_TOKEN_THROW},
+                             {"try", NBL_TOKEN_TRY},
+                             {"catch", NBL_TOKEN_CATCH},
+                             {"finally", NBL_TOKEN_FINALLY},
+                             {"include", NBL_TOKEN_INCLUDE}};
 
     NblSource *source = source_new(path, text);
     NblList *tokens = list_new_with_capacity(512);
@@ -1113,18 +1084,18 @@ NblList *lexer(char *path, char *text) {
         // Integers
         if (*c == '0' && *(c + 1) == 'b') {
             c += 2;
-            list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 2)));
+            list_add(tokens, token_new_int(NBL_TOKEN_INT, source, line, column, strtol(c, &c, 2)));
             continue;
         }
         if (*c == '0' && (isdigit(*(c + 1)) || *(c + 1) == 'o')) {
             if (*(c + 1) == 'o') c++;
             c++;
-            list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 8)));
+            list_add(tokens, token_new_int(NBL_TOKEN_INT, source, line, column, strtol(c, &c, 8)));
             continue;
         }
         if (*c == '0' && *(c + 1) == 'x') {
             c += 2;
-            list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(c, &c, 16)));
+            list_add(tokens, token_new_int(NBL_TOKEN_INT, source, line, column, strtol(c, &c, 16)));
             continue;
         }
 
@@ -1138,7 +1109,7 @@ NblList *lexer(char *path, char *text) {
             if (isFloat) {
                 list_add(tokens, token_new_float(source, line, column, strtod(start, &c)));
             } else {
-                list_add(tokens, token_new_int(TOKEN_INT, source, line, column, strtol(start, &c, 10)));
+                list_add(tokens, token_new_int(NBL_TOKEN_INT, source, line, column, strtol(start, &c, 10)));
             }
             continue;
         }
@@ -1182,7 +1153,7 @@ NblList *lexer(char *path, char *text) {
                 }
             }
             string[strpos] = '\0';
-            list_add(tokens, token_new_string(TOKEN_STRING, source, line, column, string));
+            list_add(tokens, token_new_string(NBL_TOKEN_STRING, source, line, column, string));
             continue;
         }
 
@@ -1203,64 +1174,64 @@ NblList *lexer(char *path, char *text) {
                 }
             }
             if (!found) {
-                list_add(tokens, token_new_string(TOKEN_KEYWORD, source, line, column, strndup(ptr, size)));
+                list_add(tokens, token_new_string(NBL_TOKEN_KEYWORD, source, line, column, strndup(ptr, size)));
             }
             continue;
         }
 
         // Syntax
         if (*c == '(') {
-            list_add(tokens, token_new(TOKEN_LPAREN, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_LPAREN, source, line, column));
             c++;
             continue;
         }
         if (*c == ')') {
-            list_add(tokens, token_new(TOKEN_RPAREN, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_RPAREN, source, line, column));
             c++;
             continue;
         }
         if (*c == '{') {
-            list_add(tokens, token_new(TOKEN_LCURLY, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_LCURLY, source, line, column));
             c++;
             continue;
         }
         if (*c == '}') {
-            list_add(tokens, token_new(TOKEN_RCURLY, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_RCURLY, source, line, column));
             c++;
             continue;
         }
         if (*c == '[') {
-            list_add(tokens, token_new(TOKEN_LBRACKET, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_LBRACKET, source, line, column));
             c++;
             continue;
         }
         if (*c == ']') {
-            list_add(tokens, token_new(TOKEN_RBRACKET, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_RBRACKET, source, line, column));
             c++;
             continue;
         }
         if (*c == '?') {
-            list_add(tokens, token_new(TOKEN_QUESTION, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_QUESTION, source, line, column));
             c++;
             continue;
         }
         if (*c == ';') {
-            list_add(tokens, token_new(TOKEN_SEMICOLON, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_SEMICOLON, source, line, column));
             c++;
             continue;
         }
         if (*c == ':') {
-            list_add(tokens, token_new(TOKEN_COLON, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_COLON, source, line, column));
             c++;
             continue;
         }
         if (*c == ',') {
-            list_add(tokens, token_new(TOKEN_COMMA, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_COMMA, source, line, column));
             c++;
             continue;
         }
         if (*c == '.') {
-            list_add(tokens, token_new(TOKEN_POINT, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_POINT, source, line, column));
             c++;
             continue;
         }
@@ -1268,181 +1239,181 @@ NblList *lexer(char *path, char *text) {
         // Operators
         if (*c == '=') {
             if (*(c + 1) == '>') {
-                list_add(tokens, token_new(TOKEN_FAT_ARROW, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_FAT_ARROW, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_EQ, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_EQ, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_ASSIGN, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_ASSIGN, source, line, column));
             c++;
             continue;
         }
         if (*c == '+') {
             if (*(c + 1) == '+') {
-                list_add(tokens, token_new(TOKEN_INC, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_INC, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_ADD, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_ADD, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_ADD, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_ADD, source, line, column));
             c++;
             continue;
         }
         if (*c == '-') {
             if (*(c + 1) == '-') {
-                list_add(tokens, token_new(TOKEN_DEC, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_DEC, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_SUB, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_SUB, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_SUB, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_SUB, source, line, column));
             c++;
             continue;
         }
         if (*c == '*') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_MUL, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_MUL, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '*') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_EXP, source, line, column));
+                    list_add(tokens, token_new(NBL_TOKEN_ASSIGN_EXP, source, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_EXP, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_EXP, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_MUL, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_MUL, source, line, column));
             c++;
             continue;
         }
         if (*c == '/') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_DIV, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_DIV, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_DIV, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_DIV, source, line, column));
             c++;
             continue;
         }
         if (*c == '%') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_MOD, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_MOD, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_MOD, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_MOD, source, line, column));
             c++;
             continue;
         }
         if (*c == '^') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_XOR, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_XOR, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_XOR, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_XOR, source, line, column));
             c++;
             continue;
         }
         if (*c == '~') {
-            list_add(tokens, token_new(TOKEN_NOT, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_NOT, source, line, column));
             c++;
             continue;
         }
         if (*c == '<') {
             if (*(c + 1) == '<') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_SHL, source, line, column));
+                    list_add(tokens, token_new(NBL_TOKEN_ASSIGN_SHL, source, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_SHL, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_SHL, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_LTEQ, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_LTEQ, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_LT, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_LT, source, line, column));
             c++;
             continue;
         }
         if (*c == '>') {
             if (*(c + 1) == '>') {
                 if (*(c + 2) == '=') {
-                    list_add(tokens, token_new(TOKEN_ASSIGN_SHR, source, line, column));
+                    list_add(tokens, token_new(NBL_TOKEN_ASSIGN_SHR, source, line, column));
                     c += 3;
                     continue;
                 }
-                list_add(tokens, token_new(TOKEN_SHR, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_SHR, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_GTEQ, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_GTEQ, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_GT, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_GT, source, line, column));
             c++;
             continue;
         }
         if (*c == '!') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_NEQ, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_NEQ, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_LOGICAL_NOT, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_LOGICAL_NOT, source, line, column));
             c++;
             continue;
         }
         if (*c == '|') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_OR, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_OR, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '|') {
-                list_add(tokens, token_new(TOKEN_LOGICAL_OR, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_LOGICAL_OR, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_OR, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_OR, source, line, column));
             c++;
             continue;
         }
         if (*c == '&') {
             if (*(c + 1) == '=') {
-                list_add(tokens, token_new(TOKEN_ASSIGN_AND, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_ASSIGN_AND, source, line, column));
                 c += 2;
                 continue;
             }
             if (*(c + 1) == '&') {
-                list_add(tokens, token_new(TOKEN_LOGICAL_AND, source, line, column));
+                list_add(tokens, token_new(NBL_TOKEN_LOGICAL_AND, source, line, column));
                 c += 2;
                 continue;
             }
-            list_add(tokens, token_new(TOKEN_AND, source, line, column));
+            list_add(tokens, token_new(NBL_TOKEN_AND, source, line, column));
             c++;
             continue;
         }
@@ -1460,15 +1431,15 @@ NblList *lexer(char *path, char *text) {
             continue;
         }
 
-        list_add(tokens, token_new_int(TOKEN_UNKNOWN, source, line, column, *c));
+        list_add(tokens, token_new_int(NBL_TOKEN_UNKNOWN, source, line, column, *c));
         c++;
     }
-    list_add(tokens, token_new(TOKEN_EOF, source, line, c - lineStart));
+    list_add(tokens, token_new(NBL_TOKEN_EOF, source, line, c - lineStart));
     source_free(source);
     return tokens;
 }
 
-// NblValue
+// Value
 NblArgument *argument_new(char *name, NblValueType type, NblNode *defaultNode) {
     NblArgument *argument = malloc(sizeof(NblArgument));
     argument->name = strdup(name);
@@ -1492,28 +1463,28 @@ NblValue *value_new(NblValueType type) {
     return value;
 }
 
-NblValue *value_new_null(void) { return value_new(VALUE_NULL); }
+NblValue *value_new_null(void) { return value_new(NBL_VALUE_NULL); }
 
 NblValue *value_new_bool(bool boolean) {
-    NblValue *value = value_new(VALUE_BOOL);
+    NblValue *value = value_new(NBL_VALUE_BOOL);
     value->boolean = boolean;
     return value;
 }
 
 NblValue *value_new_int(int64_t integer) {
-    NblValue *value = value_new(VALUE_INT);
+    NblValue *value = value_new(NBL_VALUE_INT);
     value->integer = integer;
     return value;
 }
 
 NblValue *value_new_float(double floating) {
-    NblValue *value = value_new(VALUE_FLOAT);
+    NblValue *value = value_new(NBL_VALUE_FLOAT);
     value->floating = floating;
     return value;
 }
 
 NblValue *value_new_string(char *string) {
-    NblValue *value = value_new(VALUE_STRING);
+    NblValue *value = value_new(NBL_VALUE_STRING);
     value->string = strdup(string);
     return value;
 }
@@ -1528,19 +1499,19 @@ NblValue *value_new_string_format(char *format, ...) {
 }
 
 NblValue *value_new_array(NblList *array) {
-    NblValue *value = value_new(VALUE_ARRAY);
+    NblValue *value = value_new(NBL_VALUE_ARRAY);
     value->array = array;
     return value;
 }
 
 NblValue *value_new_object(NblMap *object) {
-    NblValue *value = value_new(VALUE_OBJECT);
+    NblValue *value = value_new(NBL_VALUE_OBJECT);
     value->object = object;
     return value;
 }
 
 NblValue *value_new_class(NblMap *object, NblValue *parentClass, bool abstract) {
-    NblValue *value = value_new(VALUE_CLASS);
+    NblValue *value = value_new(NBL_VALUE_CLASS);
     value->object = object;
     value->parentClass = parentClass;
     value->abstract = abstract;
@@ -1548,14 +1519,14 @@ NblValue *value_new_class(NblMap *object, NblValue *parentClass, bool abstract) 
 }
 
 NblValue *value_new_instance(NblMap *object, NblValue *instanceClass) {
-    NblValue *value = value_new(VALUE_INSTANCE);
+    NblValue *value = value_new(NBL_VALUE_INSTANCE);
     value->object = object;
     value->instanceClass = instanceClass;
     return value;
 }
 
 NblValue *value_new_function(NblList *args, NblValueType returnType, NblNode *functionNode) {
-    NblValue *value = value_new(VALUE_FUNCTION);
+    NblValue *value = value_new(NBL_VALUE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
     value->functionNode = functionNode;
@@ -1564,7 +1535,7 @@ NblValue *value_new_function(NblList *args, NblValueType returnType, NblNode *fu
 
 NblValue *value_new_native_function(NblList *args, NblValueType returnType,
                                     NblValue *(*nativeFunc)(NblInterpreterContext *context, NblValue *this, NblList *values)) {
-    NblValue *value = value_new(VALUE_NATIVE_FUNCTION);
+    NblValue *value = value_new(NBL_VALUE_NATIVE_FUNCTION);
     value->arguments = args;
     value->returnType = returnType;
     value->nativeFunc = nativeFunc;
@@ -1572,41 +1543,41 @@ NblValue *value_new_native_function(NblList *args, NblValueType returnType,
 }
 
 char *value_type_to_string(NblValueType type) {
-    if (type == VALUE_ANY) return "any";
-    if (type == VALUE_NULL) return "null";
-    if (type == VALUE_BOOL) return "bool";
-    if (type == VALUE_INT) return "int";
-    if (type == VALUE_FLOAT) return "float";
-    if (type == VALUE_STRING) return "string";
-    if (type == VALUE_ARRAY) return "array";
-    if (type == VALUE_OBJECT) return "object";
-    if (type == VALUE_CLASS) return "class";
-    if (type == VALUE_INSTANCE) return "instance";
-    if (type == VALUE_FUNCTION || type == VALUE_NATIVE_FUNCTION) return "function";
+    if (type == NBL_VALUE_ANY) return "any";
+    if (type == NBL_VALUE_NULL) return "null";
+    if (type == NBL_VALUE_BOOL) return "bool";
+    if (type == NBL_VALUE_INT) return "int";
+    if (type == NBL_VALUE_FLOAT) return "float";
+    if (type == NBL_VALUE_STRING) return "string";
+    if (type == NBL_VALUE_ARRAY) return "array";
+    if (type == NBL_VALUE_OBJECT) return "object";
+    if (type == NBL_VALUE_CLASS) return "class";
+    if (type == NBL_VALUE_INSTANCE) return "instance";
+    if (type == NBL_VALUE_FUNCTION || type == NBL_VALUE_NATIVE_FUNCTION) return "function";
     return NULL;
 }
 
 char *value_to_string(NblValue *value) {
-    if (value->type == VALUE_NULL) {
+    if (value->type == NBL_VALUE_NULL) {
         return strdup("null");
     }
-    if (value->type == VALUE_BOOL) {
+    if (value->type == NBL_VALUE_BOOL) {
         return strdup(value->boolean ? "true" : "false");
     }
-    if (value->type == VALUE_INT) {
+    if (value->type == NBL_VALUE_INT) {
         char buffer[255];
         sprintf(buffer, "%" PRIi64, value->integer);
         return strdup(buffer);
     }
-    if (value->type == VALUE_FLOAT) {
+    if (value->type == NBL_VALUE_FLOAT) {
         char buffer[255];
         sprintf(buffer, "%g", value->floating);
         return strdup(buffer);
     }
-    if (value->type == VALUE_STRING) {
+    if (value->type == NBL_VALUE_STRING) {
         return strdup(value->string);
     }
-    if (value->type == VALUE_ARRAY) {
+    if (value->type == NBL_VALUE_ARRAY) {
         NblList *sb = list_new();
         list_add(sb, strdup("["));
         if (value->array->size > 0) list_add(sb, strdup(" "));
@@ -1621,7 +1592,7 @@ char *value_to_string(NblValue *value) {
         list_free(sb, free);
         return string;
     }
-    if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
+    if (value->type == NBL_VALUE_OBJECT || value->type == NBL_VALUE_CLASS || value->type == NBL_VALUE_INSTANCE) {
         NblList *sb = list_new();
         list_add(sb, strdup("{"));
         if (value->object->size > 0) list_add(sb, strdup(" "));
@@ -1637,20 +1608,20 @@ char *value_to_string(NblValue *value) {
         list_free(sb, free);
         return string;
     }
-    if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
+    if (value->type == NBL_VALUE_FUNCTION || value->type == NBL_VALUE_NATIVE_FUNCTION) {
         NblList *sb = list_new();
         list_add(sb, "fn (");
         for (size_t i = 0; i < value->arguments->size; i++) {
             NblArgument *argument = list_get(value->arguments, i);
             list_add(sb, argument->name);
-            if (argument->type != VALUE_ANY) {
+            if (argument->type != NBL_VALUE_ANY) {
                 list_add(sb, ": ");
                 list_add(sb, value_type_to_string(argument->type));
             }
             if (i != value->arguments->size - 1) list_add(sb, ", ");
         }
         list_add(sb, ")");
-        if (value->returnType != VALUE_ANY) {
+        if (value->returnType != NBL_VALUE_ANY) {
             list_add(sb, ": ");
             list_add(sb, value_type_to_string(value->returnType));
         }
@@ -1662,17 +1633,17 @@ char *value_to_string(NblValue *value) {
 }
 
 NblValueType token_type_to_value_type(NblTokenType type) {
-    if (type == TOKEN_TYPE_ANY) return VALUE_ANY;
-    if (type == TOKEN_NULL) return VALUE_NULL;
-    if (type == TOKEN_TYPE_BOOL) return VALUE_BOOL;
-    if (type == TOKEN_TYPE_INT) return VALUE_INT;
-    if (type == TOKEN_TYPE_FLOAT) return VALUE_FLOAT;
-    if (type == TOKEN_TYPE_STRING) return VALUE_STRING;
-    if (type == TOKEN_TYPE_ARRAY) return VALUE_ARRAY;
-    if (type == TOKEN_TYPE_OBJECT) return VALUE_OBJECT;
-    if (type == TOKEN_CLASS) return VALUE_CLASS;
-    if (type == TOKEN_TYPE_INSTANCE) return VALUE_INSTANCE;
-    if (type == TOKEN_TYPE_FUNCTION) return VALUE_FUNCTION;
+    if (type == NBL_TOKEN_TYPE_ANY) return NBL_VALUE_ANY;
+    if (type == NBL_TOKEN_NULL) return NBL_VALUE_NULL;
+    if (type == NBL_TOKEN_TYPE_BOOL) return NBL_VALUE_BOOL;
+    if (type == NBL_TOKEN_TYPE_INT) return NBL_VALUE_INT;
+    if (type == NBL_TOKEN_TYPE_FLOAT) return NBL_VALUE_FLOAT;
+    if (type == NBL_TOKEN_TYPE_STRING) return NBL_VALUE_STRING;
+    if (type == NBL_TOKEN_TYPE_ARRAY) return NBL_VALUE_ARRAY;
+    if (type == NBL_TOKEN_TYPE_OBJECT) return NBL_VALUE_OBJECT;
+    if (type == NBL_TOKEN_CLASS) return NBL_VALUE_CLASS;
+    if (type == NBL_TOKEN_TYPE_INSTANCE) return NBL_VALUE_INSTANCE;
+    if (type == NBL_TOKEN_TYPE_FUNCTION) return NBL_VALUE_FUNCTION;
     return 0;
 }
 
@@ -1704,31 +1675,31 @@ NblValue *value_ref(NblValue *value) {
 }
 
 NblValue *value_retrieve(NblValue *value) {
-    if (value->type == VALUE_NULL) return value_new_null();
-    if (value->type == VALUE_BOOL) return value_new_bool(value->boolean);
-    if (value->type == VALUE_INT) return value_new_int(value->integer);
-    if (value->type == VALUE_FLOAT) return value_new_float(value->floating);
-    if (value->type == VALUE_STRING) return value_new_string(value->string);
+    if (value->type == NBL_VALUE_NULL) return value_new_null();
+    if (value->type == NBL_VALUE_BOOL) return value_new_bool(value->boolean);
+    if (value->type == NBL_VALUE_INT) return value_new_int(value->integer);
+    if (value->type == NBL_VALUE_FLOAT) return value_new_float(value->floating);
+    if (value->type == NBL_VALUE_STRING) return value_new_string(value->string);
     return value_ref(value);
 }
 
 void value_clear(NblValue *value) {
-    if (value->type == VALUE_STRING) {
+    if (value->type == NBL_VALUE_STRING) {
         free(value->string);
     }
-    if (value->type == VALUE_ARRAY) {
+    if (value->type == NBL_VALUE_ARRAY) {
         list_free(value->array, (NblListFreeFunc *)value_free);
     }
-    if (value->type == VALUE_OBJECT || value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) {
+    if (value->type == NBL_VALUE_OBJECT || value->type == NBL_VALUE_CLASS || value->type == NBL_VALUE_INSTANCE) {
         map_free(value->object, (NblMapFreeFunc *)value_free);
-        if ((value->type == VALUE_CLASS || value->type == VALUE_INSTANCE) && value->parentClass != NULL) {
+        if ((value->type == NBL_VALUE_CLASS || value->type == NBL_VALUE_INSTANCE) && value->parentClass != NULL) {
             value_free(value->parentClass);
         }
     }
-    if (value->type == VALUE_FUNCTION || value->type == VALUE_NATIVE_FUNCTION) {
+    if (value->type == NBL_VALUE_FUNCTION || value->type == NBL_VALUE_NATIVE_FUNCTION) {
         list_free(value->arguments, (NblListFreeFunc *)argument_free);
     }
-    if (value->type == VALUE_FUNCTION) {
+    if (value->type == NBL_VALUE_FUNCTION) {
         node_free(value->functionNode);
     }
 }
@@ -1740,7 +1711,7 @@ void value_free(NblValue *value) {
     free(value);
 }
 
-// NblParser
+// Parser
 NblNode *node_new(NblNodeType type, NblToken *token) {
     NblNode *node = malloc(sizeof(NblNode));
     node->refs = 1;
@@ -1752,7 +1723,7 @@ NblNode *node_new(NblNodeType type, NblToken *token) {
 }
 
 NblNode *node_new_value(NblToken *token, NblValue *value) {
-    NblNode *node = node_new(NODE_VALUE, token);
+    NblNode *node = node_new(NBL_NODE_VALUE, token);
     node->value = value;
     return node;
 }
@@ -1770,7 +1741,7 @@ NblNode *node_new_unary(NblNodeType type, NblToken *token, NblNode *unary) {
 }
 
 NblNode *node_new_cast(NblToken *token, NblValueType castType, NblNode *unary) {
-    NblNode *node = node_new(NODE_CAST, token);
+    NblNode *node = node_new(NBL_NODE_CAST, token);
     node->castType = castType;
     node->unary = unary;
     return node;
@@ -1801,36 +1772,36 @@ void node_free(NblNode *node) {
     if (node->token != NULL) {
         token_free(node->token);
     }
-    if (node->type == NODE_VALUE) {
+    if (node->type == NBL_NODE_VALUE) {
         value_free(node->value);
     }
-    if (node->type == NODE_VARIABLE) {
+    if (node->type == NBL_NODE_VARIABLE) {
         free(node->string);
     }
-    if (node->type == NODE_ARRAY) {
+    if (node->type == NBL_NODE_ARRAY) {
         list_free(node->array, (NblListFreeFunc *)node_free);
     }
-    if (node->type == NODE_OBJECT || node->type == NODE_CLASS) {
+    if (node->type == NBL_NODE_OBJECT || node->type == NBL_NODE_CLASS) {
         map_free(node->object, (NblMapFreeFunc *)node_free);
-        if (node->type == NODE_CLASS && node->parentClass != NULL) {
+        if (node->type == NBL_NODE_CLASS && node->parentClass != NULL) {
             node_free(node->parentClass);
         }
     }
-    if ((node->type >= NODE_RETURN && node->type <= NODE_INCLUDE) || (node->type >= NODE_NEG && node->type <= NODE_CAST)) {
+    if ((node->type >= NBL_NODE_RETURN && node->type <= NBL_NODE_INCLUDE) || (node->type >= NBL_NODE_NEG && node->type <= NBL_NODE_CAST)) {
         node_free(node->unary);
     }
-    if (node->type >= NODE_GET && node->type <= NODE_LOGICAL_OR) {
+    if (node->type >= NBL_NODE_GET && node->type <= NBL_NODE_LOGICAL_OR) {
         node_free(node->lhs);
         node_free(node->rhs);
     }
-    if (node->type >= NODE_IF && node->type <= NODE_FORIN) {
+    if (node->type >= NBL_NODE_IF && node->type <= NBL_NODE_FORIN) {
         if (node->condition != NULL) node_free(node->condition);
         node_free(node->thenBlock);
         if (node->elseBlock != NULL) node_free(node->elseBlock);
-        if (node->type == NODE_TRY && node->finallyBlock != NULL) node_free(node->finallyBlock);
+        if (node->type == NBL_NODE_TRY && node->finallyBlock != NULL) node_free(node->finallyBlock);
     }
-    if ((node->type >= NODE_PROGRAM && node->type <= NODE_BLOCK) || node->type == NODE_CALL) {
-        if (node->type == NODE_CALL) node_free(node->function);
+    if ((node->type >= NBL_NODE_PROGRAM && node->type <= NBL_NODE_BLOCK) || node->type == NBL_NODE_CALL) {
+        if (node->type == NBL_NODE_CALL) node_free(node->function);
         list_free(node->nodes, (NblListFreeFunc *)node_free);
     }
     free(node);
@@ -1861,12 +1832,12 @@ NblValueType parser_eat_type(NblParser *parser) {
     }
     print_error(current(), "Unexpected token: '%s' needed type token", token_type_to_string(current()->type));
     exit(EXIT_FAILURE);
-    return VALUE_ANY;
+    return NBL_VALUE_ANY;
 }
 
 NblNode *parser_program(NblParser *parser, bool included) {
-    NblNode *programNode = node_new_multiple(included ? NODE_NODES : NODE_PROGRAM, current());
-    while (current()->type != TOKEN_EOF) {
+    NblNode *programNode = node_new_multiple(included ? NBL_NODE_NODES : NBL_NODE_PROGRAM, current());
+    while (current()->type != NBL_TOKEN_EOF) {
         NblNode *node = parser_statement(parser);
         if (node != NULL) list_add(programNode->nodes, node);
     }
@@ -1874,14 +1845,14 @@ NblNode *parser_program(NblParser *parser, bool included) {
 }
 
 NblNode *parser_block(NblParser *parser) {
-    NblNode *blockNode = node_new_multiple(NODE_BLOCK, current());
-    if (current()->type == TOKEN_LCURLY) {
-        parser_eat(parser, TOKEN_LCURLY);
-        while (current()->type != TOKEN_RCURLY) {
+    NblNode *blockNode = node_new_multiple(NBL_NODE_BLOCK, current());
+    if (current()->type == NBL_TOKEN_LCURLY) {
+        parser_eat(parser, NBL_TOKEN_LCURLY);
+        while (current()->type != NBL_TOKEN_RCURLY) {
             NblNode *node = parser_statement(parser);
             if (node != NULL) list_add(blockNode->nodes, node);
         }
-        parser_eat(parser, TOKEN_RCURLY);
+        parser_eat(parser, NBL_TOKEN_RCURLY);
     } else {
         NblNode *node = parser_statement(parser);
         if (node != NULL) list_add(blockNode->nodes, node);
@@ -1890,24 +1861,24 @@ NblNode *parser_block(NblParser *parser) {
 }
 
 NblNode *parser_statement(NblParser *parser) {
-    if (current()->type == TOKEN_SEMICOLON) {
-        parser_eat(parser, TOKEN_SEMICOLON);
+    if (current()->type == NBL_TOKEN_SEMICOLON) {
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
         return NULL;
     }
 
-    if (current()->type == TOKEN_LCURLY) {
+    if (current()->type == NBL_TOKEN_LCURLY) {
         return parser_block(parser);
     }
 
-    if (current()->type == TOKEN_IF) {
-        NblNode *node = node_new(NODE_IF, current());
-        parser_eat(parser, TOKEN_IF);
-        parser_eat(parser, TOKEN_LPAREN);
+    if (current()->type == NBL_TOKEN_IF) {
+        NblNode *node = node_new(NBL_NODE_IF, current());
+        parser_eat(parser, NBL_TOKEN_IF);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         node->condition = parser_assigns(parser);
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
         node->thenBlock = parser_block(parser);
-        if (current()->type == TOKEN_ELSE) {
-            parser_eat(parser, TOKEN_ELSE);
+        if (current()->type == NBL_TOKEN_ELSE) {
+            parser_eat(parser, NBL_TOKEN_ELSE);
             node->elseBlock = parser_block(parser);
         } else {
             node->elseBlock = NULL;
@@ -1915,24 +1886,24 @@ NblNode *parser_statement(NblParser *parser) {
         return node;
     }
 
-    if (current()->type == TOKEN_TRY) {
-        NblNode *node = node_new(NODE_TRY, current());
-        parser_eat(parser, TOKEN_TRY);
+    if (current()->type == NBL_TOKEN_TRY) {
+        NblNode *node = node_new(NBL_NODE_TRY, current());
+        parser_eat(parser, NBL_TOKEN_TRY);
         node->tryBlock = parser_block(parser);
 
-        parser_eat(parser, TOKEN_CATCH);
-        parser_eat(parser, TOKEN_LPAREN);
+        parser_eat(parser, NBL_TOKEN_CATCH);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         NblNode *declarations = parser_declarations(parser);
-        if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
+        if (declarations->type != NBL_NODE_CONST_ASSIGN && declarations->type != NBL_NODE_LET_ASSIGN) {
             print_error(declarations->token, "You can only declare one variable in a catch block");
             exit(EXIT_FAILURE);
         }
         node->catchVariable = declarations;
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
         node->catchBlock = parser_block(parser);
 
-        if (current()->type == TOKEN_FINALLY) {
-            parser_eat(parser, TOKEN_FINALLY);
+        if (current()->type == NBL_TOKEN_FINALLY) {
+            parser_eat(parser, NBL_TOKEN_FINALLY);
             node->finallyBlock = parser_block(parser);
         } else {
             node->finallyBlock = NULL;
@@ -1940,181 +1911,181 @@ NblNode *parser_statement(NblParser *parser) {
         return node;
     }
 
-    if (current()->type == TOKEN_LOOP) {
-        NblNode *node = node_new(NODE_LOOP, current());
+    if (current()->type == NBL_TOKEN_LOOP) {
+        NblNode *node = node_new(NBL_NODE_LOOP, current());
         node->elseBlock = NULL;
-        parser_eat(parser, TOKEN_LOOP);
+        parser_eat(parser, NBL_TOKEN_LOOP);
         node->condition = NULL;
         node->thenBlock = parser_block(parser);
         return node;
     }
 
-    if (current()->type == TOKEN_WHILE) {
-        NblNode *node = node_new(NODE_WHILE, current());
+    if (current()->type == NBL_TOKEN_WHILE) {
+        NblNode *node = node_new(NBL_NODE_WHILE, current());
         node->elseBlock = NULL;
-        parser_eat(parser, TOKEN_WHILE);
-        parser_eat(parser, TOKEN_LPAREN);
+        parser_eat(parser, NBL_TOKEN_WHILE);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         node->condition = parser_assigns(parser);
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
         node->thenBlock = parser_block(parser);
         return node;
     }
 
-    if (current()->type == TOKEN_DO) {
-        NblNode *node = node_new(NODE_DOWHILE, current());
+    if (current()->type == NBL_TOKEN_DO) {
+        NblNode *node = node_new(NBL_NODE_DOWHILE, current());
         node->elseBlock = NULL;
-        parser_eat(parser, TOKEN_DO);
+        parser_eat(parser, NBL_TOKEN_DO);
         node->thenBlock = parser_block(parser);
-        parser_eat(parser, TOKEN_WHILE);
-        parser_eat(parser, TOKEN_LPAREN);
+        parser_eat(parser, NBL_TOKEN_WHILE);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         node->condition = parser_assigns(parser);
-        parser_eat(parser, TOKEN_RPAREN);
-        parser_eat(parser, TOKEN_SEMICOLON);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
         return node;
     }
 
-    if (current()->type == TOKEN_FOR) {
+    if (current()->type == NBL_TOKEN_FOR) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_FOR);
-        parser_eat(parser, TOKEN_LPAREN);
+        parser_eat(parser, NBL_TOKEN_FOR);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         NblNode *declarations;
-        if (current()->type != TOKEN_SEMICOLON) {
+        if (current()->type != NBL_TOKEN_SEMICOLON) {
             declarations = parser_declarations(parser);
         }
 
-        if (current()->type == TOKEN_IN) {
-            NblNode *node = node_new(NODE_FORIN, token);
-            if (declarations->type != NODE_CONST_ASSIGN && declarations->type != NODE_LET_ASSIGN) {
+        if (current()->type == NBL_TOKEN_IN) {
+            NblNode *node = node_new(NBL_NODE_FORIN, token);
+            if (declarations->type != NBL_NODE_CONST_ASSIGN && declarations->type != NBL_NODE_LET_ASSIGN) {
                 print_error(declarations->token, "You can only declare one variable in a for in loop");
                 exit(EXIT_FAILURE);
             }
             node->forinVariable = declarations;
-            parser_eat(parser, TOKEN_IN);
+            parser_eat(parser, NBL_TOKEN_IN);
             node->iterator = parser_tenary(parser);
-            parser_eat(parser, TOKEN_RPAREN);
+            parser_eat(parser, NBL_TOKEN_RPAREN);
             node->thenBlock = parser_block(parser);
             return node;
         }
 
-        NblNode *blockNode = node_new_multiple(NODE_BLOCK, token);
+        NblNode *blockNode = node_new_multiple(NBL_NODE_BLOCK, token);
         list_add(blockNode->nodes, declarations);
 
-        NblNode *node = node_new(NODE_FOR, token);
-        parser_eat(parser, TOKEN_SEMICOLON);
-        if (current()->type != TOKEN_SEMICOLON) {
+        NblNode *node = node_new(NBL_NODE_FOR, token);
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
+        if (current()->type != NBL_TOKEN_SEMICOLON) {
             node->condition = parser_tenary(parser);
         } else {
             node->condition = NULL;
         }
-        parser_eat(parser, TOKEN_SEMICOLON);
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
 
-        if (current()->type != TOKEN_RPAREN) {
+        if (current()->type != NBL_TOKEN_RPAREN) {
             node->incrementBlock = parser_assigns(parser);
         } else {
             node->incrementBlock = NULL;
         }
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
 
         node->thenBlock = parser_block(parser);
         list_add(blockNode->nodes, node);
         return blockNode;
     }
 
-    if (current()->type == TOKEN_CONTINUE) {
+    if (current()->type == NBL_TOKEN_CONTINUE) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_CONTINUE);
-        parser_eat(parser, TOKEN_SEMICOLON);
-        return node_new(NODE_CONTINUE, token);
+        parser_eat(parser, NBL_TOKEN_CONTINUE);
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
+        return node_new(NBL_NODE_CONTINUE, token);
     }
-    if (current()->type == TOKEN_BREAK) {
+    if (current()->type == NBL_TOKEN_BREAK) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_BREAK);
-        parser_eat(parser, TOKEN_SEMICOLON);
-        return node_new(NODE_BREAK, token);
+        parser_eat(parser, NBL_TOKEN_BREAK);
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
+        return node_new(NBL_NODE_BREAK, token);
     }
-    if (current()->type == TOKEN_RETURN) {
+    if (current()->type == NBL_TOKEN_RETURN) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_RETURN);
-        NblNode *node = node_new_unary(NODE_RETURN, token, parser_tenary(parser));
-        parser_eat(parser, TOKEN_SEMICOLON);
+        parser_eat(parser, NBL_TOKEN_RETURN);
+        NblNode *node = node_new_unary(NBL_NODE_RETURN, token, parser_tenary(parser));
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
         return node;
     }
-    if (current()->type == TOKEN_THROW) {
+    if (current()->type == NBL_TOKEN_THROW) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_THROW);
-        NblNode *node = node_new_unary(NODE_THROW, token, parser_tenary(parser));
-        parser_eat(parser, TOKEN_SEMICOLON);
+        parser_eat(parser, NBL_TOKEN_THROW);
+        NblNode *node = node_new_unary(NBL_NODE_THROW, token, parser_tenary(parser));
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
         return node;
     }
-    if (current()->type == TOKEN_INCLUDE) {
+    if (current()->type == NBL_TOKEN_INCLUDE) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_INCLUDE);
-        NblNode *node = node_new_unary(NODE_INCLUDE, token, parser_tenary(parser));
-        parser_eat(parser, TOKEN_SEMICOLON);
+        parser_eat(parser, NBL_TOKEN_INCLUDE);
+        NblNode *node = node_new_unary(NBL_NODE_INCLUDE, token, parser_tenary(parser));
+        parser_eat(parser, NBL_TOKEN_SEMICOLON);
         return node;
     }
 
-    if (current()->type == TOKEN_FUNCTION) {
+    if (current()->type == NBL_TOKEN_FUNCTION) {
         NblToken *functionToken = current();
-        parser_eat(parser, TOKEN_FUNCTION);
+        parser_eat(parser, NBL_TOKEN_FUNCTION);
         NblToken *nameToken = current();
         char *name = current()->string;
-        parser_eat(parser, TOKEN_KEYWORD);
-        NblNode *node =
-            node_new_operation(NODE_CONST_ASSIGN, functionToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_function(parser, functionToken));
-        node->declarationType = VALUE_FUNCTION;
+        parser_eat(parser, NBL_TOKEN_KEYWORD);
+        NblNode *node = node_new_operation(NBL_NODE_CONST_ASSIGN, functionToken, node_new_string(NBL_NODE_VARIABLE, nameToken, name),
+                                           parser_function(parser, functionToken));
+        node->declarationType = NBL_VALUE_FUNCTION;
         return node;
     }
-    if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
+    if (current()->type == NBL_TOKEN_ABSTRACT || current()->type == NBL_TOKEN_CLASS) {
         NblToken *classToken = current();
         bool abstract = false;
-        if (current()->type == TOKEN_ABSTRACT) {
+        if (current()->type == NBL_TOKEN_ABSTRACT) {
             abstract = true;
-            parser_eat(parser, TOKEN_ABSTRACT);
+            parser_eat(parser, NBL_TOKEN_ABSTRACT);
         }
-        parser_eat(parser, TOKEN_CLASS);
+        parser_eat(parser, NBL_TOKEN_CLASS);
         NblToken *nameToken = current();
         char *name = current()->string;
-        parser_eat(parser, TOKEN_KEYWORD);
-        NblNode *node =
-            node_new_operation(NODE_CONST_ASSIGN, classToken, node_new_string(NODE_VARIABLE, nameToken, name), parser_class(parser, classToken, abstract));
-        node->declarationType = VALUE_CLASS;
+        parser_eat(parser, NBL_TOKEN_KEYWORD);
+        NblNode *node = node_new_operation(NBL_NODE_CONST_ASSIGN, classToken, node_new_string(NBL_NODE_VARIABLE, nameToken, name),
+                                           parser_class(parser, classToken, abstract));
+        node->declarationType = NBL_VALUE_CLASS;
         return node;
     }
 
     NblNode *node = parser_declarations(parser);
-    parser_eat(parser, TOKEN_SEMICOLON);
+    parser_eat(parser, NBL_TOKEN_SEMICOLON);
     return node;
 }
 
 NblNode *parser_declarations(NblParser *parser) {
-    if (current()->type == TOKEN_CONST || current()->type == TOKEN_LET) {
+    if (current()->type == NBL_TOKEN_CONST || current()->type == NBL_TOKEN_LET) {
         NblList *nodes = list_new();
         NblNodeType assignType;
-        if (current()->type == TOKEN_CONST) {
-            assignType = NODE_CONST_ASSIGN;
-            parser_eat(parser, TOKEN_CONST);
+        if (current()->type == NBL_TOKEN_CONST) {
+            assignType = NBL_NODE_CONST_ASSIGN;
+            parser_eat(parser, NBL_TOKEN_CONST);
         }
-        if (current()->type == TOKEN_LET) {
-            assignType = NODE_LET_ASSIGN;
-            parser_eat(parser, TOKEN_LET);
+        if (current()->type == NBL_TOKEN_LET) {
+            assignType = NBL_NODE_LET_ASSIGN;
+            parser_eat(parser, NBL_TOKEN_LET);
         }
 
         for (;;) {
             char *name = current()->string;
-            parser_eat(parser, TOKEN_KEYWORD);
-            NblNode *variable = node_new_string(NODE_VARIABLE, current(), name);
+            parser_eat(parser, NBL_TOKEN_KEYWORD);
+            NblNode *variable = node_new_string(NBL_NODE_VARIABLE, current(), name);
 
-            NblValueType declarationType = VALUE_ANY;
-            if (current()->type == TOKEN_COLON) {
-                parser_eat(parser, TOKEN_COLON);
+            NblValueType declarationType = NBL_VALUE_ANY;
+            if (current()->type == NBL_TOKEN_COLON) {
+                parser_eat(parser, NBL_TOKEN_COLON);
                 declarationType = parser_eat_type(parser);
             }
 
             NblNode *node;
-            if (current()->type == TOKEN_ASSIGN) {
+            if (current()->type == NBL_TOKEN_ASSIGN) {
                 NblToken *token = current();
-                parser_eat(parser, TOKEN_ASSIGN);
+                parser_eat(parser, NBL_TOKEN_ASSIGN);
                 node = node_new_operation(assignType, token, variable, parser_assign(parser));
             } else {
                 node = node_new_operation(assignType, variable->token, variable, node_new_value(variable->token, value_new_null()));
@@ -2122,8 +2093,8 @@ NblNode *parser_declarations(NblParser *parser) {
             node->declarationType = declarationType;
             list_add(nodes, node);
 
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
+            if (current()->type == NBL_TOKEN_COMMA) {
+                parser_eat(parser, NBL_TOKEN_COMMA);
             } else {
                 break;
             }
@@ -2137,7 +2108,7 @@ NblNode *parser_declarations(NblParser *parser) {
             list_free(nodes, NULL);
             return firstNode;
         }
-        NblNode *nodesNode = node_new(NODE_NODES, current());
+        NblNode *nodesNode = node_new(NBL_NODE_NODES, current());
         nodesNode->nodes = nodes;
         return nodesNode;
     }
@@ -2149,8 +2120,8 @@ NblNode *parser_assigns(NblParser *parser) {
     for (;;) {
         NblNode *node = parser_assign(parser);
         list_add(nodes, node);
-        if (current()->type == TOKEN_COMMA) {
-            parser_eat(parser, TOKEN_COMMA);
+        if (current()->type == NBL_TOKEN_COMMA) {
+            parser_eat(parser, NBL_TOKEN_COMMA);
         } else {
             break;
         }
@@ -2164,79 +2135,79 @@ NblNode *parser_assigns(NblParser *parser) {
         list_free(nodes, NULL);
         return firstNode;
     }
-    NblNode *nodesNode = node_new(NODE_NODES, current());
+    NblNode *nodesNode = node_new(NBL_NODE_NODES, current());
     nodesNode->nodes = nodes;
     return nodesNode;
 }
 
 NblNode *parser_assign(NblParser *parser) {
     NblNode *lhs = parser_tenary(parser);  // TODO
-    if (current()->type == TOKEN_ASSIGN) {
+    if (current()->type == NBL_TOKEN_ASSIGN) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN);
-        return node_new_operation(NODE_ASSIGN, token, lhs, parser_assign(parser));
+        parser_eat(parser, NBL_TOKEN_ASSIGN);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, parser_assign(parser));
     }
-    if (current()->type == TOKEN_ASSIGN_ADD) {
+    if (current()->type == NBL_TOKEN_ASSIGN_ADD) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_ADD);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_ADD, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_ADD);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_ADD, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_SUB) {
+    if (current()->type == NBL_TOKEN_ASSIGN_SUB) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_SUB);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SUB, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_SUB);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_SUB, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_MUL) {
+    if (current()->type == NBL_TOKEN_ASSIGN_MUL) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_MUL);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MUL, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_MUL);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_MUL, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_EXP) {
+    if (current()->type == NBL_TOKEN_ASSIGN_EXP) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_EXP);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_EXP, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_EXP);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_EXP, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_MOD) {
+    if (current()->type == NBL_TOKEN_ASSIGN_MOD) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_MOD);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_MOD, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_MOD);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_MOD, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_AND) {
+    if (current()->type == NBL_TOKEN_ASSIGN_AND) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_AND);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_AND, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_AND);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_AND, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_XOR) {
+    if (current()->type == NBL_TOKEN_ASSIGN_XOR) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_XOR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_XOR, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_XOR);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_XOR, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_OR) {
+    if (current()->type == NBL_TOKEN_ASSIGN_OR) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_OR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_OR, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_OR);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_OR, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_SHL) {
+    if (current()->type == NBL_TOKEN_ASSIGN_SHL) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_SHL);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHL, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_SHL);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_SHL, token, node_ref(lhs), parser_assign(parser)));
     }
-    if (current()->type == TOKEN_ASSIGN_SHR) {
+    if (current()->type == NBL_TOKEN_ASSIGN_SHR) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_ASSIGN_SHR);
-        return node_new_operation(NODE_ASSIGN, token, lhs, node_new_operation(NODE_SHR, token, node_ref(lhs), parser_assign(parser)));
+        parser_eat(parser, NBL_TOKEN_ASSIGN_SHR);
+        return node_new_operation(NBL_NODE_ASSIGN, token, lhs, node_new_operation(NBL_NODE_SHR, token, node_ref(lhs), parser_assign(parser)));
     }
     return lhs;
 }
 
 NblNode *parser_tenary(NblParser *parser) {
     NblNode *node = parser_logical(parser);
-    if (current()->type == TOKEN_QUESTION) {
-        NblNode *tenaryNode = node_new(NODE_TENARY, current());
-        parser_eat(parser, TOKEN_QUESTION);
+    if (current()->type == NBL_TOKEN_QUESTION) {
+        NblNode *tenaryNode = node_new(NBL_NODE_TENARY, current());
+        parser_eat(parser, NBL_TOKEN_QUESTION);
         tenaryNode->condition = node;
         tenaryNode->thenBlock = parser_tenary(parser);
-        parser_eat(parser, TOKEN_COLON);
+        parser_eat(parser, NBL_TOKEN_COLON);
         tenaryNode->elseBlock = parser_tenary(parser);
         return tenaryNode;
     }
@@ -2245,16 +2216,16 @@ NblNode *parser_tenary(NblParser *parser) {
 
 NblNode *parser_logical(NblParser *parser) {
     NblNode *node = parser_equality(parser);
-    while (current()->type == TOKEN_LOGICAL_AND || current()->type == TOKEN_LOGICAL_OR) {
-        if (current()->type == TOKEN_LOGICAL_AND) {
+    while (current()->type == NBL_TOKEN_LOGICAL_AND || current()->type == NBL_TOKEN_LOGICAL_OR) {
+        if (current()->type == NBL_TOKEN_LOGICAL_AND) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_LOGICAL_AND);
-            node = node_new_operation(NODE_LOGICAL_AND, token, node, parser_equality(parser));
+            parser_eat(parser, NBL_TOKEN_LOGICAL_AND);
+            node = node_new_operation(NBL_NODE_LOGICAL_AND, token, node, parser_equality(parser));
         }
-        if (current()->type == TOKEN_LOGICAL_OR) {
+        if (current()->type == NBL_TOKEN_LOGICAL_OR) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_LOGICAL_OR);
-            node = node_new_operation(NODE_LOGICAL_OR, token, node, parser_equality(parser));
+            parser_eat(parser, NBL_TOKEN_LOGICAL_OR);
+            node = node_new_operation(NBL_NODE_LOGICAL_OR, token, node, parser_equality(parser));
         }
     }
     return node;
@@ -2262,16 +2233,16 @@ NblNode *parser_logical(NblParser *parser) {
 
 NblNode *parser_equality(NblParser *parser) {
     NblNode *node = parser_relational(parser);
-    while (current()->type == TOKEN_EQ || current()->type == TOKEN_NEQ) {
-        if (current()->type == TOKEN_EQ) {
+    while (current()->type == NBL_TOKEN_EQ || current()->type == NBL_TOKEN_NEQ) {
+        if (current()->type == NBL_TOKEN_EQ) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_EQ);
-            node = node_new_operation(NODE_EQ, token, node, parser_relational(parser));
+            parser_eat(parser, NBL_TOKEN_EQ);
+            node = node_new_operation(NBL_NODE_EQ, token, node, parser_relational(parser));
         }
-        if (current()->type == TOKEN_NEQ) {
+        if (current()->type == NBL_TOKEN_NEQ) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_NEQ);
-            node = node_new_operation(NODE_NEQ, token, node, parser_relational(parser));
+            parser_eat(parser, NBL_TOKEN_NEQ);
+            node = node_new_operation(NBL_NODE_NEQ, token, node, parser_relational(parser));
         }
     }
     return node;
@@ -2279,26 +2250,26 @@ NblNode *parser_equality(NblParser *parser) {
 
 NblNode *parser_relational(NblParser *parser) {
     NblNode *node = parser_instanceof(parser);
-    while (current()->type == TOKEN_LT || current()->type == TOKEN_LTEQ || current()->type == TOKEN_GT || current()->type == TOKEN_GTEQ) {
-        if (current()->type == TOKEN_LT) {
+    while (current()->type == NBL_TOKEN_LT || current()->type == NBL_TOKEN_LTEQ || current()->type == NBL_TOKEN_GT || current()->type == NBL_TOKEN_GTEQ) {
+        if (current()->type == NBL_TOKEN_LT) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_LT);
-            node = node_new_operation(NODE_LT, token, node, parser_instanceof(parser));
+            parser_eat(parser, NBL_TOKEN_LT);
+            node = node_new_operation(NBL_NODE_LT, token, node, parser_instanceof(parser));
         }
-        if (current()->type == TOKEN_LTEQ) {
+        if (current()->type == NBL_TOKEN_LTEQ) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_LTEQ);
-            node = node_new_operation(NODE_LTEQ, token, node, parser_instanceof(parser));
+            parser_eat(parser, NBL_TOKEN_LTEQ);
+            node = node_new_operation(NBL_NODE_LTEQ, token, node, parser_instanceof(parser));
         }
-        if (current()->type == TOKEN_GT) {
+        if (current()->type == NBL_TOKEN_GT) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_GT);
-            node = node_new_operation(NODE_GT, token, node, parser_instanceof(parser));
+            parser_eat(parser, NBL_TOKEN_GT);
+            node = node_new_operation(NBL_NODE_GT, token, node, parser_instanceof(parser));
         }
-        if (current()->type == TOKEN_GTEQ) {
+        if (current()->type == NBL_TOKEN_GTEQ) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_GTEQ);
-            node = node_new_operation(NODE_GTEQ, token, node, parser_instanceof(parser));
+            parser_eat(parser, NBL_TOKEN_GTEQ);
+            node = node_new_operation(NBL_NODE_GTEQ, token, node, parser_instanceof(parser));
         }
     }
     return node;
@@ -2306,31 +2277,31 @@ NblNode *parser_relational(NblParser *parser) {
 
 NblNode *parser_instanceof(NblParser *parser) {
     NblNode *node = parser_bitwise(parser);
-    while (current()->type == TOKEN_INSTANCEOF) {
+    while (current()->type == NBL_TOKEN_INSTANCEOF) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_INSTANCEOF);
-        node = node_new_operation(NODE_INSTANCEOF, token, node, parser_bitwise(parser));
+        parser_eat(parser, NBL_TOKEN_INSTANCEOF);
+        node = node_new_operation(NBL_NODE_INSTANCEOF, token, node, parser_bitwise(parser));
     }
     return node;
 }
 
 NblNode *parser_bitwise(NblParser *parser) {
     NblNode *node = parser_shift(parser);
-    while (current()->type == TOKEN_AND || current()->type == TOKEN_XOR || current()->type == TOKEN_OR) {
-        if (current()->type == TOKEN_AND) {
+    while (current()->type == NBL_TOKEN_AND || current()->type == NBL_TOKEN_XOR || current()->type == NBL_TOKEN_OR) {
+        if (current()->type == NBL_TOKEN_AND) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_AND);
-            node = node_new_operation(NODE_AND, token, node, parser_shift(parser));
+            parser_eat(parser, NBL_TOKEN_AND);
+            node = node_new_operation(NBL_NODE_AND, token, node, parser_shift(parser));
         }
-        if (current()->type == TOKEN_XOR) {
+        if (current()->type == NBL_TOKEN_XOR) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_XOR);
-            node = node_new_operation(NODE_XOR, token, node, parser_shift(parser));
+            parser_eat(parser, NBL_TOKEN_XOR);
+            node = node_new_operation(NBL_NODE_XOR, token, node, parser_shift(parser));
         }
-        if (current()->type == TOKEN_OR) {
+        if (current()->type == NBL_TOKEN_OR) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_OR);
-            node = node_new_operation(NODE_OR, token, node, parser_shift(parser));
+            parser_eat(parser, NBL_TOKEN_OR);
+            node = node_new_operation(NBL_NODE_OR, token, node, parser_shift(parser));
         }
     }
     return node;
@@ -2338,17 +2309,17 @@ NblNode *parser_bitwise(NblParser *parser) {
 
 NblNode *parser_shift(NblParser *parser) {
     NblNode *node = parser_add(parser);
-    while (current()->type == TOKEN_SHL || current()->type == TOKEN_SHR) {
-        if (current()->type == TOKEN_SHL) {
+    while (current()->type == NBL_TOKEN_SHL || current()->type == NBL_TOKEN_SHR) {
+        if (current()->type == NBL_TOKEN_SHL) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_SHL);
-            node = node_new_operation(NODE_SHL, token, node, parser_add(parser));
+            parser_eat(parser, NBL_TOKEN_SHL);
+            node = node_new_operation(NBL_NODE_SHL, token, node, parser_add(parser));
         }
 
-        if (current()->type == TOKEN_SHR) {
+        if (current()->type == NBL_TOKEN_SHR) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_SHR);
-            node = node_new_operation(NODE_SHR, token, node, parser_add(parser));
+            parser_eat(parser, NBL_TOKEN_SHR);
+            node = node_new_operation(NBL_NODE_SHR, token, node, parser_add(parser));
         }
     }
     return node;
@@ -2356,17 +2327,17 @@ NblNode *parser_shift(NblParser *parser) {
 
 NblNode *parser_add(NblParser *parser) {
     NblNode *node = parser_mul(parser);
-    while (current()->type == TOKEN_ADD || current()->type == TOKEN_SUB) {
-        if (current()->type == TOKEN_ADD) {
+    while (current()->type == NBL_TOKEN_ADD || current()->type == NBL_TOKEN_SUB) {
+        if (current()->type == NBL_TOKEN_ADD) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_ADD);
-            node = node_new_operation(NODE_ADD, token, node, parser_mul(parser));
+            parser_eat(parser, NBL_TOKEN_ADD);
+            node = node_new_operation(NBL_NODE_ADD, token, node, parser_mul(parser));
         }
 
-        if (current()->type == TOKEN_SUB) {
+        if (current()->type == NBL_TOKEN_SUB) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_SUB);
-            node = node_new_operation(NODE_SUB, token, node, parser_mul(parser));
+            parser_eat(parser, NBL_TOKEN_SUB);
+            node = node_new_operation(NBL_NODE_SUB, token, node, parser_mul(parser));
         }
     }
     return node;
@@ -2374,174 +2345,174 @@ NblNode *parser_add(NblParser *parser) {
 
 NblNode *parser_mul(NblParser *parser) {
     NblNode *node = parser_unary(parser);
-    while (current()->type == TOKEN_MUL || current()->type == TOKEN_EXP || current()->type == TOKEN_DIV || current()->type == TOKEN_MOD) {
-        if (current()->type == TOKEN_MUL) {
+    while (current()->type == NBL_TOKEN_MUL || current()->type == NBL_TOKEN_EXP || current()->type == NBL_TOKEN_DIV || current()->type == NBL_TOKEN_MOD) {
+        if (current()->type == NBL_TOKEN_MUL) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_MUL);
-            node = node_new_operation(NODE_MUL, token, node, parser_unary(parser));
+            parser_eat(parser, NBL_TOKEN_MUL);
+            node = node_new_operation(NBL_NODE_MUL, token, node, parser_unary(parser));
         }
-        if (current()->type == TOKEN_EXP) {
+        if (current()->type == NBL_TOKEN_EXP) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_EXP);
-            node = node_new_operation(NODE_EXP, token, node, parser_unary(parser));
+            parser_eat(parser, NBL_TOKEN_EXP);
+            node = node_new_operation(NBL_NODE_EXP, token, node, parser_unary(parser));
         }
-        if (current()->type == TOKEN_DIV) {
+        if (current()->type == NBL_TOKEN_DIV) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_DIV);
-            node = node_new_operation(NODE_DIV, token, node, parser_unary(parser));
+            parser_eat(parser, NBL_TOKEN_DIV);
+            node = node_new_operation(NBL_NODE_DIV, token, node, parser_unary(parser));
         }
-        if (current()->type == TOKEN_MOD) {
+        if (current()->type == NBL_TOKEN_MOD) {
             NblToken *token = current();
-            parser_eat(parser, TOKEN_MOD);
-            node = node_new_operation(NODE_MOD, token, node, parser_unary(parser));
+            parser_eat(parser, NBL_TOKEN_MOD);
+            node = node_new_operation(NBL_NODE_MOD, token, node, parser_unary(parser));
         }
     }
     return node;
 }
 
 NblNode *parser_unary(NblParser *parser) {
-    if (current()->type == TOKEN_ADD) {
-        parser_eat(parser, TOKEN_ADD);
+    if (current()->type == NBL_TOKEN_ADD) {
+        parser_eat(parser, NBL_TOKEN_ADD);
         return parser_unary(parser);
     }
-    if (current()->type == TOKEN_SUB) {
+    if (current()->type == NBL_TOKEN_SUB) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_SUB);
-        return node_new_unary(NODE_NEG, token, parser_unary(parser));
+        parser_eat(parser, NBL_TOKEN_SUB);
+        return node_new_unary(NBL_NODE_NEG, token, parser_unary(parser));
     }
-    if (current()->type == TOKEN_INC) {
+    if (current()->type == NBL_TOKEN_INC) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_INC);
-        return node_new_unary(NODE_INC_PRE, token, parser_unary(parser));
+        parser_eat(parser, NBL_TOKEN_INC);
+        return node_new_unary(NBL_NODE_INC_PRE, token, parser_unary(parser));
     }
-    if (current()->type == TOKEN_DEC) {
+    if (current()->type == NBL_TOKEN_DEC) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_DEC);
-        return node_new_unary(NODE_DEC_PRE, token, parser_unary(parser));
+        parser_eat(parser, NBL_TOKEN_DEC);
+        return node_new_unary(NBL_NODE_DEC_PRE, token, parser_unary(parser));
     }
-    if (current()->type == TOKEN_NOT) {
+    if (current()->type == NBL_TOKEN_NOT) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_NOT);
-        return node_new_unary(NODE_NOT, token, parser_unary(parser));
+        parser_eat(parser, NBL_TOKEN_NOT);
+        return node_new_unary(NBL_NODE_NOT, token, parser_unary(parser));
     }
-    if (current()->type == TOKEN_LOGICAL_NOT) {
+    if (current()->type == NBL_TOKEN_LOGICAL_NOT) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_LOGICAL_NOT);
-        return node_new_unary(NODE_LOGICAL_NOT, token, parser_unary(parser));
+        parser_eat(parser, NBL_TOKEN_LOGICAL_NOT);
+        return node_new_unary(NBL_NODE_LOGICAL_NOT, token, parser_unary(parser));
     }
-    if (current()->type == TOKEN_LPAREN && token_type_is_type(next(0)->type) && next(1)->type == TOKEN_RPAREN) {
+    if (current()->type == NBL_TOKEN_LPAREN && token_type_is_type(next(0)->type) && next(1)->type == NBL_TOKEN_RPAREN) {
         NblToken *token = current();
-        parser_eat(parser, TOKEN_LPAREN);
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         NblValueType castType = parser_eat_type(parser);
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
         return node_new_cast(token, castType, parser_unary(parser));
     }
     return parser_primary(parser);
 }
 
 NblNode *parser_primary(NblParser *parser) {
-    if (current()->type == TOKEN_LPAREN) {
-        parser_eat(parser, TOKEN_LPAREN);
+    if (current()->type == NBL_TOKEN_LPAREN) {
+        parser_eat(parser, NBL_TOKEN_LPAREN);
         NblNode *node = parser_tenary(parser);
-        parser_eat(parser, TOKEN_RPAREN);
+        parser_eat(parser, NBL_TOKEN_RPAREN);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_NULL) {
-        NblNode *node = node_new_value(current(), value_new(VALUE_NULL));
-        parser_eat(parser, TOKEN_NULL);
+    if (current()->type == NBL_TOKEN_NULL) {
+        NblNode *node = node_new_value(current(), value_new(NBL_VALUE_NULL));
+        parser_eat(parser, NBL_TOKEN_NULL);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_TRUE) {
+    if (current()->type == NBL_TOKEN_TRUE) {
         NblNode *node = node_new_value(current(), value_new_bool(true));
-        parser_eat(parser, TOKEN_TRUE);
+        parser_eat(parser, NBL_TOKEN_TRUE);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_FALSE) {
+    if (current()->type == NBL_TOKEN_FALSE) {
         NblNode *node = node_new_value(current(), value_new_bool(false));
-        parser_eat(parser, TOKEN_FALSE);
+        parser_eat(parser, NBL_TOKEN_FALSE);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_INT) {
+    if (current()->type == NBL_TOKEN_INT) {
         NblNode *node = node_new_value(current(), value_new_int(current()->integer));
-        parser_eat(parser, TOKEN_INT);
+        parser_eat(parser, NBL_TOKEN_INT);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_FLOAT) {
+    if (current()->type == NBL_TOKEN_FLOAT) {
         NblNode *node = node_new_value(current(), value_new_float(current()->floating));
-        parser_eat(parser, TOKEN_FLOAT);
+        parser_eat(parser, NBL_TOKEN_FLOAT);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_STRING) {
+    if (current()->type == NBL_TOKEN_STRING) {
         NblNode *node = node_new_value(current(), value_new_string(current()->string));
-        parser_eat(parser, TOKEN_STRING);
+        parser_eat(parser, NBL_TOKEN_STRING);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_KEYWORD) {
+    if (current()->type == NBL_TOKEN_KEYWORD) {
         NblToken *nameToken = current();
         char *name = current()->string;
-        parser_eat(parser, TOKEN_KEYWORD);
-        return parser_primary_suffix(parser, node_new_string(NODE_VARIABLE, nameToken, name));
+        parser_eat(parser, NBL_TOKEN_KEYWORD);
+        return parser_primary_suffix(parser, node_new_string(NBL_NODE_VARIABLE, nameToken, name));
     }
-    if (current()->type == TOKEN_LBRACKET) {
-        NblNode *node = node_new(NODE_ARRAY, current());
+    if (current()->type == NBL_TOKEN_LBRACKET) {
+        NblNode *node = node_new(NBL_NODE_ARRAY, current());
         node->array = list_new();
-        parser_eat(parser, TOKEN_LBRACKET);
-        while (current()->type != TOKEN_RBRACKET) {
+        parser_eat(parser, NBL_TOKEN_LBRACKET);
+        while (current()->type != NBL_TOKEN_RBRACKET) {
             list_add(node->array, parser_assign(parser));
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
+            if (current()->type == NBL_TOKEN_COMMA) {
+                parser_eat(parser, NBL_TOKEN_COMMA);
             } else {
                 break;
             }
         }
-        parser_eat(parser, TOKEN_RBRACKET);
+        parser_eat(parser, NBL_TOKEN_RBRACKET);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_LCURLY) {
-        NblNode *node = node_new(NODE_OBJECT, current());
+    if (current()->type == NBL_TOKEN_LCURLY) {
+        NblNode *node = node_new(NBL_NODE_OBJECT, current());
         node->object = map_new();
-        parser_eat(parser, TOKEN_LCURLY);
-        while (current()->type != TOKEN_RCURLY) {
-            if (current()->type == TOKEN_FUNCTION) {
+        parser_eat(parser, NBL_TOKEN_LCURLY);
+        while (current()->type != NBL_TOKEN_RCURLY) {
+            if (current()->type == NBL_TOKEN_FUNCTION) {
                 NblToken *functionToken = current();
-                parser_eat(parser, TOKEN_FUNCTION);
+                parser_eat(parser, NBL_TOKEN_FUNCTION);
                 char *keyName = current()->string;
-                parser_eat(parser, TOKEN_KEYWORD);
+                parser_eat(parser, NBL_TOKEN_KEYWORD);
                 map_set(node->object, keyName, parser_function(parser, functionToken));
                 continue;
             }
 
             NblToken *keyToken = current();
             char *keyName = current()->string;
-            parser_eat(parser, TOKEN_KEYWORD);
-            if (current()->type == TOKEN_ASSIGN) {
-                parser_eat(parser, TOKEN_ASSIGN);
+            parser_eat(parser, NBL_TOKEN_KEYWORD);
+            if (current()->type == NBL_TOKEN_ASSIGN) {
+                parser_eat(parser, NBL_TOKEN_ASSIGN);
                 map_set(node->object, keyName, parser_tenary(parser));
             } else {
-                map_set(node->object, keyName, node_new_string(NODE_VARIABLE, keyToken, keyName));
+                map_set(node->object, keyName, node_new_string(NBL_NODE_VARIABLE, keyToken, keyName));
             }
-            if (current()->type == TOKEN_COMMA) {
-                parser_eat(parser, TOKEN_COMMA);
+            if (current()->type == NBL_TOKEN_COMMA) {
+                parser_eat(parser, NBL_TOKEN_COMMA);
             } else {
                 break;
             }
         }
-        parser_eat(parser, TOKEN_RCURLY);
+        parser_eat(parser, NBL_TOKEN_RCURLY);
         return parser_primary_suffix(parser, node);
     }
-    if (current()->type == TOKEN_FUNCTION) {
+    if (current()->type == NBL_TOKEN_FUNCTION) {
         NblToken *functionToken = current();
-        parser_eat(parser, TOKEN_FUNCTION);
+        parser_eat(parser, NBL_TOKEN_FUNCTION);
         return parser_primary_suffix(parser, parser_function(parser, functionToken));
     }
-    if (current()->type == TOKEN_ABSTRACT || current()->type == TOKEN_CLASS) {
+    if (current()->type == NBL_TOKEN_ABSTRACT || current()->type == NBL_TOKEN_CLASS) {
         NblToken *classToken = current();
         bool abstract = false;
-        if (current()->type == TOKEN_ABSTRACT) {
+        if (current()->type == NBL_TOKEN_ABSTRACT) {
             abstract = true;
-            parser_eat(parser, TOKEN_ABSTRACT);
+            parser_eat(parser, NBL_TOKEN_ABSTRACT);
         }
-        parser_eat(parser, TOKEN_CLASS);
+        parser_eat(parser, NBL_TOKEN_CLASS);
         return parser_class(parser, classToken, abstract);
     }
 
@@ -2551,44 +2522,44 @@ NblNode *parser_primary(NblParser *parser) {
 }
 
 NblNode *parser_primary_suffix(NblParser *parser, NblNode *node) {
-    while (current()->type == TOKEN_LBRACKET || current()->type == TOKEN_POINT || current()->type == TOKEN_LPAREN || current()->type == TOKEN_INC ||
-           current()->type == TOKEN_DEC) {
+    while (current()->type == NBL_TOKEN_LBRACKET || current()->type == NBL_TOKEN_POINT || current()->type == NBL_TOKEN_LPAREN ||
+           current()->type == NBL_TOKEN_INC || current()->type == NBL_TOKEN_DEC) {
         NblToken *token = current();
-        if (current()->type == TOKEN_LBRACKET) {
-            parser_eat(parser, TOKEN_LBRACKET);
+        if (current()->type == NBL_TOKEN_LBRACKET) {
+            parser_eat(parser, NBL_TOKEN_LBRACKET);
             NblNode *indexOrKey = parser_assign(parser);
-            parser_eat(parser, TOKEN_RBRACKET);
-            node = node_new_operation(NODE_GET, token, node, indexOrKey);
+            parser_eat(parser, NBL_TOKEN_RBRACKET);
+            node = node_new_operation(NBL_NODE_GET, token, node, indexOrKey);
         }
-        if (current()->type == TOKEN_POINT) {
-            parser_eat(parser, TOKEN_POINT);
+        if (current()->type == NBL_TOKEN_POINT) {
+            parser_eat(parser, NBL_TOKEN_POINT);
             NblToken *keyToken = current();
             char *key = current()->string;
-            parser_eat(parser, TOKEN_KEYWORD);
-            node = node_new_operation(NODE_GET, token, node, node_new_value(keyToken, value_new_string(key)));
+            parser_eat(parser, NBL_TOKEN_KEYWORD);
+            node = node_new_operation(NBL_NODE_GET, token, node, node_new_value(keyToken, value_new_string(key)));
         }
-        if (current()->type == TOKEN_LPAREN) {
-            NblNode *callNode = node_new_multiple(NODE_CALL, current());
+        if (current()->type == NBL_TOKEN_LPAREN) {
+            NblNode *callNode = node_new_multiple(NBL_NODE_CALL, current());
             callNode->function = node;
-            parser_eat(parser, TOKEN_LPAREN);
-            while (current()->type != TOKEN_RPAREN) {
+            parser_eat(parser, NBL_TOKEN_LPAREN);
+            while (current()->type != NBL_TOKEN_RPAREN) {
                 list_add(callNode->nodes, parser_assign(parser));
-                if (current()->type == TOKEN_COMMA) {
-                    parser_eat(parser, TOKEN_COMMA);
+                if (current()->type == NBL_TOKEN_COMMA) {
+                    parser_eat(parser, NBL_TOKEN_COMMA);
                 } else {
                     break;
                 }
             }
-            parser_eat(parser, TOKEN_RPAREN);
+            parser_eat(parser, NBL_TOKEN_RPAREN);
             node = callNode;
         }
-        if (current()->type == TOKEN_INC) {
-            parser_eat(parser, TOKEN_INC);
-            node = node_new_unary(NODE_INC_POST, token, node);
+        if (current()->type == NBL_TOKEN_INC) {
+            parser_eat(parser, NBL_TOKEN_INC);
+            node = node_new_unary(NBL_NODE_INC_POST, token, node);
         }
-        if (current()->type == TOKEN_DEC) {
-            parser_eat(parser, TOKEN_DEC);
-            node = node_new_unary(NODE_DEC_POST, token, node);
+        if (current()->type == NBL_TOKEN_DEC) {
+            parser_eat(parser, NBL_TOKEN_DEC);
+            node = node_new_unary(NBL_NODE_DEC_POST, token, node);
         }
     }
     return node;
@@ -2596,64 +2567,64 @@ NblNode *parser_primary_suffix(NblParser *parser, NblNode *node) {
 
 NblNode *parser_function(NblParser *parser, NblToken *token) {
     NblList *arguments = list_new();
-    parser_eat(parser, TOKEN_LPAREN);
-    while (current()->type != TOKEN_RPAREN) {
+    parser_eat(parser, NBL_TOKEN_LPAREN);
+    while (current()->type != NBL_TOKEN_RPAREN) {
         list_add(arguments, parser_argument(parser));
-        if (current()->type == TOKEN_COMMA) {
-            parser_eat(parser, TOKEN_COMMA);
+        if (current()->type == NBL_TOKEN_COMMA) {
+            parser_eat(parser, NBL_TOKEN_COMMA);
         } else {
             break;
         }
     }
-    parser_eat(parser, TOKEN_RPAREN);
+    parser_eat(parser, NBL_TOKEN_RPAREN);
 
-    NblValueType returnType = VALUE_ANY;
-    if (current()->type == TOKEN_COLON) {
-        parser_eat(parser, TOKEN_COLON);
+    NblValueType returnType = NBL_VALUE_ANY;
+    if (current()->type == NBL_TOKEN_COLON) {
+        parser_eat(parser, NBL_TOKEN_COLON);
         returnType = parser_eat_type(parser);
     }
 
-    if (current()->type == TOKEN_FAT_ARROW) {
+    if (current()->type == NBL_TOKEN_FAT_ARROW) {
         NblToken *fatArrowToken = current();
-        parser_eat(parser, TOKEN_FAT_ARROW);
-        return node_new_value(token, value_new_function(arguments, returnType, node_new_unary(NODE_RETURN, fatArrowToken, parser_tenary(parser))));
+        parser_eat(parser, NBL_TOKEN_FAT_ARROW);
+        return node_new_value(token, value_new_function(arguments, returnType, node_new_unary(NBL_NODE_RETURN, fatArrowToken, parser_tenary(parser))));
     }
     return node_new_value(token, value_new_function(arguments, returnType, parser_block(parser)));
 }
 
 NblNode *parser_class(NblParser *parser, NblToken *token, bool abstract) {
     NblNode *parentClass = NULL;
-    if (current()->type == TOKEN_EXTENDS) {
-        parser_eat(parser, TOKEN_EXTENDS);
+    if (current()->type == NBL_TOKEN_EXTENDS) {
+        parser_eat(parser, NBL_TOKEN_EXTENDS);
         parentClass = parser_tenary(parser);
     }
 
     NblMap *object = map_new();
-    parser_eat(parser, TOKEN_LCURLY);
-    while (current()->type != TOKEN_RCURLY) {
-        if (current()->type == TOKEN_FUNCTION) {
+    parser_eat(parser, NBL_TOKEN_LCURLY);
+    while (current()->type != NBL_TOKEN_RCURLY) {
+        if (current()->type == NBL_TOKEN_FUNCTION) {
             NblToken *functionToken = current();
-            parser_eat(parser, TOKEN_FUNCTION);
+            parser_eat(parser, NBL_TOKEN_FUNCTION);
             char *keyName = current()->string;
-            parser_eat(parser, TOKEN_KEYWORD);
+            parser_eat(parser, NBL_TOKEN_KEYWORD);
             map_set(object, keyName, parser_function(parser, functionToken));
             continue;
         }
 
         char *keyName = current()->string;
-        parser_eat(parser, TOKEN_KEYWORD);
-        parser_eat(parser, TOKEN_ASSIGN);
+        parser_eat(parser, NBL_TOKEN_KEYWORD);
+        parser_eat(parser, NBL_TOKEN_ASSIGN);
         map_set(object, keyName, parser_tenary(parser));
 
-        if (current()->type == TOKEN_COMMA) {
-            parser_eat(parser, TOKEN_COMMA);
+        if (current()->type == NBL_TOKEN_COMMA) {
+            parser_eat(parser, NBL_TOKEN_COMMA);
         } else {
             break;
         }
     }
-    parser_eat(parser, TOKEN_RCURLY);
+    parser_eat(parser, NBL_TOKEN_RCURLY);
 
-    NblNode *classNode = node_new(NODE_CLASS, token);
+    NblNode *classNode = node_new(NBL_NODE_CLASS, token);
     classNode->object = object;
     classNode->parentClass = parentClass;
     classNode->abstract = abstract;
@@ -2662,15 +2633,15 @@ NblNode *parser_class(NblParser *parser, NblToken *token, bool abstract) {
 
 NblArgument *parser_argument(NblParser *parser) {
     char *name = current()->string;
-    parser_eat(parser, TOKEN_KEYWORD);
-    NblValueType type = VALUE_ANY;
-    if (current()->type == TOKEN_COLON) {
-        parser_eat(parser, TOKEN_COLON);
+    parser_eat(parser, NBL_TOKEN_KEYWORD);
+    NblValueType type = NBL_VALUE_ANY;
+    if (current()->type == NBL_TOKEN_COLON) {
+        parser_eat(parser, NBL_TOKEN_COLON);
         type = parser_eat_type(parser);
     }
     NblNode *defaultNode = NULL;
-    if (current()->type == TOKEN_ASSIGN) {
-        parser_eat(parser, TOKEN_ASSIGN);
+    if (current()->type == NBL_TOKEN_ASSIGN) {
+        parser_eat(parser, NBL_TOKEN_ASSIGN);
         defaultNode = parser_tenary(parser);
     }
     return argument_new(name, type, defaultNode);
@@ -2683,10 +2654,10 @@ static NblValue *env_math_abs(NblInterpreterContext *context, NblValue *this, Nb
     (void)context;
     (void)this;
     NblValue *x = list_get(values, 0);
-    if (x->type == VALUE_INT) {
+    if (x->type == NBL_VALUE_INT) {
         return value_new_int(x->integer < 0 ? -x->integer : x->integer);
     }
-    if (x->type == VALUE_FLOAT) {
+    if (x->type == NBL_VALUE_FLOAT) {
         return value_new_float(x->floating < 0 ? -x->floating : x->floating);
     }
     return value_new_null();
@@ -2771,30 +2742,30 @@ static NblValue *env_math_min(NblInterpreterContext *context, NblValue *this, Nb
     NblValue *first = list_get(values, 0);
     int64_t minInteger;
     double minFloating;
-    if (first->type == VALUE_INT) {
+    if (first->type == NBL_VALUE_INT) {
         minInteger = first->integer;
         minFloating = first->integer;
     }
-    if (first->type == VALUE_FLOAT) {
+    if (first->type == NBL_VALUE_FLOAT) {
         minInteger = first->floating;
         minFloating = first->floating;
     }
 
     bool onlyInteger = true;
     list_foreach(values, NblValue * value, {
-        if (value->type != VALUE_INT) onlyInteger = false;
+        if (value->type != NBL_VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
-            if (value->type == VALUE_INT) {
+            if (value->type == NBL_VALUE_INT) {
                 minInteger = MIN(minInteger, value->integer);
             }
-            if (value->type == VALUE_FLOAT) {
+            if (value->type == NBL_VALUE_FLOAT) {
                 minInteger = MIN(minInteger, value->floating);
             }
         }
-        if (value->type == VALUE_INT) {
+        if (value->type == NBL_VALUE_INT) {
             minFloating = MIN(minFloating, value->integer);
         }
-        if (value->type == VALUE_FLOAT) {
+        if (value->type == NBL_VALUE_FLOAT) {
             minFloating = MIN(minFloating, value->floating);
         }
     });
@@ -2806,30 +2777,30 @@ static NblValue *env_math_max(NblInterpreterContext *context, NblValue *this, Nb
     NblValue *first = list_get(values, 0);
     int64_t maxInteger;
     double maxFloating;
-    if (first->type == VALUE_INT) {
+    if (first->type == NBL_VALUE_INT) {
         maxInteger = first->integer;
         maxFloating = first->integer;
     }
-    if (first->type == VALUE_FLOAT) {
+    if (first->type == NBL_VALUE_FLOAT) {
         maxInteger = first->floating;
         maxFloating = first->floating;
     }
 
     bool onlyInteger = true;
     list_foreach(values, NblValue * value, {
-        if (value->type != VALUE_INT) onlyInteger = false;
+        if (value->type != NBL_VALUE_INT) onlyInteger = false;
         if (onlyInteger) {
-            if (value->type == VALUE_INT) {
+            if (value->type == NBL_VALUE_INT) {
                 maxInteger = MAX(maxInteger, value->integer);
             }
-            if (value->type == VALUE_FLOAT) {
+            if (value->type == NBL_VALUE_FLOAT) {
                 maxInteger = MAX(maxInteger, value->floating);
             }
         }
-        if (value->type == VALUE_INT) {
+        if (value->type == NBL_VALUE_INT) {
             maxFloating = MAX(maxFloating, value->integer);
         }
-        if (value->type == VALUE_FLOAT) {
+        if (value->type == NBL_VALUE_FLOAT) {
             maxFloating = MAX(maxFloating, value->floating);
         }
     });
@@ -2886,7 +2857,7 @@ static NblValue *env_array_constructor(NblInterpreterContext *context, NblValue 
     (void)context;
     (void)this;
     NblValue *first = list_get(values, 0);
-    if (first != NULL && first->type == VALUE_ARRAY) {
+    if (first != NULL && first->type == NBL_VALUE_ARRAY) {
         return value_ref(first);
     }
     return value_new_array(list_new());
@@ -2935,7 +2906,7 @@ static NblValue *env_array_filter(NblInterpreterContext *context, NblValue *this
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
         NblValue *returnValue = interpreter_call(context, function, NULL, arguments);
-        if (returnValue->type != VALUE_BOOL) {
+        if (returnValue->type != NBL_VALUE_BOOL) {
             return interpreter_throw(context,
                                      value_new_string_format("Array filter condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
@@ -2955,7 +2926,7 @@ static NblValue *env_array_find(NblInterpreterContext *context, NblValue *this, 
         list_add(arguments, value_new_int(index));
         list_add(arguments, value_ref(this));
         NblValue *returnValue = interpreter_call(context, function, NULL, arguments);
-        if (returnValue->type != VALUE_BOOL) {
+        if (returnValue->type != NBL_VALUE_BOOL) {
             return interpreter_throw(context,
                                      value_new_string_format("Array find condition type is not a bool it is: %s", value_type_to_string(returnValue->type)));
         }
@@ -2975,7 +2946,7 @@ static NblValue *env_object_constructor(NblInterpreterContext *context, NblValue
     (void)context;
     (void)this;
     NblValue *first = list_get(values, 0);
-    if (first != NULL && first->type == VALUE_OBJECT) {
+    if (first != NULL && first->type == NBL_VALUE_OBJECT) {
         return value_ref(first);
     }
     return value_new_object(map_new());
@@ -3037,7 +3008,7 @@ NblMap *std_env(void) {
 
     // Math
     NblMap *math = map_new();
-    map_set(env, "Math", variable_new(VALUE_OBJECT, false, value_new_object(math)));
+    map_set(env, "Math", variable_new(NBL_VALUE_OBJECT, false, value_new_object(math)));
     map_set(math, "E", value_new_float(M_E));
     map_set(math, "LN2", value_new_float(M_LN2));
     map_set(math, "LN10", value_new_float(M_LN10));
@@ -3048,85 +3019,85 @@ NblMap *std_env(void) {
     map_set(math, "SQRT2", value_new_float(M_SQRT2));
 
     NblList *math_float_args = list_new();
-    list_add(math_float_args, argument_new("x", VALUE_FLOAT, NULL));
+    list_add(math_float_args, argument_new("x", NBL_VALUE_FLOAT, NULL));
     NblList *math_float_float_args = list_new();
-    list_add(math_float_float_args, argument_new("x", VALUE_FLOAT, NULL));
-    list_add(math_float_float_args, argument_new("y", VALUE_FLOAT, NULL));
+    list_add(math_float_float_args, argument_new("x", NBL_VALUE_FLOAT, NULL));
+    list_add(math_float_float_args, argument_new("y", NBL_VALUE_FLOAT, NULL));
     NblList *math_float_float_reverse_args = list_new();
-    list_add(math_float_float_reverse_args, argument_new("y", VALUE_FLOAT, NULL));
-    list_add(math_float_float_reverse_args, argument_new("x", VALUE_FLOAT, NULL));
-    map_set(math, "abs", value_new_native_function(math_float_args, VALUE_ANY, env_math_abs));
-    map_set(math, "sin", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_sin));
-    map_set(math, "cos", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_cos));
-    map_set(math, "tan", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_tan));
-    map_set(math, "asin", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_asin));
-    map_set(math, "acos", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_acos));
-    map_set(math, "atan", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_atan));
-    map_set(math, "atan2", value_new_native_function(math_float_float_reverse_args, VALUE_FLOAT, env_math_atan2));
-    map_set(math, "pow", value_new_native_function(math_float_float_args, VALUE_FLOAT, env_math_pow));
-    map_set(math, "sqrt", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_sqrt));
-    map_set(math, "floor", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_floor));
-    map_set(math, "ceil", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_ceil));
-    map_set(math, "round", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_round));
-    map_set(math, "min", value_new_native_function(empty_args, VALUE_ANY, env_math_min));
-    map_set(math, "max", value_new_native_function(list_ref(empty_args), VALUE_ANY, env_math_max));
-    map_set(math, "exp", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_exp));
-    map_set(math, "log", value_new_native_function(list_ref(math_float_args), VALUE_FLOAT, env_math_log));
+    list_add(math_float_float_reverse_args, argument_new("y", NBL_VALUE_FLOAT, NULL));
+    list_add(math_float_float_reverse_args, argument_new("x", NBL_VALUE_FLOAT, NULL));
+    map_set(math, "abs", value_new_native_function(math_float_args, NBL_VALUE_ANY, env_math_abs));
+    map_set(math, "sin", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_sin));
+    map_set(math, "cos", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_cos));
+    map_set(math, "tan", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_tan));
+    map_set(math, "asin", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_asin));
+    map_set(math, "acos", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_acos));
+    map_set(math, "atan", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_atan));
+    map_set(math, "atan2", value_new_native_function(math_float_float_reverse_args, NBL_VALUE_FLOAT, env_math_atan2));
+    map_set(math, "pow", value_new_native_function(math_float_float_args, NBL_VALUE_FLOAT, env_math_pow));
+    map_set(math, "sqrt", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_sqrt));
+    map_set(math, "floor", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_floor));
+    map_set(math, "ceil", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_ceil));
+    map_set(math, "round", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_round));
+    map_set(math, "min", value_new_native_function(empty_args, NBL_VALUE_ANY, env_math_min));
+    map_set(math, "max", value_new_native_function(list_ref(empty_args), NBL_VALUE_ANY, env_math_max));
+    map_set(math, "exp", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_exp));
+    map_set(math, "log", value_new_native_function(list_ref(math_float_args), NBL_VALUE_FLOAT, env_math_log));
     random_seed = time_ms();
-    map_set(math, "random", value_new_native_function(list_ref(empty_args), VALUE_FLOAT, env_math_random));
+    map_set(math, "random", value_new_native_function(list_ref(empty_args), NBL_VALUE_FLOAT, env_math_random));
 
     // Exception
     NblMap *exception = map_new();
     NblList *exception_constructor_args = list_new();
-    list_add(exception_constructor_args, argument_new("error", VALUE_STRING, NULL));
-    map_set(env, "Exception", variable_new(VALUE_CLASS, false, value_new_class(exception, NULL, false)));
-    map_set(exception, "constructor", value_new_native_function(exception_constructor_args, VALUE_ANY, env_exception_constructor));
+    list_add(exception_constructor_args, argument_new("error", NBL_VALUE_STRING, NULL));
+    map_set(env, "Exception", variable_new(NBL_VALUE_CLASS, false, value_new_class(exception, NULL, false)));
+    map_set(exception, "constructor", value_new_native_function(exception_constructor_args, NBL_VALUE_ANY, env_exception_constructor));
 
     // String
     NblMap *string = map_new();
-    map_set(env, "String", variable_new(VALUE_CLASS, false, value_new_class(string, NULL, false)));
-    map_set(string, "constructor", value_new_native_function(list_ref(empty_args), VALUE_STRING, env_string_constructor));
-    map_set(string, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_string_length));
+    map_set(env, "String", variable_new(NBL_VALUE_CLASS, false, value_new_class(string, NULL, false)));
+    map_set(string, "constructor", value_new_native_function(list_ref(empty_args), NBL_VALUE_STRING, env_string_constructor));
+    map_set(string, "length", value_new_native_function(list_ref(empty_args), NBL_VALUE_INT, env_string_length));
 
     // Array
     NblMap *array = map_new();
     NblList *array_function_args = list_new();
-    list_add(array_function_args, argument_new("function", VALUE_FUNCTION, NULL));
-    map_set(env, "Array", variable_new(VALUE_CLASS, false, value_new_class(array, NULL, false)));
-    map_set(array, "constructor", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_array_constructor));
-    map_set(array, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_length));
-    map_set(array, "push", value_new_native_function(list_ref(empty_args), VALUE_INT, env_array_push));
-    map_set(array, "foreach", value_new_native_function(array_function_args, VALUE_NULL, env_array_foreach));
-    map_set(array, "map", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_map));
-    map_set(array, "filter", value_new_native_function(list_ref(array_function_args), VALUE_ARRAY, env_array_filter));
-    map_set(array, "find", value_new_native_function(list_ref(array_function_args), VALUE_ANY, env_array_find));
+    list_add(array_function_args, argument_new("function", NBL_VALUE_FUNCTION, NULL));
+    map_set(env, "Array", variable_new(NBL_VALUE_CLASS, false, value_new_class(array, NULL, false)));
+    map_set(array, "constructor", value_new_native_function(list_ref(empty_args), NBL_VALUE_ARRAY, env_array_constructor));
+    map_set(array, "length", value_new_native_function(list_ref(empty_args), NBL_VALUE_INT, env_array_length));
+    map_set(array, "push", value_new_native_function(list_ref(empty_args), NBL_VALUE_INT, env_array_push));
+    map_set(array, "foreach", value_new_native_function(array_function_args, NBL_VALUE_NULL, env_array_foreach));
+    map_set(array, "map", value_new_native_function(list_ref(array_function_args), NBL_VALUE_ARRAY, env_array_map));
+    map_set(array, "filter", value_new_native_function(list_ref(array_function_args), NBL_VALUE_ARRAY, env_array_filter));
+    map_set(array, "find", value_new_native_function(list_ref(array_function_args), NBL_VALUE_ANY, env_array_find));
 
     // Object
     NblMap *object = map_new();
-    map_set(env, "Object", variable_new(VALUE_CLASS, false, value_new_class(object, NULL, false)));
-    map_set(object, "constructor", value_new_native_function(list_ref(empty_args), VALUE_OBJECT, env_object_constructor));
-    map_set(object, "length", value_new_native_function(list_ref(empty_args), VALUE_INT, env_object_length));
-    map_set(object, "keys", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_keys));
-    map_set(object, "values", value_new_native_function(list_ref(empty_args), VALUE_ARRAY, env_object_values));
+    map_set(env, "Object", variable_new(NBL_VALUE_CLASS, false, value_new_class(object, NULL, false)));
+    map_set(object, "constructor", value_new_native_function(list_ref(empty_args), NBL_VALUE_OBJECT, env_object_constructor));
+    map_set(object, "length", value_new_native_function(list_ref(empty_args), NBL_VALUE_INT, env_object_length));
+    map_set(object, "keys", value_new_native_function(list_ref(empty_args), NBL_VALUE_ARRAY, env_object_keys));
+    map_set(object, "values", value_new_native_function(list_ref(empty_args), NBL_VALUE_ARRAY, env_object_values));
 
     // Date
     NblMap *date = map_new();
-    map_set(env, "Date", variable_new(VALUE_CLASS, false, value_new_class(date, NULL, false)));
-    map_set(date, "now", value_new_native_function(list_ref(empty_args), VALUE_INT, env_date_now));
+    map_set(env, "Date", variable_new(NBL_VALUE_CLASS, false, value_new_class(date, NULL, false)));
+    map_set(date, "now", value_new_native_function(list_ref(empty_args), NBL_VALUE_INT, env_date_now));
 
     // Root
     NblList *type_args = list_new();
-    list_add(type_args, argument_new("value", VALUE_ANY, NULL));
-    map_set(env, "type", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(type_args, VALUE_ANY, env_type)));
+    list_add(type_args, argument_new("value", NBL_VALUE_ANY, NULL));
+    map_set(env, "type", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(type_args, NBL_VALUE_ANY, env_type)));
 
     NblList *assertion_args = list_new();
-    list_add(assertion_args, argument_new("assertion", VALUE_ANY, NULL));
-    map_set(env, "assert", variable_new(VALUE_NATIVE_FUNCTION, false, value_new_native_function(assertion_args, VALUE_NULL, env_assert)));
+    list_add(assertion_args, argument_new("assertion", NBL_VALUE_ANY, NULL));
+    map_set(env, "assert", variable_new(NBL_VALUE_NATIVE_FUNCTION, false, value_new_native_function(assertion_args, NBL_VALUE_NULL, env_assert)));
 
     return env;
 }
 
-// NblInterpreter
+// Interpreter
 NblVariable *variable_new(NblValueType type, bool mutable, NblValue *value) {
     NblVariable *variable = malloc(sizeof(NblVariable));
     variable->type = type;
@@ -3160,7 +3131,7 @@ NblValue *interpreter(NblMap *env, NblNode *node) {
         NblValue *text = value_class_get(scope.exception->exceptionValue, "text");
         NblValue *line = value_class_get(scope.exception->exceptionValue, "line");
         NblValue *column = value_class_get(scope.exception->exceptionValue, "column");
-        NblToken *token = token_new(TOKEN_THROW, source_new(path->string, text->string), line->integer, column->integer);
+        NblToken *token = token_new(NBL_TOKEN_THROW, source_new(path->string, text->string), line->integer, column->integer);
         NblValue *error = value_class_get(scope.exception->exceptionValue, "error");
         print_error(token, "Uncatched exception: %s", error->string);
         token_free(token);
@@ -3212,7 +3183,7 @@ NblValue *type_error_exception(NblValueType expected, NblValueType got) {
     }
 
 NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, NblValue *this, NblList *arguments) {
-    if (callValue->type == VALUE_FUNCTION) {
+    if (callValue->type == NBL_VALUE_FUNCTION) {
         NblScope functionScope = {.exception = context->scope->exception,
                                   .function = &(NblFunctionScope){.returnValue = NULL},
                                   .loop = &(NblLoopScope){.inLoop = false, .isContinuing = false, .isBreaking = false},
@@ -3220,11 +3191,11 @@ NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, 
         if (this != NULL) {
             if (this->instanceClass->parentClass != NULL) {
                 map_set(functionScope.block->env, "super",
-                        variable_new(VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
+                        variable_new(NBL_VALUE_INSTANCE, false, value_new_instance(map_ref(this->object), value_ref(this->instanceClass->parentClass))));
             }
-            map_set(functionScope.block->env, "this", variable_new(VALUE_INSTANCE, false, value_ref(this)));
+            map_set(functionScope.block->env, "this", variable_new(NBL_VALUE_INSTANCE, false, value_ref(this)));
         }
-        map_set(functionScope.block->env, "arguments", variable_new(VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
+        map_set(functionScope.block->env, "arguments", variable_new(NBL_VALUE_ARRAY, false, value_new_array(list_ref(arguments))));
         for (size_t i = 0; i < callValue->arguments->size; i++) {
             NblArgument *argument = list_get(callValue->arguments, i);
             map_set(functionScope.block->env, argument->name, variable_new(argument->type, true, value_ref(list_get(arguments, i))));
@@ -3232,7 +3203,7 @@ NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, 
         NblInterpreter interpreter = {.env = context->env};
         interpreter_node(&interpreter, &functionScope, callValue->functionNode);
         map_free(functionScope.block->env, (NblMapFreeFunc *)variable_free);
-        if (callValue->returnType != VALUE_ANY && context->scope->exception->exceptionValue == NULL &&
+        if (callValue->returnType != NBL_VALUE_ANY && context->scope->exception->exceptionValue == NULL &&
             functionScope.function->returnValue->type != callValue->returnType) {
             NblValueType returnValueType = functionScope.function->returnValue->type;
             value_free(functionScope.function->returnValue);
@@ -3245,20 +3216,20 @@ NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, 
         return value_new_null();
     }
 
-    if (callValue->type == VALUE_NATIVE_FUNCTION) {
+    if (callValue->type == NBL_VALUE_NATIVE_FUNCTION) {
         NblValue *returnValue = callValue->nativeFunc(context, this, arguments);
-        if (callValue->returnType != VALUE_ANY && context->scope->exception->exceptionValue == NULL && returnValue->type != callValue->returnType) {
+        if (callValue->returnType != NBL_VALUE_ANY && context->scope->exception->exceptionValue == NULL && returnValue->type != callValue->returnType) {
             return interpreter_throw(context, type_error_exception(callValue->returnType, returnValue->type));
         }
         return returnValue;
     }
 
-    if (callValue->type == VALUE_CLASS) {
+    if (callValue->type == NBL_VALUE_CLASS) {
         NblValue *instance = value_new_instance(map_new(), value_ref(callValue));
         NblValue *constructorFunction = value_class_get(callValue, "constructor");
         if (constructorFunction != NULL) {
             NblValue *newReturnValue = interpreter_call(context, constructorFunction, instance, arguments);
-            if (newReturnValue->type == VALUE_NULL) {
+            if (newReturnValue->type == NBL_VALUE_NULL) {
                 value_free(newReturnValue);
             } else {
                 value_free(instance);
@@ -3271,30 +3242,30 @@ NblValue *interpreter_call(NblInterpreterContext *context, NblValue *callValue, 
 }
 
 NblValue *interpreter_throw(NblInterpreterContext *context, NblValue *exception) {
-    if (exception->type == VALUE_STRING) {
+    if (exception->type == NBL_VALUE_STRING) {
         NblValue *exceptionClass = ((NblVariable *)map_get(context->env, "Exception"))->value;
         NblList *arguments = list_new();
         list_add(arguments, exception);
         exception = interpreter_call(context, exceptionClass, NULL, arguments);
         list_free(arguments, (NblListFreeFunc *)value_free);
     }
-    if (exception->type != VALUE_INSTANCE) {
-        return interpreter_throw(context, type_error_exception(VALUE_INSTANCE, exception->type));
+    if (exception->type != NBL_VALUE_INSTANCE) {
+        return interpreter_throw(context, type_error_exception(NBL_VALUE_INSTANCE, exception->type));
     }
     context->scope->exception->exceptionValue = exception;
     return value_new_null();
 }
 
 NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode *node) {
-    if (node->type == NODE_PROGRAM) {
+    if (node->type == NBL_NODE_PROGRAM) {
         list_foreach(node->nodes, NblNode * child, { interpreter_statement(interpreter, scope, child, {}); });
         return NULL;
     }
-    if (node->type == NODE_NODES) {
+    if (node->type == NBL_NODE_NODES) {
         list_foreach(node->nodes, NblNode * child, { interpreter_statement(interpreter, scope, child, {}); });
         return NULL;
     }
-    if (node->type == NODE_BLOCK) {
+    if (node->type == NBL_NODE_BLOCK) {
         NblScope blockScope = {.exception = scope->exception,
                                .function = scope->function,
                                .loop = scope->loop,
@@ -3304,13 +3275,13 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         map_free(blockScope.block->env, (NblMapFreeFunc *)variable_free);
         return NULL;
     }
-    if (node->type == NODE_IF) {
+    if (node->type == NBL_NODE_IF) {
         NblValue *condition = interpreter_node(interpreter, scope, node->condition);
-        if (condition->type != VALUE_BOOL) {
+        if (condition->type != NBL_VALUE_BOOL) {
             NblValueType conditionType = condition->type;
             value_free(condition);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
+            return interpreter_throw(&context, type_error_exception(NBL_VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
             interpreter_statement(interpreter, scope, node->thenBlock, { value_free(condition); });
@@ -3320,13 +3291,13 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         value_free(condition);
         return NULL;
     }
-    if (node->type == NODE_TENARY) {
+    if (node->type == NBL_NODE_TENARY) {
         NblValue *condition = interpreter_node(interpreter, scope, node->condition);
-        if (condition->type != VALUE_BOOL) {
+        if (condition->type != NBL_VALUE_BOOL) {
             NblValueType conditionType = condition->type;
             value_free(condition);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-            return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
+            return interpreter_throw(&context, type_error_exception(NBL_VALUE_BOOL, conditionType));
         }
         if (condition->boolean) {
             value_free(condition);
@@ -3335,7 +3306,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         value_free(condition);
         return interpreter_node(interpreter, scope, node->elseBlock);
     }
-    if (node->type == NODE_TRY) {
+    if (node->type == NBL_NODE_TRY) {
         NblScope tryScope = {
             .exception = &(NblExceptionScope){.exceptionValue = NULL}, .function = scope->function, .loop = scope->loop, .block = scope->block};
         interpreter_statement_in_try(interpreter, &tryScope, node->tryBlock, {});
@@ -3345,7 +3316,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                                    .loop = scope->loop,
                                    .block = &(NblBlockScope){.parentBlock = scope->block, .env = map_new()}};
             map_set(catchScope.block->env, node->catchVariable->lhs->string,
-                    variable_new(node->catchVariable->declarationType, node->catchVariable->type == NODE_LET_ASSIGN,
+                    variable_new(node->catchVariable->declarationType, node->catchVariable->type == NBL_NODE_LET_ASSIGN,
                                  value_ref(tryScope.exception->exceptionValue)));
             interpreter_statement(interpreter, &catchScope, node->catchBlock, { map_free(catchScope.block->env, (NblMapFreeFunc *)variable_free); });
             map_free(catchScope.block->env, (NblMapFreeFunc *)variable_free);
@@ -3356,7 +3327,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return NULL;
     }
-    if (node->type == NODE_LOOP) {
+    if (node->type == NBL_NODE_LOOP) {
         NblScope loopScope = {.exception = scope->exception,
                               .function = scope->function,
                               .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
@@ -3372,18 +3343,18 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return NULL;
     }
-    if (node->type == NODE_WHILE) {
+    if (node->type == NBL_NODE_WHILE) {
         NblScope loopScope = {.exception = scope->exception,
                               .function = scope->function,
                               .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
                               .block = scope->block};
         for (;;) {
             NblValue *condition = interpreter_node(interpreter, scope, node->condition);
-            if (condition->type != VALUE_BOOL) {
+            if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 value_free(condition);
                 NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
+                return interpreter_throw(&context, type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -3401,7 +3372,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return NULL;
     }
-    if (node->type == NODE_DOWHILE) {
+    if (node->type == NBL_NODE_DOWHILE) {
         NblScope loopScope = {.exception = scope->exception,
                               .function = scope->function,
                               .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
@@ -3416,11 +3387,11 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             }
 
             NblValue *condition = interpreter_node(interpreter, scope, node->condition);
-            if (condition->type != VALUE_BOOL) {
+            if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 value_free(condition);
                 NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
+                return interpreter_throw(&context, type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -3430,18 +3401,18 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return NULL;
     }
-    if (node->type == NODE_FOR) {
+    if (node->type == NBL_NODE_FOR) {
         NblScope loopScope = {.exception = scope->exception,
                               .function = scope->function,
                               .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
                               .block = scope->block};
         for (;;) {
             NblValue *condition = interpreter_node(interpreter, scope, node->condition);
-            if (condition->type != VALUE_BOOL) {
+            if (condition->type != NBL_VALUE_BOOL) {
                 NblValueType conditionType = condition->type;
                 value_free(condition);
                 NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->condition};
-                return interpreter_throw(&context, type_error_exception(VALUE_BOOL, conditionType));
+                return interpreter_throw(&context, type_error_exception(NBL_VALUE_BOOL, conditionType));
             }
             if (!condition->boolean) {
                 value_free(condition);
@@ -3461,10 +3432,10 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return NULL;
     }
-    if (node->type == NODE_FORIN) {
+    if (node->type == NBL_NODE_FORIN) {
         NblValue *iterator = interpreter_node(interpreter, scope, node->iterator);
-        if (iterator->type != VALUE_STRING && iterator->type != VALUE_ARRAY && iterator->type != VALUE_OBJECT && iterator->type != VALUE_CLASS &&
-            iterator->type != VALUE_INSTANCE) {
+        if (iterator->type != NBL_VALUE_STRING && iterator->type != NBL_VALUE_ARRAY && iterator->type != NBL_VALUE_OBJECT &&
+            iterator->type != NBL_VALUE_CLASS && iterator->type != NBL_VALUE_INSTANCE) {
             NblValueType iteratorType = iterator->type;
             value_free(iterator);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->iterator};
@@ -3477,27 +3448,27 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                               .loop = &(NblLoopScope){.inLoop = true, .isContinuing = false, .isBreaking = false},
                               .block = &(NblBlockScope){.parentBlock = scope->block, .env = map_new()}};
         size_t size;
-        if (iterator->type == VALUE_STRING) {
+        if (iterator->type == NBL_VALUE_STRING) {
             size = strlen(iterator->string);
         }
-        if (iterator->type == VALUE_ARRAY) {
+        if (iterator->type == NBL_VALUE_ARRAY) {
             size = iterator->array->size;
         }
-        if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
+        if (iterator->type == NBL_VALUE_OBJECT || iterator->type == NBL_VALUE_CLASS || iterator->type == NBL_VALUE_INSTANCE) {
             size = iterator->object->size;
         }
 
         for (size_t i = 0; i < size; i++) {
             NblValue *iteratorValue;
-            if (iterator->type == VALUE_STRING) {
+            if (iterator->type == NBL_VALUE_STRING) {
                 char character[] = {iterator->string[i], '\0'};
                 iteratorValue = value_new_string(character);
             }
-            if (iterator->type == VALUE_ARRAY) {
+            if (iterator->type == NBL_VALUE_ARRAY) {
                 NblValue *value = list_get(iterator->array, i);
                 iteratorValue = value != NULL ? value_retrieve(value) : value_new_null();
             }
-            if (iterator->type == VALUE_OBJECT || iterator->type == VALUE_CLASS || iterator->type == VALUE_INSTANCE) {
+            if (iterator->type == NBL_VALUE_OBJECT || iterator->type == NBL_VALUE_CLASS || iterator->type == NBL_VALUE_INSTANCE) {
                 iteratorValue = value_new_string(iterator->object->keys[i]);
             }
             NblVariable *previousVariable = map_get(loopScope.block->env, node->forinVariable->lhs->string);
@@ -3506,7 +3477,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                 previousVariable->value = iteratorValue;
             } else {
                 map_set(loopScope.block->env, node->forinVariable->lhs->string,
-                        variable_new(node->forinVariable->declarationType, node->forinVariable->type == NODE_LET_ASSIGN, iteratorValue));
+                        variable_new(node->forinVariable->declarationType, node->forinVariable->type == NBL_NODE_LET_ASSIGN, iteratorValue));
             }
 
             interpreter_statement_in_loop(interpreter, &loopScope, node->thenBlock, {});
@@ -3521,7 +3492,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         value_free(iterator);
         return NULL;
     }
-    if (node->type == NODE_CONTINUE) {
+    if (node->type == NBL_NODE_CONTINUE) {
         if (!scope->loop->inLoop) {
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string("Continue not in a loop"));
@@ -3529,7 +3500,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         scope->loop->isContinuing = true;
         return NULL;
     }
-    if (node->type == NODE_BREAK) {
+    if (node->type == NBL_NODE_BREAK) {
         if (!scope->loop->inLoop) {
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string("Break not in a loop"));
@@ -3537,21 +3508,21 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         scope->loop->isBreaking = true;
         return NULL;
     }
-    if (node->type == NODE_RETURN) {
+    if (node->type == NBL_NODE_RETURN) {
         scope->function->returnValue = interpreter_node(interpreter, scope, node->unary);
         return NULL;
     }
-    if (node->type == NODE_THROW) {
+    if (node->type == NBL_NODE_THROW) {
         NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
         return interpreter_throw(&context, interpreter_node(interpreter, scope, node->unary));
     }
-    if (node->type == NODE_INCLUDE) {
+    if (node->type == NBL_NODE_INCLUDE) {
         NblValue *pathValue = interpreter_node(interpreter, scope, node->unary);
-        if (pathValue->type != VALUE_STRING) {
+        if (pathValue->type != NBL_VALUE_STRING) {
             NblValueType pathValueType = pathValue->type;
             value_free(pathValue);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->unary};
-            return interpreter_throw(&context, type_error_exception(VALUE_STRING, pathValueType));
+            return interpreter_throw(&context, type_error_exception(NBL_VALUE_STRING, pathValueType));
         }
         char includePath[255];
         if (strlen(node->token->source->dirname) > 0) {
@@ -3579,49 +3550,49 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         return NULL;
     }
 
-    if (node->type == NODE_VALUE) {
+    if (node->type == NBL_NODE_VALUE) {
         return value_retrieve(node->value);
     }
-    if (node->type == NODE_ARRAY) {
+    if (node->type == NBL_NODE_ARRAY) {
         NblValue *arrayValue = value_new_array(list_new_with_capacity(node->array->capacity));
         list_foreach(node->array, NblNode * item, { list_add(arrayValue->array, interpreter_node(interpreter, scope, item)); });
         return arrayValue;
     }
-    if (node->type == NODE_OBJECT) {
+    if (node->type == NBL_NODE_OBJECT) {
         NblValue *objectValue = value_new_object(map_new_with_capacity(node->object->capacity));
         map_foreach(node->object, char *key, NblNode *value, { map_set(objectValue->object, key, interpreter_node(interpreter, scope, value)); });
         return objectValue;
     }
-    if (node->type == NODE_CLASS) {
+    if (node->type == NBL_NODE_CLASS) {
         NblValue *classValue = value_new_class(map_new_with_capacity(node->object->capacity),
                                                node->parentClass != NULL ? interpreter_node(interpreter, scope, node->parentClass) : NULL, node->abstract);
         map_foreach(node->object, char *key, NblNode *value, { map_set(classValue->object, key, interpreter_node(interpreter, scope, value)); });
         return classValue;
     }
 
-    if (node->type == NODE_CONST_ASSIGN || node->type == NODE_LET_ASSIGN) {
+    if (node->type == NBL_NODE_CONST_ASSIGN || node->type == NBL_NODE_LET_ASSIGN) {
         NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
         if (map_get(scope->block->env, node->lhs->string) != NULL) {
             value_free(rhs);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't redeclare variable: '%s'", node->lhs->string));
         }
-        if (node->declarationType != VALUE_ANY && node->declarationType != rhs->type) {
+        if (node->declarationType != NBL_VALUE_ANY && node->declarationType != rhs->type) {
             NblValueType rhsType = rhs->type;
             value_free(rhs);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
             return interpreter_throw(&context, value_new_string_format("Unexpected variable type: '%s' needed '%s'", value_type_to_string(rhsType),
                                                                        value_type_to_string(node->declarationType)));
         }
-        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, node->type == NODE_LET_ASSIGN, value_retrieve(rhs)));
+        map_set(scope->block->env, node->lhs->string, variable_new(node->declarationType, node->type == NBL_NODE_LET_ASSIGN, value_retrieve(rhs)));
         return rhs;
     }
-    if (node->type == NODE_ASSIGN) {
+    if (node->type == NBL_NODE_ASSIGN) {
         NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
-        if (node->lhs->type == NODE_GET) {
+        if (node->lhs->type == NBL_NODE_GET) {
             NblValue *containerValue = interpreter_node(interpreter, scope, node->lhs->lhs);
-            if (containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT && containerValue->type != VALUE_CLASS &&
-                containerValue->type != VALUE_INSTANCE) {
+            if (containerValue->type != NBL_VALUE_ARRAY && containerValue->type != NBL_VALUE_OBJECT && containerValue->type != NBL_VALUE_CLASS &&
+                containerValue->type != NBL_VALUE_INSTANCE) {
                 NblValueType containerValueType = containerValue->type;
                 value_free(rhs);
                 value_free(containerValue);
@@ -3631,27 +3602,27 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             }
 
             NblValue *indexOrKey = interpreter_node(interpreter, scope, node->lhs->rhs);
-            if (containerValue->type == VALUE_ARRAY) {
-                if (indexOrKey->type != VALUE_INT) {
+            if (containerValue->type == NBL_VALUE_ARRAY) {
+                if (indexOrKey->type != NBL_VALUE_INT) {
                     NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(rhs);
                     value_free(containerValue);
                     value_free(indexOrKey);
                     NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
+                    return interpreter_throw(&context, type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 NblValue *previousValue = list_get(containerValue->array, indexOrKey->integer);
                 if (previousValue != NULL) value_free(previousValue);
                 list_set(containerValue->array, indexOrKey->integer, value_retrieve(rhs));
             }
-            if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
-                if (indexOrKey->type != VALUE_STRING) {
+            if (containerValue->type == NBL_VALUE_OBJECT || containerValue->type == NBL_VALUE_CLASS || containerValue->type == NBL_VALUE_INSTANCE) {
+                if (indexOrKey->type != NBL_VALUE_STRING) {
                     NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(rhs);
                     value_free(containerValue);
                     value_free(indexOrKey);
                     NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
+                    return interpreter_throw(&context, type_error_exception(NBL_VALUE_STRING, indexOrKeyType));
                 }
                 NblValue *previousValue = map_get(containerValue->object, indexOrKey->string);
                 if (previousValue != NULL) value_free(previousValue);
@@ -3662,7 +3633,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             return rhs;
         }
 
-        if (node->lhs->type != NODE_VARIABLE) {
+        if (node->lhs->type != NBL_NODE_VARIABLE) {
             value_free(rhs);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Is not a variable"));
@@ -3678,7 +3649,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
             return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
         }
-        if (variable->type != VALUE_ANY && variable->type != rhs->type) {
+        if (variable->type != NBL_VALUE_ANY && variable->type != rhs->type) {
             NblValueType rhsType = rhs->type;
             value_free(rhs);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
@@ -3689,7 +3660,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         return rhs;
     }
 
-    if (node->type == NODE_VARIABLE) {
+    if (node->type == NBL_NODE_VARIABLE) {
         NblVariable *variable = block_scope_get(scope->block, node->string);
         if (variable == NULL) {
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
@@ -3697,10 +3668,10 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
         return value_retrieve(variable->value);
     }
-    if (node->type == NODE_GET) {
+    if (node->type == NBL_NODE_GET) {
         NblValue *containerValue = interpreter_node(interpreter, scope, node->lhs);
-        if (containerValue->type != VALUE_STRING && containerValue->type != VALUE_ARRAY && containerValue->type != VALUE_OBJECT &&
-            containerValue->type != VALUE_CLASS && containerValue->type != VALUE_INSTANCE) {
+        if (containerValue->type != NBL_VALUE_STRING && containerValue->type != NBL_VALUE_ARRAY && containerValue->type != NBL_VALUE_OBJECT &&
+            containerValue->type != NBL_VALUE_CLASS && containerValue->type != NBL_VALUE_INSTANCE) {
             NblValueType containerValueType = containerValue->type;
             value_free(containerValue);
             NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node};
@@ -3710,19 +3681,19 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
 
         NblValue *indexOrKey = interpreter_node(interpreter, scope, node->rhs);
         NblValue *returnValue = NULL;
-        if (containerValue->type == VALUE_STRING) {
-            if (indexOrKey->type == VALUE_STRING) {
+        if (containerValue->type == NBL_VALUE_STRING) {
+            if (indexOrKey->type == NBL_VALUE_STRING) {
                 NblValue *stringClass = ((NblVariable *)map_get(interpreter->env, "String"))->value;
                 NblValue *stringClassItem = map_get(stringClass->object, indexOrKey->string);
                 if (stringClassItem != NULL) returnValue = value_retrieve(stringClassItem);
             }
             if (returnValue == NULL) {
-                if (indexOrKey->type != VALUE_INT) {
+                if (indexOrKey->type != NBL_VALUE_INT) {
                     NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
                     NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
+                    return interpreter_throw(&context, type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 if (indexOrKey->integer >= 0 && indexOrKey->integer <= (int64_t)strlen(containerValue->string)) {
                     char character[] = {containerValue->string[indexOrKey->integer], '\0'};
@@ -3732,40 +3703,40 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                 }
             }
         }
-        if (containerValue->type == VALUE_ARRAY) {
-            if (indexOrKey->type == VALUE_STRING) {
+        if (containerValue->type == NBL_VALUE_ARRAY) {
+            if (indexOrKey->type == NBL_VALUE_STRING) {
                 NblValue *arrayClass = ((NblVariable *)map_get(interpreter->env, "Array"))->value;
                 NblValue *arrayClassItem = map_get(arrayClass->object, indexOrKey->string);
                 if (arrayClassItem != NULL) returnValue = value_retrieve(arrayClassItem);
             }
             if (returnValue == NULL) {
-                if (indexOrKey->type != VALUE_INT) {
+                if (indexOrKey->type != NBL_VALUE_INT) {
                     NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
                     NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_INT, indexOrKeyType));
+                    return interpreter_throw(&context, type_error_exception(NBL_VALUE_INT, indexOrKeyType));
                 }
                 NblValue *value = list_get(containerValue->array, indexOrKey->integer);
                 returnValue = value != NULL ? value_retrieve(value) : value_new_null();
             }
         }
-        if (containerValue->type == VALUE_OBJECT || containerValue->type == VALUE_CLASS || containerValue->type == VALUE_INSTANCE) {
-            if (containerValue->type == VALUE_OBJECT && indexOrKey->type == VALUE_STRING) {
+        if (containerValue->type == NBL_VALUE_OBJECT || containerValue->type == NBL_VALUE_CLASS || containerValue->type == NBL_VALUE_INSTANCE) {
+            if (containerValue->type == NBL_VALUE_OBJECT && indexOrKey->type == NBL_VALUE_STRING) {
                 NblValue *objectClass = ((NblVariable *)map_get(interpreter->env, "Object"))->value;
                 NblValue *objectClassItem = map_get(objectClass->object, indexOrKey->string);
                 if (objectClassItem != NULL) returnValue = value_retrieve(objectClassItem);
             }
             if (returnValue == NULL) {
-                if (indexOrKey->type != VALUE_STRING) {
+                if (indexOrKey->type != NBL_VALUE_STRING) {
                     NblValueType indexOrKeyType = indexOrKey->type;
                     value_free(indexOrKey);
                     value_free(containerValue);
                     NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->rhs};
-                    return interpreter_throw(&context, type_error_exception(VALUE_STRING, indexOrKeyType));
+                    return interpreter_throw(&context, type_error_exception(NBL_VALUE_STRING, indexOrKeyType));
                 }
                 NblValue *value;
-                if (containerValue->type == VALUE_INSTANCE) {
+                if (containerValue->type == NBL_VALUE_INSTANCE) {
                     value = value_class_get(containerValue, indexOrKey->string);
                 } else {
                     value = map_get(containerValue->object, indexOrKey->string);
@@ -3787,19 +3758,19 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         value_free(containerValue);
         return returnValue;
     }
-    if (node->type == NODE_CALL) {
+    if (node->type == NBL_NODE_CALL) {
         NblValue *thisValue = NULL;
-        if (node->function->type == NODE_GET) {
+        if (node->function->type == NBL_NODE_GET) {
             NblValue *containerValue = interpreter_node(interpreter, scope, node->function->lhs);
-            if (containerValue->type == VALUE_STRING || containerValue->type == VALUE_ARRAY || containerValue->type == VALUE_OBJECT ||
-                containerValue->type == VALUE_INSTANCE) {
+            if (containerValue->type == NBL_VALUE_STRING || containerValue->type == NBL_VALUE_ARRAY || containerValue->type == NBL_VALUE_OBJECT ||
+                containerValue->type == NBL_VALUE_INSTANCE) {
                 thisValue = containerValue;
             } else {
                 value_free(containerValue);
             }
         }
         NblValue *callValue = interpreter_node(interpreter, scope, node->function);
-        if (callValue->type != VALUE_FUNCTION && callValue->type != VALUE_NATIVE_FUNCTION && callValue->type != VALUE_CLASS) {
+        if (callValue->type != NBL_VALUE_FUNCTION && callValue->type != NBL_VALUE_NATIVE_FUNCTION && callValue->type != NBL_VALUE_CLASS) {
             NblValueType callValueType = callValue->type;
             value_free(callValue);
             if (thisValue != NULL) value_free(thisValue);
@@ -3809,7 +3780,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         }
 
         NblList *callArguments = NULL;
-        if (callValue->type == VALUE_CLASS) {
+        if (callValue->type == NBL_VALUE_CLASS) {
             if (callValue->abstract) {
                 value_free(callValue);
                 if (thisValue != NULL) value_free(thisValue);
@@ -3829,7 +3800,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                 if (list_get(node->nodes, i) == NULL && argument != NULL) {
                     if (argument->defaultNode != NULL) {
                         NblValue *defaultValue = interpreter_node(interpreter, scope, argument->defaultNode);
-                        if (argument->type != VALUE_ANY && defaultValue->type != argument->type) {
+                        if (argument->type != NBL_VALUE_ANY && defaultValue->type != argument->type) {
                             NblValueType defaultValueType = defaultValue->type;
                             value_free(defaultValue);
                             list_free(arguments, (NblListFreeFunc *)value_free);
@@ -3851,7 +3822,7 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             }
 
             NblValue *nodeValue = interpreter_node(interpreter, scope, list_get(node->nodes, i));
-            if (argument != NULL && argument->type != VALUE_ANY && nodeValue->type != argument->type) {
+            if (argument != NULL && argument->type != NBL_VALUE_ANY && nodeValue->type != argument->type) {
                 NblValueType nodeValueType = nodeValue->type;
                 value_free(nodeValue);
                 list_free(arguments, (NblListFreeFunc *)value_free);
@@ -3872,20 +3843,20 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         return returnValue;
     }
 
-    if (node->type >= NODE_NEG && node->type <= NODE_CAST) {
+    if (node->type >= NBL_NODE_NEG && node->type <= NBL_NODE_CAST) {
         NblValue *unary = interpreter_node(interpreter, scope, node->unary);
-        if (node->type == NODE_NEG) {
-            if (unary->type == VALUE_INT) {
+        if (node->type == NBL_NODE_NEG) {
+            if (unary->type == NBL_VALUE_INT) {
                 unary->integer = -unary->integer;
                 return unary;
             }
-            if (unary->type == VALUE_FLOAT) {
+            if (unary->type == NBL_VALUE_FLOAT) {
                 unary->floating = -unary->floating;
                 return unary;
             }
         }
-        if (node->type == NODE_INC_PRE || node->type == NODE_DEC_PRE || node->type == NODE_INC_POST || node->type == NODE_DEC_POST) {
-            if (node->unary->type != NODE_VARIABLE) {
+        if (node->type == NBL_NODE_INC_PRE || node->type == NBL_NODE_DEC_PRE || node->type == NBL_NODE_INC_POST || node->type == NBL_NODE_DEC_POST) {
+            if (node->unary->type != NBL_NODE_VARIABLE) {
                 value_free(unary);
                 NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return interpreter_throw(&context, value_new_string_format("Is not a variable"));
@@ -3896,116 +3867,116 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
                 NblInterpreterContext context = {.env = interpreter->env, .scope = scope, .node = node->lhs};
                 return interpreter_throw(&context, value_new_string_format("Can't mutate const variable: '%s'", node->lhs->string));
             }
-            if (unary->type == VALUE_INT) {
-                if (node->type == NODE_INC_PRE) unary->integer++;
-                if (node->type == NODE_INC_PRE || node->type == NODE_INC_POST) variable->value->integer++;
-                if (node->type == NODE_DEC_PRE) unary->integer--;
-                if (node->type == NODE_DEC_PRE || node->type == NODE_DEC_POST) variable->value->integer--;
+            if (unary->type == NBL_VALUE_INT) {
+                if (node->type == NBL_NODE_INC_PRE) unary->integer++;
+                if (node->type == NBL_NODE_INC_PRE || node->type == NBL_NODE_INC_POST) variable->value->integer++;
+                if (node->type == NBL_NODE_DEC_PRE) unary->integer--;
+                if (node->type == NBL_NODE_DEC_PRE || node->type == NBL_NODE_DEC_POST) variable->value->integer--;
                 return unary;
             }
-            if (unary->type == VALUE_FLOAT) {
-                if (node->type == NODE_INC_PRE) unary->floating++;
-                if (node->type == NODE_INC_PRE || node->type == NODE_INC_POST) variable->value->floating++;
-                if (node->type == NODE_DEC_PRE) unary->floating--;
-                if (node->type == NODE_DEC_PRE || node->type == NODE_DEC_POST) variable->value->floating--;
+            if (unary->type == NBL_VALUE_FLOAT) {
+                if (node->type == NBL_NODE_INC_PRE) unary->floating++;
+                if (node->type == NBL_NODE_INC_PRE || node->type == NBL_NODE_INC_POST) variable->value->floating++;
+                if (node->type == NBL_NODE_DEC_PRE) unary->floating--;
+                if (node->type == NBL_NODE_DEC_PRE || node->type == NBL_NODE_DEC_POST) variable->value->floating--;
                 return unary;
             }
         }
-        if (node->type == NODE_NOT) {
-            if (unary->type == VALUE_INT) {
+        if (node->type == NBL_NODE_NOT) {
+            if (unary->type == NBL_VALUE_INT) {
                 unary->integer = ~unary->integer;
                 return unary;
             }
         }
-        if (node->type == NODE_LOGICAL_NOT) {
-            if (unary->type == VALUE_BOOL) {
+        if (node->type == NBL_NODE_LOGICAL_NOT) {
+            if (unary->type == NBL_VALUE_BOOL) {
                 unary->boolean = !unary->boolean;
                 return unary;
             }
         }
-        if (node->type == NODE_CAST) {
-            if (node->castType == VALUE_BOOL) {
-                if (unary->type == VALUE_NULL) {
-                    unary->type = VALUE_BOOL;
+        if (node->type == NBL_NODE_CAST) {
+            if (node->castType == NBL_VALUE_BOOL) {
+                if (unary->type == NBL_VALUE_NULL) {
+                    unary->type = NBL_VALUE_BOOL;
                     unary->boolean = false;
                     return unary;
                 }
-                if (unary->type == VALUE_BOOL) return unary;
-                if (unary->type == VALUE_INT) {
-                    unary->type = VALUE_BOOL;
+                if (unary->type == NBL_VALUE_BOOL) return unary;
+                if (unary->type == NBL_VALUE_INT) {
+                    unary->type = NBL_VALUE_BOOL;
                     unary->boolean = unary->integer != 0;
                     return unary;
                 }
-                if (unary->type == VALUE_FLOAT) {
-                    unary->type = VALUE_BOOL;
+                if (unary->type == NBL_VALUE_FLOAT) {
+                    unary->type = NBL_VALUE_BOOL;
                     unary->boolean = unary->floating != 0.0;
                     return unary;
                 }
-                if (unary->type == VALUE_STRING) {
+                if (unary->type == NBL_VALUE_STRING) {
                     bool result = !(!strcmp(unary->string, "") || !strcmp(unary->string, "0"));
                     value_clear(unary);
-                    unary->type = VALUE_BOOL;
+                    unary->type = NBL_VALUE_BOOL;
                     unary->boolean = result;
                     return unary;
                 }
             }
 
-            if (node->castType == VALUE_INT) {
-                if (unary->type == VALUE_NULL) {
-                    unary->type = VALUE_INT;
+            if (node->castType == NBL_VALUE_INT) {
+                if (unary->type == NBL_VALUE_NULL) {
+                    unary->type = NBL_VALUE_INT;
                     unary->integer = 0;
                     return unary;
                 }
-                if (unary->type == VALUE_BOOL) {
-                    unary->type = VALUE_INT;
+                if (unary->type == NBL_VALUE_BOOL) {
+                    unary->type = NBL_VALUE_INT;
                     unary->integer = unary->boolean;
                     return unary;
                 }
-                if (unary->type == VALUE_INT) return unary;
-                if (unary->type == VALUE_FLOAT) {
-                    unary->type = VALUE_INT;
+                if (unary->type == NBL_VALUE_INT) return unary;
+                if (unary->type == NBL_VALUE_FLOAT) {
+                    unary->type = NBL_VALUE_INT;
                     unary->integer = unary->floating;
                     return unary;
                 }
-                if (unary->type == VALUE_STRING) {
+                if (unary->type == NBL_VALUE_STRING) {
                     int64_t result = string_to_int(unary->string);
                     value_clear(unary);
-                    unary->type = VALUE_INT;
+                    unary->type = NBL_VALUE_INT;
                     unary->integer = result;
                     return unary;
                 }
             }
 
-            if (node->castType == VALUE_FLOAT) {
-                if (unary->type == VALUE_NULL) {
-                    unary->type = VALUE_FLOAT;
+            if (node->castType == NBL_VALUE_FLOAT) {
+                if (unary->type == NBL_VALUE_NULL) {
+                    unary->type = NBL_VALUE_FLOAT;
                     unary->floating = 0;
                     return unary;
                 }
-                if (unary->type == VALUE_BOOL) {
-                    unary->type = VALUE_FLOAT;
+                if (unary->type == NBL_VALUE_BOOL) {
+                    unary->type = NBL_VALUE_FLOAT;
                     unary->floating = unary->boolean;
                     return unary;
                 }
-                if (unary->type == VALUE_INT) {
-                    unary->type = VALUE_FLOAT;
+                if (unary->type == NBL_VALUE_INT) {
+                    unary->type = NBL_VALUE_FLOAT;
                     unary->floating = unary->integer;
                     return unary;
                 }
-                if (unary->type == VALUE_FLOAT) return unary;
-                if (unary->type == VALUE_STRING) {
+                if (unary->type == NBL_VALUE_FLOAT) return unary;
+                if (unary->type == NBL_VALUE_STRING) {
                     int64_t result = string_to_float(unary->string);
                     value_clear(unary);
-                    unary->type = VALUE_FLOAT;
+                    unary->type = NBL_VALUE_FLOAT;
                     unary->floating = result;
                     return unary;
                 }
             }
 
-            if (node->castType == VALUE_STRING) {
+            if (node->castType == NBL_VALUE_STRING) {
                 char *string = value_to_string(unary);
                 value_clear(unary);
-                unary->type = VALUE_STRING;
+                unary->type = NBL_VALUE_STRING;
                 unary->string = string;
                 return unary;
             }
@@ -4016,36 +3987,36 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
         return interpreter_throw(&context, value_new_string("Type error"));
     }
 
-    if (node->type >= NODE_ADD && node->type <= NODE_LOGICAL_OR) {
+    if (node->type >= NBL_NODE_ADD && node->type <= NBL_NODE_LOGICAL_OR) {
         NblValue *lhs = interpreter_node(interpreter, scope, node->lhs);
         NblValue *rhs = interpreter_node(interpreter, scope, node->rhs);
 
-        if (node->type == NODE_ADD) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_ADD) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer += rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating += rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating += rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = lhs->integer + rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
 
-            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
+            if (lhs->type == NBL_VALUE_STRING && rhs->type == NBL_VALUE_STRING) {
                 char *string = malloc(strlen(lhs->string) + strlen(rhs->string) + 1);
                 strcpy(string, lhs->string);
                 strcat(string, rhs->string);
@@ -4056,170 +4027,170 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             }
         }
 
-        if (node->type == NODE_SUB) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_SUB) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer -= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating -= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating -= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = lhs->integer - rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_MUL) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_MUL) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer *= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating *= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating *= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = lhs->integer * rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_EXP) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_EXP) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer = pow(lhs->integer, rhs->integer);
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = pow(lhs->floating, rhs->floating);
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = pow(lhs->floating, rhs->integer);
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = pow(lhs->integer, rhs->floating);
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_DIV) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_DIV) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer = rhs->integer != 0 ? lhs->integer / rhs->integer : 0;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = rhs->integer != 0 ? lhs->floating / rhs->floating : 0;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = rhs->integer != 0 ? lhs->floating / rhs->integer : 0;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = rhs->integer != 0 ? lhs->integer / rhs->floating : 0;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_MOD) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_MOD) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer %= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = fmod(lhs->floating, rhs->floating);
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = fmod(lhs->floating, rhs->integer);
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_FLOAT;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_FLOAT;
                 lhs->floating = fmod(lhs->integer, rhs->floating);
                 value_free(rhs);
                 return lhs;
             }
         }
 
-        if (node->type == NODE_AND) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_AND) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer &= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_XOR) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_XOR) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer ^= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_OR) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_OR) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer |= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_SHL) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_SHL) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer <<= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_SHR) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
+        if (node->type == NBL_NODE_SHR) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
                 lhs->integer >>= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
         }
 
-        if (node->type == NODE_INSTANCEOF) {
-            if (lhs->type == VALUE_INSTANCE && rhs->type == VALUE_CLASS) {
+        if (node->type == NBL_NODE_INSTANCEOF) {
+            if (lhs->type == NBL_VALUE_INSTANCE && rhs->type == NBL_VALUE_CLASS) {
                 bool result = value_class_instanceof(lhs, rhs);
                 value_free(lhs);
                 value_free(rhs);
@@ -4227,229 +4198,229 @@ NblValue *interpreter_node(NblInterpreter *interpreter, NblScope *scope, NblNode
             }
         }
 
-        if (node->type == NODE_EQ) {
-            if (lhs->type == VALUE_NULL) {
+        if (node->type == NBL_NODE_EQ) {
+            if (lhs->type == NBL_VALUE_NULL) {
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
-                lhs->boolean = rhs->type == VALUE_NULL;
+                lhs->type = NBL_VALUE_BOOL;
+                lhs->boolean = rhs->type == NBL_VALUE_NULL;
                 value_free(rhs);
                 return lhs;
             }
-            if (rhs->type == VALUE_NULL) {
-                bool result = lhs->type == VALUE_NULL;
+            if (rhs->type == NBL_VALUE_NULL) {
+                bool result = lhs->type == NBL_VALUE_NULL;
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = result;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_BOOL && rhs->type == VALUE_BOOL) {
+            if (lhs->type == NBL_VALUE_BOOL && rhs->type == NBL_VALUE_BOOL) {
                 lhs->boolean = lhs->boolean == rhs->boolean;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer == rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating == rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer == rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating == rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
+            if (lhs->type == NBL_VALUE_STRING && rhs->type == NBL_VALUE_STRING) {
                 bool result = !strcmp(lhs->string, rhs->string);
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = result;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_NEQ) {
-            if (lhs->type == VALUE_NULL) {
+        if (node->type == NBL_NODE_NEQ) {
+            if (lhs->type == NBL_VALUE_NULL) {
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
-                lhs->boolean = rhs->type != VALUE_NULL;
+                lhs->type = NBL_VALUE_BOOL;
+                lhs->boolean = rhs->type != NBL_VALUE_NULL;
                 value_free(rhs);
                 return lhs;
             }
-            if (rhs->type == VALUE_NULL) {
-                bool result = lhs->type != VALUE_NULL;
+            if (rhs->type == NBL_VALUE_NULL) {
+                bool result = lhs->type != NBL_VALUE_NULL;
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = result;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_BOOL && rhs->type == VALUE_BOOL) {
+            if (lhs->type == NBL_VALUE_BOOL && rhs->type == NBL_VALUE_BOOL) {
                 lhs->boolean = lhs->boolean != rhs->boolean;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer != rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating != rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer != rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating != rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_STRING && rhs->type == VALUE_STRING) {
+            if (lhs->type == NBL_VALUE_STRING && rhs->type == NBL_VALUE_STRING) {
                 bool result = strcmp(lhs->string, rhs->string);
                 value_clear(lhs);
-                lhs->type = VALUE_BOOL;
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = result;
                 value_free(rhs);
                 return lhs;
             }
         }
 
-        if (node->type == NODE_LT) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+        if (node->type == NBL_NODE_LT) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer < rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating < rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating < rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer < rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_LTEQ) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+        if (node->type == NBL_NODE_LTEQ) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer <= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating <= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating <= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer <= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_GT) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+        if (node->type == NBL_NODE_GT) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer > rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating > rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating > rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer > rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_GTEQ) {
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+        if (node->type == NBL_NODE_GTEQ) {
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer >= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating >= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_FLOAT && rhs->type == VALUE_INT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_FLOAT && rhs->type == NBL_VALUE_INT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->floating >= rhs->integer;
                 value_free(rhs);
                 return lhs;
             }
-            if (lhs->type == VALUE_INT && rhs->type == VALUE_FLOAT) {
-                lhs->type = VALUE_BOOL;
+            if (lhs->type == NBL_VALUE_INT && rhs->type == NBL_VALUE_FLOAT) {
+                lhs->type = NBL_VALUE_BOOL;
                 lhs->boolean = lhs->integer >= rhs->floating;
                 value_free(rhs);
                 return lhs;
             }
         }
 
-        if (node->type == NODE_LOGICAL_AND) {
-            if (lhs->type == VALUE_BOOL && rhs->type == VALUE_BOOL) {
+        if (node->type == NBL_NODE_LOGICAL_AND) {
+            if (lhs->type == NBL_VALUE_BOOL && rhs->type == NBL_VALUE_BOOL) {
                 lhs->boolean = lhs->boolean && rhs->boolean;
                 value_free(rhs);
                 return lhs;
             }
         }
-        if (node->type == NODE_LOGICAL_OR) {
-            if (lhs->type == VALUE_BOOL && rhs->type == VALUE_BOOL) {
+        if (node->type == NBL_NODE_LOGICAL_OR) {
+            if (lhs->type == NBL_VALUE_BOOL && rhs->type == NBL_VALUE_BOOL) {
                 lhs->boolean = lhs->boolean || rhs->boolean;
                 value_free(rhs);
                 return lhs;
