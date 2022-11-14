@@ -35,6 +35,7 @@ extern bool SystemTimeToFileTime(const SYSTEMTIME *lpSystemTime, FILETIME *lpFil
 #else
 #include <sys/time.h>
 #endif
+#define NBL_IMPLEMENTATION
 #include "nbl.h"
 
 // Fix missing math constants

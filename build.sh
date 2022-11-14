@@ -5,25 +5,25 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [ "$1" = "format" ]; then
-    clang-format -i $(find . -name *.h -o -name *.c)
+    clang-format -i $(find src -name *.h -o -name *.c)
     exit
 fi
 
 if [ "$1" = "debug" ]; then
-    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -lm -o nbl || exit
+    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 src/main.c -lm -o nbl || exit
     lldb -- ./nbl $2
     exit
 fi
 
 if [ "$1" = "leaks" ]; then
-    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -lm -o nbl || exit
+    gcc -g -DDEBUG -Wall -Wextra -Wshadow -Wpedantic --std=c11 src/main.c -lm -o nbl || exit
     export MallocStackLogging=1
     leaks -atExit -- ./nbl $2 > dump
     unset MallocStackLogging
     exit
 fi
 
-gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 -Iinclude $(find src -name *.c) -lm -o nbl || exit
+gcc -Wall -Wextra -Wshadow -Wpedantic --std=c11 src/main.c -lm -o nbl || exit
 if [ "$1" = "test" ]; then
     for file in $(find tests -name *.nbl); do
         echo "Running test $(basename $file)..."
