@@ -31,7 +31,7 @@ static NblValue *env_exit(NblContext *context, NblValue *this, NblList *values) 
 }
 
 // Read execute print loop
-void repl(NblMap *env) {
+void repl(NblContext *context) {
     char command[1024];
     for (;;) {
         // Read
@@ -44,81 +44,49 @@ void repl(NblMap *env) {
         command[realCommandSize] = ';';
         command[realCommandSize + 1] = '\0';
 
-        // Parse
-        NblList *tokens = nbl_lexer("text", command);
-        NblParser parser = {.tokens = tokens, .position = 0};
-        NblNode *node = nbl_parser_statement(&parser);
-        if (node == NULL) {
-            continue;
-        }
-
-        // Run
-        NblValue *returnValue = nbl_interpreter(env, node);
+        NblValue *returnValue = nbl_context_eval_text_statement(context, command);
         if (returnValue != NULL) {
             char *string = nbl_value_to_string(returnValue);
             printf("%s\n", string);
             free(string);
             nbl_value_free(returnValue);
         }
-
-        // Cleanup
-        nbl_node_free(node);
-        nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
     }
 }
 
 // Main
 int main(int argc, char **argv) {
     // Create env
-    NblMap *env = nbl_std_env();
+    NblContext *context = nbl_context_new();
 
     NblList *empty_args = nbl_list_new();
-    nbl_map_set(env, "print", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(empty_args, NBL_VALUE_NULL, env_print)));
-    nbl_map_set(env, "println", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(nbl_list_ref(empty_args), NBL_VALUE_NULL, env_println)));
+    nbl_map_set(context->env, "print", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(empty_args, NBL_VALUE_NULL, env_print)));
+    nbl_map_set(context->env, "println", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(nbl_list_ref(empty_args), NBL_VALUE_NULL, env_println)));
 
     NblList *exit_args = nbl_list_new();
     nbl_list_add(exit_args, nbl_argument_new("exitCode", NBL_VALUE_INT, nbl_node_new_value(NULL, nbl_value_new_int(0))));
-    nbl_map_set(env, "exit", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(exit_args, NBL_VALUE_NULL, env_exit)));
+    nbl_map_set(context->env, "exit", nbl_variable_new(NBL_VALUE_NATIVE_FUNCTION, false, nbl_value_new_native_function(exit_args, NBL_VALUE_NULL, env_exit)));
 
     // Run repl when no arguments are given
     if (argc == 1) {
         printf("New Bastiaan Language Interpreter\n");
-        repl(env);
-        nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
+        repl(context);
+        nbl_context_free(context);
         return EXIT_SUCCESS;
     }
 
-    // Or else read file and execute
-    char *path = argv[1];
-    char *text = nbl_file_read(path);
-    if (text == NULL) {
-        fprintf(stderr, "Can't read file: %s\n", path);
-        return EXIT_FAILURE;
-    }
-    NblList *tokens = nbl_lexer(path, text);
-    // list_foreach(tokens, Token *token, {
-    //     printf("%s ", token_type_to_string(token->type));
-    // });
-    // printf("\n");
-    NblNode *node = nbl_parser(tokens, false);
-
-    // Run
+    // Or else run file
     NblList *arguments = nbl_list_new();
     for (int i = 2; i < argc; i++) {
         nbl_list_add(arguments, nbl_value_new_string(argv[i]));
     }
-    nbl_map_set(env, "arguments", nbl_variable_new(NBL_VALUE_ARRAY, false, nbl_value_new_array(arguments)));
+    nbl_map_set(context->env, "arguments", nbl_variable_new(NBL_VALUE_ARRAY, false, nbl_value_new_array(arguments)));
 
-    NblValue *returnValue = nbl_interpreter(env, node);
+    NblValue *returnValue = nbl_context_eval_file(context, argv[1]);
     if (returnValue->type == NBL_VALUE_INT) {
         exit(returnValue->integer);
     }
     nbl_value_free(returnValue);
-
-    // Cleanup
-    nbl_node_free(node);
-    nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
-    free(text);
-    nbl_map_free(env, (NblMapFreeFunc *)nbl_variable_free);
+    nbl_context_free(context);
     return EXIT_SUCCESS;
 }

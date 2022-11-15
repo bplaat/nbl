@@ -586,12 +586,25 @@ typedef struct NblInterpreter {
 } NblInterpreter;
 
 struct NblContext {
+    int32_t refs;
     NblMap *env;
     NblScope *scope;
     NblNode *node;
 };
 
 NblVariable *nbl_block_scope_get(NblBlockScope *block, char *key);
+
+NblContext *nbl_context_new(void);
+
+NblValue *nbl_context_eval_text(NblContext *context, char *text);
+
+NblValue *nbl_context_eval_text_statement(NblContext *context, char *text);
+
+NblValue *nbl_context_eval_file(NblContext *context, char *path);
+
+NblContext *nbl_context_ref(NblContext *context);
+
+void nbl_context_free(NblContext *context);
 
 NblValue *nbl_interpreter(NblMap *env, NblNode *node);
 
@@ -3117,6 +3130,60 @@ NblVariable *nbl_block_scope_get(NblBlockScope *block, char *key) {
         return nbl_block_scope_get(block->parentBlock, key);
     }
     return variable;
+}
+
+NblContext *nbl_context_new(void) {
+    NblContext *context = malloc(sizeof(NblContext));
+    context->refs = 1;
+    context->env = nbl_std_env();
+    return context;
+}
+
+NblValue *nbl_context_eval_text(NblContext *context, char *text) {
+    NblList *tokens = nbl_lexer("text", text);
+    NblNode *node = nbl_parser(tokens, false);
+    NblValue *returnValue = nbl_interpreter(context->env, node);
+    nbl_node_free(node);
+    nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
+    return returnValue;
+}
+
+NblValue *nbl_context_eval_text_statement(NblContext *context, char *text) {
+    NblList *tokens = nbl_lexer("text", text);
+    NblParser parser = {.tokens = tokens, .position = 0};
+    NblNode *node = nbl_parser_statement(&parser);
+    NblValue *returnValue = nbl_interpreter(context->env, node);
+    nbl_node_free(node);
+    nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
+    return returnValue;
+}
+
+NblValue *nbl_context_eval_file(NblContext *context, char *path) {
+    char *text = nbl_file_read(path);
+    if (text == NULL) {
+        fprintf(stderr, "Can't read file: %s\n", path);
+        exit(EXIT_FAILURE);
+    }
+    NblList *tokens = nbl_lexer(path, text);
+    NblNode *node = nbl_parser(tokens, false);
+    NblValue *returnValue = nbl_interpreter(context->env, node);
+    nbl_node_free(node);
+    nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
+    free(text);
+    return returnValue;
+}
+
+NblContext *nbl_context_ref(NblContext *context) {
+    context->refs++;
+    return context;
+}
+
+void nbl_context_free(NblContext *context) {
+    context->refs--;
+    if (context->refs > 0) return;
+
+    nbl_map_free(context->env, (NblMapFreeFunc *)nbl_variable_free);
+    free(context);
 }
 
 NblValue *nbl_interpreter(NblMap *env, NblNode *node) {
