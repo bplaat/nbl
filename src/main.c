@@ -40,9 +40,12 @@ void repl(NblContext *context) {
         if (!strcmp(command, ".exit\n")) {
             break;
         }
-        size_t realCommandSize = strlen(command);
-        command[realCommandSize] = ';';
-        command[realCommandSize + 1] = '\0';
+        size_t commandSize = strlen(command);
+        if (command[0] == '\r' || command[0] == '\n') {
+            continue;
+        }
+        command[commandSize] = ';';
+        command[commandSize + 1] = '\0';
 
         NblValue *returnValue = nbl_context_eval_text_statement(context, command);
         if (returnValue != NULL) {

@@ -3152,6 +3152,7 @@ NblValue *nbl_context_eval_text_statement(NblContext *context, char *text) {
     NblList *tokens = nbl_lexer("text", text);
     NblParser parser = {.tokens = tokens, .position = 0};
     NblNode *node = nbl_parser_statement(&parser);
+    if (node == NULL) return NULL;
     NblValue *returnValue = nbl_interpreter(context->env, node);
     nbl_node_free(node);
     nbl_list_free(tokens, (NblListFreeFunc *)nbl_token_free);
